@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Edit, Trash2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard, ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone, MapPin, Mail, User, ChevronDown, ChevronUp } from 'lucide-react';
+import { X, Plus, Edit, Trash2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard, ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone, MapPin, Mail, User, ChevronDown, ChevronUp, AlertTriangle, Image, ToggleLeft, ToggleRight, Settings, Tag, MessageSquare, Percent, Save, RefreshCw, CreditCard } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -859,6 +859,79 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
                     </div>
                   </CardContent>
                 </Card>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Contact Message Details Modal */}
+        <Dialog open={showContactDetails} onOpenChange={setShowContactDetails}>
+          <DialogContent className="max-w-lg" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <MessageSquare className="h-5 w-5 text-emerald-600" />
+                تفاصيل الرسالة
+              </DialogTitle>
+            </DialogHeader>
+            {selectedContact && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-gray-500">الاسم</p>
+                    <p className="font-medium">{selectedContact.name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-500">البريد الإلكتروني</p>
+                    <p className="font-medium">{selectedContact.email}</p>
+                  </div>
+                  {selectedContact.phone && (
+                    <div>
+                      <p className="text-sm text-gray-500">الهاتف</p>
+                      <p className="font-medium" dir="ltr">{selectedContact.phone}</p>
+                    </div>
+                  )}
+                  {selectedContact.subject && (
+                    <div>
+                      <p className="text-sm text-gray-500">الموضوع</p>
+                      <p className="font-medium">{selectedContact.subject}</p>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <p className="text-sm text-gray-500 mb-1">الرسالة</p>
+                  <div className="p-3 bg-gray-50 rounded-lg text-sm">
+                    {selectedContact.message}
+                  </div>
+                </div>
+                
+                {selectedContact.reply && (
+                  <div>
+                    <p className="text-sm text-gray-500 mb-1">الرد السابق</p>
+                    <div className="p-3 bg-green-50 rounded-lg text-sm">
+                      {selectedContact.reply}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <Label htmlFor="reply">الرد</Label>
+                  <Textarea
+                    id="reply"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    placeholder="اكتب ردك هنا..."
+                    rows={3}
+                  />
+                </div>
+                
+                <div className="flex gap-3">
+                  <Button onClick={handleReplyToMessage} className="bg-emerald-600 hover:bg-emerald-700">
+                    إرسال الرد
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowContactDetails(false)}>
+                    إغلاق
+                  </Button>
+                </div>
               </div>
             )}
           </DialogContent>

@@ -314,3 +314,33 @@ model VerificationToken {
 
   @@unique([identifier, token])
 }
+
+model SiteSetting {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           String   @db.Text
+  type            String   @default("text")
+  group           String   @default("general")
+  label           String
+  labelAr         String?
+  description     String?
+  descriptionAr   String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model Banner {
+  id          String   @id @default(cuid())
+  title       String
+  titleAr     String
+  subtitle    String?
+  subtitleAr  String?
+  image       String
+  link        String?
+  buttonText  String?
+  buttonTextAr String?
+  active      Boolean  @default(true)
+  order       Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
