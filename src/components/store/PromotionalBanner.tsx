@@ -2,121 +2,101 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ShoppingBag, Truck, Percent, Gift, CreditCard } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ShoppingBag, Truck, Percent, Gift, CreditCard, X, ExternalLink } from 'lucide-react';
 import { useStore, t } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 
+interface Banner {
+  id: string;
+  title: string;
+  titleAr: string;
+  subtitle: string | null;
+  subtitleAr: string | null;
+  image: string;
+  link: string | null;
+  buttonText: string | null;
+  buttonTextAr: string | null;
+  active: boolean;
+  order: number;
+}
+
+// Default banners if no active banners in database
+const defaultBanners = {
+  ar: [
+    {
+      id: 'default-1',
+      title: 'عروض العودة للمدارس',
+      subtitle: 'خصم يصل إلى 30% على جميع الأدوات المدرسية',
+      gradient: 'from-blue-600 via-indigo-600 to-purple-600',
+    },
+    {
+      id: 'default-2',
+      title: 'توصيل مجاني',
+      subtitle: 'للطلبات فوق 200 جنيه مصري',
+      gradient: 'from-teal-600 via-cyan-600 to-emerald-600',
+    },
+    {
+      id: 'default-3',
+      title: 'عروض حصرية',
+      subtitle: 'خصم 15% للأعضاء الجدد',
+      gradient: 'from-rose-600 via-pink-600 to-fuchsia-600',
+    },
+  ],
+  en: [
+    {
+      id: 'default-1',
+      title: 'Back to School Offers',
+      subtitle: 'Up to 30% off on all school supplies',
+      gradient: 'from-blue-600 via-indigo-600 to-purple-600',
+    },
+    {
+      id: 'default-2',
+      title: 'Free Delivery',
+      subtitle: 'On orders over 200 EGP',
+      gradient: 'from-teal-600 via-cyan-600 to-emerald-600',
+    },
+    {
+      id: 'default-3',
+      title: 'Exclusive Offers',
+      subtitle: '15% off for new members',
+      gradient: 'from-rose-600 via-pink-600 to-fuchsia-600',
+    },
+  ]
+};
+
 export function PromotionalBanner() {
   const [currentBanner, setCurrentBanner] = useState(0);
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dismissed, setDismissed] = useState(false);
   const { language } = useStore();
   const isArabic = language === 'ar';
 
-  const banners = isArabic ? [
-    {
-      id: 1,
-      title: 'عروض العودة للمدارس',
-      subtitle: 'خصم يصل إلى 30% على جميع الأدوات المدرسية',
-      description: 'استعد للعام الدراسي الجديد مع أفضل العروض على الأقلام والدفاتر والحقائب المدرسية',
-      icon: ShoppingBag,
-      gradient: 'from-blue-600 via-indigo-600 to-purple-600',
-      accent: 'bg-yellow-400',
-      cta: 'تسوق الآن',
-    },
-    {
-      id: 2,
-      title: 'توصيل مجاني',
-      subtitle: 'للطلبات فوق 200 جنيه مصري',
-      description: 'استمتع بالتوصيل المجاني لجميع محافظات مصر عند شرائك بأكثر من 200 جنيه',
-      icon: Truck,
-      gradient: 'from-teal-600 via-cyan-600 to-emerald-600',
-      accent: 'bg-orange-400',
-      cta: 'اطلب الآن',
-    },
-    {
-      id: 3,
-      title: 'عروض حصرية',
-      subtitle: 'خصم 15% للأعضاء الجدد',
-      description: 'سجل الآن واحصل على خصم فوري 15% على أول طلب لك من متجر كمال سعد',
-      icon: Percent,
-      gradient: 'from-rose-600 via-pink-600 to-fuchsia-600',
-      accent: 'bg-cyan-400',
-      cta: 'سجل مجاناً',
-    },
-    {
-      id: 4,
-      title: 'هدايا مميزة',
-      subtitle: 'أدوات مكتبية بأفضل الأسعار',
-      description: 'اكتشف مجموعتنا الواسعة من الأدوات المكتبية عالية الجودة بأسعار لا تُقاوم',
-      icon: Gift,
-      gradient: 'from-amber-600 via-orange-600 to-red-600',
-      accent: 'bg-green-400',
-      cta: 'اكتشف المزيد',
-    },
-    {
-      id: 5,
-      title: 'التقسيط المريح',
-      subtitle: 'اقسط مشترياتك حتى 12 شهر',
-      description: 'اشترِ الآن وادفع لاحقاً مع خطط التقسيط المرنة دون فوائد',
-      icon: CreditCard,
-      gradient: 'from-violet-600 via-purple-600 to-indigo-600',
-      accent: 'bg-pink-400',
-      cta: 'اعرف المزيد',
-    },
-  ] : [
-    {
-      id: 1,
-      title: 'Back to School Offers',
-      subtitle: 'Up to 30% off on all school supplies',
-      description: 'Get ready for the new school year with the best offers on pens, notebooks, and school bags',
-      icon: ShoppingBag,
-      gradient: 'from-blue-600 via-indigo-600 to-purple-600',
-      accent: 'bg-yellow-400',
-      cta: 'Shop Now',
-    },
-    {
-      id: 2,
-      title: 'Free Delivery',
-      subtitle: 'On orders over 200 EGP',
-      description: 'Enjoy free delivery to all Egyptian governorates when you spend more than 200 EGP',
-      icon: Truck,
-      gradient: 'from-teal-600 via-cyan-600 to-emerald-600',
-      accent: 'bg-orange-400',
-      cta: 'Order Now',
-    },
-    {
-      id: 3,
-      title: 'Exclusive Offers',
-      subtitle: '15% off for new members',
-      description: 'Sign up now and get an instant 15% discount on your first order from Kamal Saad store',
-      icon: Percent,
-      gradient: 'from-rose-600 via-pink-600 to-fuchsia-600',
-      accent: 'bg-cyan-400',
-      cta: 'Sign Up Free',
-    },
-    {
-      id: 4,
-      title: 'Special Gifts',
-      subtitle: 'Office supplies at best prices',
-      description: 'Discover our wide range of high-quality office supplies at irresistible prices',
-      icon: Gift,
-      gradient: 'from-amber-600 via-orange-600 to-red-600',
-      accent: 'bg-green-400',
-      cta: 'Discover More',
-    },
-    {
-      id: 5,
-      title: 'Easy Installments',
-      subtitle: 'Pay in installments up to 12 months',
-      description: 'Buy now and pay later with flexible installment plans without interest',
-      icon: CreditCard,
-      gradient: 'from-violet-600 via-purple-600 to-indigo-600',
-      accent: 'bg-pink-400',
-      cta: 'Learn More',
-    },
-  ];
+  // Fetch banners from API
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const res = await fetch('/api/banners');
+        const data = await res.json();
+        if (data.success && data.data && data.data.length > 0) {
+          // Filter only active banners
+          const activeBanners = data.data.filter((b: Banner) => b.active);
+          if (activeBanners.length > 0) {
+            setBanners(activeBanners);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching banners:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBanners();
+  }, []);
 
   // Auto-rotate banners
   useEffect(() => {
+    if (banners.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentBanner((prev) => (prev + 1) % banners.length);
     }, 5000);
@@ -131,8 +111,30 @@ export function PromotionalBanner() {
     setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length);
   };
 
-  const currentBannerData = banners[currentBanner];
-  const IconComponent = currentBannerData.icon;
+  // Don't render if dismissed or no banners
+  if (dismissed) return null;
+  
+  // Show default banners if no custom banners
+  const hasCustomBanners = banners.length > 0;
+  const displayBanners = hasCustomBanners ? banners : defaultBanners[isArabic ? 'ar' : 'en'];
+
+  if (displayBanners.length === 0) return null;
+
+  const currentBannerData = displayBanners[currentBanner];
+  const title = hasCustomBanners 
+    ? (isArabic ? (currentBannerData as Banner).titleAr || (currentBannerData as Banner).title : (currentBannerData as Banner).title)
+    : currentBannerData.title;
+  const subtitle = hasCustomBanners
+    ? (isArabic ? (currentBannerData as Banner).subtitleAr || (currentBannerData as Banner).subtitle : (currentBannerData as Banner).subtitle)
+    : currentBannerData.subtitle;
+  const buttonText = hasCustomBanners
+    ? (isArabic ? (currentBannerData as Banner).buttonTextAr || (currentBannerData as Banner).buttonText : (currentBannerData as Banner).buttonText)
+    : (isArabic ? 'تسوق الآن' : 'Shop Now');
+  const link = hasCustomBanners ? (currentBannerData as Banner).link : null;
+  const bannerImage = hasCustomBanners ? (currentBannerData as Banner).image : null;
+  const gradient = hasCustomBanners 
+    ? 'from-teal-600 via-cyan-600 to-blue-600' 
+    : currentBannerData.gradient;
 
   return (
     <div 
@@ -146,119 +148,136 @@ export function PromotionalBanner() {
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: isArabic ? 100 : -100 }}
           transition={{ duration: 0.6, ease: 'easeInOut' }}
-          className={`relative bg-gradient-to-l ${currentBannerData.gradient} p-8 md:p-12 lg:p-16 min-h-[300px] md:min-h-[350px] flex items-center`}
+          className={`relative ${bannerImage ? '' : `bg-gradient-to-l ${gradient}`} p-6 md:p-8 lg:p-10 min-h-[200px] md:min-h-[250px] flex items-center`}
         >
-          {/* Background decorations */}
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-            <div className="absolute top-1/2 left-1/2 w-32 h-32 bg-white/5 rounded-full" />
-          </div>
+          {/* Banner Image Background */}
+          {bannerImage && (
+            <>
+              <img 
+                src={bannerImage} 
+                alt={title}
+                className="absolute inset-0 w-full h-full object-cover"
+              />
+              {/* Overlay for better text readability */}
+              <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-transparent" />
+            </>
+          )}
+          
+          {/* Background decorations (only if no custom image) */}
+          {!bannerImage && (
+            <div className="absolute inset-0 overflow-hidden">
+              <div className="absolute top-0 right-0 w-96 h-96 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+              <div className="absolute bottom-0 left-0 w-64 h-64 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
+            </div>
+          )}
 
           <div className="container mx-auto relative z-10">
-            <div className="flex flex-col md:flex-row items-center gap-8">
-              {/* Content */}
-              <div className="flex-1 text-center md:text-start">
+            <div className="flex flex-col items-center text-center">
+              {subtitle && (
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.2 }}
-                  className={`inline-flex items-center gap-2 ${currentBannerData.accent} text-gray-900 px-4 py-1.5 rounded-full text-sm font-bold mb-4`}
+                  className="inline-flex items-center gap-2 bg-yellow-400 text-gray-900 px-4 py-1.5 rounded-full text-sm font-bold mb-3"
                 >
                   <span className="animate-pulse">✨</span>
-                  {currentBannerData.subtitle}
+                  {subtitle}
                 </motion.div>
-                
-                <motion.h2
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.3 }}
-                  className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4"
-                >
-                  {currentBannerData.title}
-                </motion.h2>
-                
-                <motion.p
-                  initial={{ y: 20, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="text-white/90 text-lg md:text-xl mb-6 max-w-xl"
-                >
-                  {currentBannerData.description}
-                </motion.p>
-                
+              )}
+              
+              <motion.h2
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.3 }}
+                className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4 drop-shadow-lg"
+              >
+                {title}
+              </motion.h2>
+              
+              {buttonText && (
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.5 }}
+                  transition={{ delay: 0.4 }}
                 >
-                  <Button 
-                    size="lg" 
-                    className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                  >
-                    {currentBannerData.cta}
-                  </Button>
+                  {link ? (
+                    <a href={link} target="_blank" rel="noopener noreferrer">
+                      <Button 
+                        size="lg" 
+                        className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-6 py-5 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 gap-2"
+                      >
+                        {buttonText}
+                        <ExternalLink className="w-4 h-4" />
+                      </Button>
+                    </a>
+                  ) : (
+                    <Button 
+                      size="lg" 
+                      className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-6 py-5 text-lg rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+                    >
+                      {buttonText}
+                    </Button>
+                  )}
                 </motion.div>
-              </div>
-
-              {/* Icon */}
-              <motion.div
-                initial={{ scale: 0, rotate: -180 }}
-                animate={{ scale: 1, rotate: 0 }}
-                transition={{ delay: 0.3, type: 'spring', stiffness: 200 }}
-                className="hidden md:flex flex-shrink-0"
-              >
-                <div className="relative">
-                  <div className="absolute inset-0 bg-white/20 rounded-3xl blur-2xl scale-150" />
-                  <div className="relative bg-white/20 backdrop-blur-sm rounded-3xl p-8 border border-white/30">
-                    <IconComponent className="w-24 h-24 md:w-32 md:h-32 text-white" strokeWidth={1.5} />
-                  </div>
-                </div>
-              </motion.div>
+              )}
             </div>
           </div>
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation Arrows */}
-      <button
-        onClick={prevBanner}
-        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 hover:scale-110 z-20"
-      >
-        <ChevronLeft className="w-6 h-6" />
-      </button>
-      <button
-        onClick={nextBanner}
-        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 hover:scale-110 z-20"
-      >
-        <ChevronRight className="w-6 h-6" />
-      </button>
-
-      {/* Dots Navigation */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
-        {banners.map((_, index) => (
+      {/* Navigation Arrows - only show if multiple banners */}
+      {displayBanners.length > 1 && (
+        <>
           <button
-            key={index}
-            onClick={() => setCurrentBanner(index)}
-            className={`transition-all duration-300 rounded-full ${
-              index === currentBanner 
-                ? 'w-8 h-3 bg-white' 
-                : 'w-3 h-3 bg-white/50 hover:bg-white/70'
-            }`}
-          />
-        ))}
-      </div>
+            onClick={prevBanner}
+            className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 hover:scale-110 z-20"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </button>
+          <button
+            onClick={nextBanner}
+            className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-3 rounded-full transition-all duration-300 hover:scale-110 z-20"
+          >
+            <ChevronRight className="w-6 h-6" />
+          </button>
 
-      {/* Progress Bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20 z-20">
-        <motion.div
-          key={currentBanner}
-          initial={{ width: '0%' }}
-          animate={{ width: '100%' }}
-          transition={{ duration: 5, ease: 'linear' }}
-          className="h-full bg-white/80"
-        />
-      </div>
+          {/* Dots Navigation */}
+          <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+            {displayBanners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentBanner(index)}
+                className={`transition-all duration-300 rounded-full ${
+                  index === currentBanner 
+                    ? 'w-8 h-3 bg-white' 
+                    : 'w-3 h-3 bg-white/50 hover:bg-white/70'
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+
+      {/* Close Button */}
+      <button
+        onClick={() => setDismissed(true)}
+        className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2 rounded-full transition-all duration-300 hover:scale-110 z-30"
+      >
+        <X className="w-4 h-4" />
+      </button>
+
+      {/* Progress Bar - only show if multiple banners */}
+      {displayBanners.length > 1 && (
+        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20 z-20">
+          <motion.div
+            key={currentBanner}
+            initial={{ width: '0%' }}
+            animate={{ width: '100%' }}
+            transition={{ duration: 5, ease: 'linear' }}
+            className="h-full bg-white/80"
+          />
+        </div>
+      )}
     </div>
   );
 }

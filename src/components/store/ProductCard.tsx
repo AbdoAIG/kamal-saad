@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Star, ShoppingCart, Heart, Zap } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Zap, Package } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Product, useStore, t } from '@/store/useStore';
@@ -18,12 +18,24 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const router = useRouter();
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const { language, isFavorite, toggleFavorite } = useStore();
 
   const isArabic = language === 'ar';
   const isProductFavorite = isFavorite(product.id);
-  const images = JSON.parse(product.images || '[]');
-  const mainImage = images[0] || 'https://via.placeholder.com/300';
+  
+  // Parse images safely with error handling
+  let images: string[] = [];
+  try {
+    images = typeof product.images === 'string' 
+      ? JSON.parse(product.images || '[]') 
+      : (Array.isArray(product.images) ? product.images : []);
+  } catch (e) {
+    console.error('Error parsing product images:', e);
+    images = [];
+  }
+  
+  const mainImage = images[0] || '/placeholder-product.png';
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
   const discountPercent = hasDiscount
     ? Math.round(((product.price - (product.discountPrice || 0)) / product.price) * 100)
@@ -65,17 +77,27 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         <Card className="group relative overflow-hidden border-0 shadow-lg hover:shadow-2xl transition-all duration-500 bg-white dark:bg-gray-800 rounded-2xl cursor-pointer">
           {/* Image Container */}
           <div className="relative aspect-square overflow-hidden bg-gray-100 dark:bg-gray-700">
-            {!imageLoaded && (
+            {!imageLoaded && !imageError && (
               <div className="absolute inset-0 bg-gray-200 dark:bg-gray-600 animate-pulse" />
             )}
             
-            <motion.img
-              src={mainImage}
-              alt={productName}
-              className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
-              onLoad={() => setImageLoaded(true)}
-              style={{ opacity: imageLoaded ? 1 : 0 }}
-            />
+            {!imageError ? (
+              <motion.img
+                src={mainImage}
+                alt={productName}
+                className="object-cover w-full h-full transition-transform duration-700 group-hover:scale-110"
+                onLoad={() => setImageLoaded(true)}
+                onError={() => {
+                  setImageError(true);
+                  setImageLoaded(true);
+                }}
+                style={{ opacity: imageLoaded ? 1 : 0 }}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-700">
+                <Package className="h-16 w-16 text-gray-300 dark:text-gray-500" />
+              </div>
+            )}
 
             <div className="absolute inset-0 bg-gradient-to-t from-black/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
