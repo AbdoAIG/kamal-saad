@@ -4,6 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import { SessionSync } from "@/components/auth/SessionSync";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 const notoSansArabic = Noto_Sans_Arabic({
   variable: "--font-arabic",
@@ -49,10 +50,12 @@ export default function RootLayout({
         className={`${notoSansArabic.variable} ${inter.variable} font-sans antialiased bg-background text-foreground`}
         style={{ fontFamily: 'var(--font-arabic), var(--font-english), system-ui, sans-serif' }}
       >
-        <AuthProvider>
-          <SessionSync />
-          {children}
-        </AuthProvider>
+        <ErrorBoundary>
+          <AuthProvider>
+            <SessionSync />
+            {children}
+          </AuthProvider>
+        </ErrorBoundary>
         <Toaster />
       </body>
     </html>
