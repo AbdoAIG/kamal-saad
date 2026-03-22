@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession, signIn, signOut } from 'next-auth/react';
+import { useStore } from '@/store/useStore';
 import {
   Loader2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard,
   ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone,
@@ -120,10 +120,9 @@ const menuItems = [
 ];
 
 export default function AdminPage() {
-  const { data: session, status } = useSession();
+  const { user, setUser, setUserId, logout } = useStore();
   const router = useRouter();
 
-  const [isAdmin, setIsAdmin] = useState(false);
   const [loginForm, setLoginForm] = useState({ email: '', password: '' });
   const [loginError, setLoginError] = useState('');
   const [loggingIn, setLoggingIn] = useState(false);
@@ -152,20 +151,15 @@ export default function AdminPage() {
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
   // Check if user is admin
+  const isAdmin = user?.role === 'admin';
+
+  // Fetch data when admin is logged in
   useEffect(() => {
-    if (status === 'authenticated' && session?.user) {
-      const userRole = (session.user as { role?: string }).role;
-      if (userRole === 'admin') {
-        setIsAdmin(true);
-        fetchData();
-        fetchOrders();
-      } else {
-        setIsAdmin(false);
-      }
-    } else if (status === 'unauthenticated') {
-      setIsAdmin(false);
+    if (isAdmin) {
+      fetchData();
+      fetchOrders();
     }
-  }, [session, status]);
+  }, [isAdmin]);
 
   const fetchData = async () => {
     try {
@@ -248,16 +242,22 @@ export default function AdminPage() {
     setLoginError('');
     setLoggingIn(true);
     try {
-      const result = await signIn('credentials', {
-        email: loginForm.email,
-        password: loginForm.password,
-        redirect: false,
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(loginForm)
       });
 
-      if (result?.error) {
-        setLoginError('بيانات الدخول غير صحيحة');
+      const data = await res.json();
+
+      if (!res.ok) {
+        setLoginError(data.error || 'بيانات الدخول غير صحيحة');
+      } else {
+        // Set user in store
+        setUser(data.user);
+        setUserId(data.user.id);
+        setLoginForm({ email: '', password: '' });
       }
-      // The useEffect will handle the rest when session updates
     } catch (error) {
       setLoginError('حدث خطأ في الاتصال');
     } finally {
@@ -266,8 +266,12 @@ export default function AdminPage() {
   };
 
   const handleLogout = async () => {
-    await signOut({ redirect: false });
-    setIsAdmin(false);
+    try {
+      await fetch('/api/auth/login', { method: 'DELETE' });
+    } catch (e) {
+      // ignore
+    }
+    logout();
     router.push('/');
   };
 
@@ -345,6 +349,15 @@ export default function AdminPage() {
     setCurrentPage('products');
   };
 
+  // Add loading state check
+  const [isLoadingUser, setIsLoadingUser] = useState(true);
+
+  useEffect(() => {
+    // Short timeout to let store hydrate from localStorage
+    const timer = setTimeout(() => setIsLoadingUser(false), 100);
+    return () => clearTimeout(timer);
+  }, []);
+
   // Stats
   const totalProducts = products.length;
   const totalStock = products.reduce((sum, p) => sum + p.stock, 0);
@@ -359,7 +372,7 @@ export default function AdminPage() {
     p.nameAr.includes(productSearch)
   );
 
-  if (status === 'loading') {
+  if (isLoadingUser) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-100">
         <Loader2 className="h-10 w-10 animate-spin text-emerald-600" />
@@ -495,8 +508,8 @@ export default function AdminPage() {
             </div>
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
-                <p className="font-medium truncate">{session?.user?.name || 'Admin'}</p>
-                <p className="text-xs text-gray-400 truncate">{session?.user?.email}</p>
+                <p className="font-medium truncate">{user?.name || 'Admin'}</p>
+                <p className="text-xs text-gray-400 truncate">{user?.email}</p>
               </div>
             )}
           </div>
@@ -528,7 +541,7 @@ export default function AdminPage() {
                 {menuItems.find(m => m.id === currentPage)?.label || 'لوحة التحكم'}
               </h2>
               <p className="text-sm text-gray-500">
-                أهلاً بك، {session?.user?.name || 'مدير'} | {new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+                أهلاً بك، {user?.name || 'مدير'} | {new Date().toLocaleDateString('ar-EG', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
               </p>
             </div>
             <div className="flex items-center gap-3">
