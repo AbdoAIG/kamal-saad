@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { signIn } from 'next-auth/react';
 import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -82,31 +81,24 @@ export function AuthModal() {
     }
   };
 
-  const handleGoogleLogin = async () => {
+  const handleGoogleLogin = () => {
     setSocialLoading('google');
     console.log('[AuthModal] Initiating Google OAuth login');
     
-    try {
-      // Store current URL to return to after login
-      const callbackUrl = window.location.pathname + window.location.search;
-      
-      // Use redirect for OAuth providers
-      const result = await signIn('google', { 
-        callbackUrl: callbackUrl !== '/' ? callbackUrl : '/',
-        redirect: true 
-      });
-      
-      // This code won't run because redirect: true causes full page redirect
-      console.log('[AuthModal] signIn result:', result);
-    } catch (error) {
-      console.error('[AuthModal] Google login error:', error);
-      setSocialLoading(null);
-    }
+    // Store current URL to return to after login
+    const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    
+    // Use our custom Google signin endpoint
+    const signinUrl = `/api/auth/google-signin?callbackUrl=${callbackUrl}`;
+    console.log('[AuthModal] Redirecting to:', signinUrl);
+    
+    // Direct page navigation
+    window.location.href = signinUrl;
   };
 
   const handleFacebookLogin = () => {
-    setSocialLoading('facebook');
-    signIn('facebook', { callbackUrl: '/' });
+    // Facebook login not configured yet
+    console.log('[AuthModal] Facebook login not configured');
   };
 
   return (
