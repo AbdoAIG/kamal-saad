@@ -1618,6 +1618,52 @@ function CustomersManagement() {
 
 // Reports Page Component
 function ReportsPage({ orders, products }: { orders: Order[], products: Product[] }) {
+  const [reportData, setReportData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [reportType, setReportType] = useState('overview');
+  const [dateRange, setDateRange] = useState({
+    startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+    endDate: new Date().toISOString().split('T')[0]
+  });
+  const [exporting, setExporting] = useState(false);
+
+  useEffect(() => {
+    fetchReport();
+  }, [reportType, dateRange.startDate, dateRange.endDate]);
+
+  const fetchReport = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/reports?type=${reportType}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      const data = await res.json();
+      setReportData(data.data);
+    } catch (error) {
+      console.error('Error fetching report:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleExport = async (type: string) => {
+    setExporting(true);
+    try {
+      const res = await fetch(`/api/reports/export?type=${type}&startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`);
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${type}_report_${new Date().toISOString().split('T')[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+    } catch (error) {
+      console.error('Error exporting report:', error);
+    } finally {
+      setExporting(false);
+    }
+  };
+
   const deliveredOrders = orders.filter(o => o.status === 'delivered');
   const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
@@ -1625,89 +1671,301 @@ function ReportsPage({ orders, products }: { orders: Order[], products: Product[
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-800">التقارير والإحصائيات</h2>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
-          <CardContent className="p-6">
-            <p className="text-emerald-100 text-sm">إجمالي الإيرادات</p>
-            <p className="text-3xl font-bold mt-1">{totalRevenue.toLocaleString()} ج.م</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
-          <CardContent className="p-6">
-            <p className="text-blue-100 text-sm">إجمالي الطلبات</p>
-            <p className="text-3xl font-bold mt-1">{orders.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white">
-          <CardContent className="p-6">
-            <p className="text-amber-100 text-sm">طلبات قيد الانتظار</p>
-            <p className="text-3xl font-bold mt-1">{pendingOrders}</p>
-          </CardContent>
-        </Card>
-        <Card className="bg-gradient-to-br from-red-500 to-rose-600 text-white">
-          <CardContent className="p-6">
-            <p className="text-red-100 text-sm">طلبات ملغية</p>
-            <p className="text-3xl font-bold mt-1">{cancelledOrders}</p>
-          </CardContent>
-        </Card>
+      {/* Header with filters */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <h2 className="text-xl font-bold text-gray-800">التقارير والإحصائيات</h2>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Date Range */}
+          <div className="flex items-center gap-2">
+            <Input
+              type="date"
+              value={dateRange.startDate}
+              onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+              className="w-40"
+            />
+            <span className="text-gray-500">إلى</span>
+            <Input
+              type="date"
+              value={dateRange.endDate}
+              onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+              className="w-40"
+            />
+          </div>
+          
+          {/* Export buttons */}
+          <div className="flex gap-2">
+            <Button 
+              onClick={() => handleExport('sales')}
+              disabled={exporting}
+              variant="outline"
+              className="gap-2"
+            >
+              <FileText className="h-4 w-4" />
+              تصدير المبيعات
+            </Button>
+            <Button 
+              onClick={() => handleExport('products')}
+              disabled={exporting}
+              variant="outline"
+              className="gap-2"
+            >
+              <Package className="h-4 w-4" />
+              تصدير المنتجات
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 gap-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Package className="h-5 w-5 text-emerald-600" />
-              أكثر المنتجات طلباً
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {products.slice(0, 5).map((product, index) => (
-                <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">
-                      {index + 1}
-                    </span>
-                    <span>{product.nameAr}</span>
-                  </div>
-                  <Badge variant="outline">{product.stock} متاح</Badge>
+      {/* Report Type Tabs */}
+      <div className="flex gap-2 border-b pb-2">
+        {[
+          { id: 'overview', label: 'نظرة عامة' },
+          { id: 'sales', label: 'المبيعات' },
+          { id: 'products', label: 'المنتجات' },
+          { id: 'customers', label: 'العملاء' },
+          { id: 'financial', label: 'المالية' },
+        ].map(tab => (
+          <Button
+            key={tab.id}
+            variant={reportType === tab.id ? 'default' : 'ghost'}
+            onClick={() => setReportType(tab.id)}
+            className={reportType === tab.id ? 'bg-emerald-600 hover:bg-emerald-700' : ''}
+          >
+            {tab.label}
+          </Button>
+        ))}
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        </div>
+      ) : (
+        <>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+              <CardContent className="p-6">
+                <p className="text-emerald-100 text-sm">إجمالي الإيرادات</p>
+                <p className="text-3xl font-bold mt-1">
+                  {(reportData?.summary?.totalRevenue || totalRevenue).toLocaleString()} ج.م
+                </p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+              <CardContent className="p-6">
+                <p className="text-blue-100 text-sm">إجمالي الطلبات</p>
+                <p className="text-3xl font-bold mt-1">{reportData?.summary?.totalOrders || orders.length}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+              <CardContent className="p-6">
+                <p className="text-amber-100 text-sm">طلبات قيد الانتظار</p>
+                <p className="text-3xl font-bold mt-1">{reportData?.summary?.pendingOrders || pendingOrders}</p>
+              </CardContent>
+            </Card>
+            <Card className="bg-gradient-to-br from-red-500 to-rose-600 text-white">
+              <CardContent className="p-6">
+                <p className="text-red-100 text-sm">طلبات ملغية</p>
+                <p className="text-3xl font-bold mt-1">{reportData?.summary?.cancelledOrders || cancelledOrders}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Status Distribution */}
+          {reportData?.statusDistribution && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>توزيع حالات الطلبات</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
+                  {Object.entries(reportData.statusDistribution).map(([status, count]) => (
+                    <div key={status} className="text-center p-4 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-gray-800">{count as number}</p>
+                      <p className="text-sm text-gray-500 capitalize">{status}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
+              </CardContent>
+            </Card>
+          )}
 
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="h-5 w-5 text-emerald-600" />
-              ملخص الأداء
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span>معدل التحويل</span>
-                <span className="font-bold text-emerald-600">
-                  {orders.length > 0 ? ((deliveredOrders.length / orders.length) * 100).toFixed(1) : 0}%
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>متوسط قيمة الطلب</span>
-                <span className="font-bold text-emerald-600">
-                  {orders.length > 0 ? Math.round(totalRevenue / orders.length).toLocaleString() : 0} ج.م
-                </span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span>المنتجات المتاحة</span>
-                <span className="font-bold">{products.length}</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+          {/* Daily Sales Chart */}
+          {reportData?.dailySales && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>المبيعات اليومية</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="overflow-x-auto">
+                  <div className="min-w-[600px] h-64 flex items-end gap-1">
+                    {reportData.dailySales.slice(-14).map((day: any, index: number) => (
+                      <div key={index} className="flex-1 flex flex-col items-center">
+                        <div
+                          className="w-full bg-gradient-to-t from-emerald-500 to-teal-400 rounded-t-lg transition-all hover:from-emerald-600 hover:to-teal-500"
+                          style={{ height: `${Math.max(10, (day.revenue / Math.max(...reportData.dailySales.map((d: any) => d.revenue))) * 200)}px` }}
+                          title={`${day.date}: ${day.revenue.toLocaleString()} ج.م`}
+                        />
+                        <p className="text-xs text-gray-500 mt-1">{new Date(day.date).getDate()}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Top Products */}
+          {reportData?.topSelling && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-emerald-600" />
+                  أكثر المنتجات مبيعاً
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {reportData.topSelling.map((product: any, index: number) => (
+                    <div key={product.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </span>
+                        <span>{product.nameAr}</span>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <span className="text-emerald-600 font-bold">{(product.revenue || 0).toLocaleString()} ج.م</span>
+                        <Badge variant="outline">{product.soldQuantity || product.stock} مباع</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Payment Distribution */}
+          {reportData?.paymentDistribution && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle>طرق الدفع</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {Object.entries(reportData.paymentDistribution).map(([method, count]) => (
+                    <div key={method} className="text-center p-4 bg-gray-50 rounded-xl">
+                      <p className="text-2xl font-bold text-gray-800">{count as number}</p>
+                      <p className="text-sm text-gray-500 capitalize">{method}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Top Customers */}
+          {reportData?.topCustomers && (
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-emerald-600" />
+                  أفضل العملاء
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {reportData.topCustomers.slice(0, 5).map((customer: any, index: number) => (
+                    <div key={customer.id || index} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </span>
+                        <div>
+                          <span className="font-medium">{customer.name || 'بدون اسم'}</span>
+                          <p className="text-xs text-gray-500">{customer.email}</p>
+                        </div>
+                      </div>
+                      <div className="text-left">
+                        <span className="text-emerald-600 font-bold">{customer.totalSpent.toLocaleString()} ج.م</span>
+                        <p className="text-xs text-gray-500">{customer.ordersCount} طلب</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Performance Summary */}
+          <div className="grid md:grid-cols-2 gap-6">
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-emerald-600" />
+                  ملخص الأداء
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span>معدل التحويل</span>
+                    <span className="font-bold text-emerald-600">
+                      {reportData?.summary?.conversionRate || (orders.length > 0 ? ((deliveredOrders.length / orders.length) * 100).toFixed(1) : 0)}%
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>متوسط قيمة الطلب</span>
+                    <span className="font-bold text-emerald-600">
+                      {(reportData?.summary?.averageOrderValue || (orders.length > 0 ? Math.round(totalRevenue / orders.length) : 0)).toLocaleString()} ج.م
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>المنتجات المتاحة</span>
+                    <span className="font-bold">{products.length}</span>
+                  </div>
+                  {reportData?.growth && (
+                    <>
+                      <div className="flex justify-between items-center">
+                        <span>نمو الإيرادات</span>
+                        <span className={`font-bold ${parseFloat(reportData.growth.revenue) >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          {parseFloat(reportData.growth.revenue) >= 0 ? '+' : ''}{reportData.growth.revenue}%
+                        </span>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="shadow-lg">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="h-5 w-5 text-emerald-600" />
+                  أكثر المنتجات طلباً
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {products.slice(0, 5).map((product, index) => (
+                    <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">
+                          {index + 1}
+                        </span>
+                        <span>{product.nameAr}</span>
+                      </div>
+                      <Badge variant="outline">{product.stock} متاح</Badge>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </>
+      )}
     </div>
   );
 }
