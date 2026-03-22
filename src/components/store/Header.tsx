@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { 
-  ShoppingCart, Search, User, Menu, X, Heart, Bell, 
-  Sun, Moon, Languages, Phone, Flame, Package, Settings, LogOut, MapPin, MessageCircle, ChevronDown
+  ShoppingCart, Search, User, Menu, X, Heart, 
+  Sun, Moon, Languages, Flame, Package, Settings, LogOut, MapPin, MessageCircle
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -20,7 +20,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { NotificationDropdown } from './NotificationDropdown';
 
 interface HeaderProps {
   onMenuClick?: () => void;
@@ -80,41 +79,6 @@ export function Header({ onMenuClick }: HeaderProps) {
       className="sticky top-0 z-50"
       dir={isArabic ? 'rtl' : 'ltr'}
     >
-      {/* Top Bar - Dark Blue */}
-      <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-9 text-sm">
-            {/* Contact Info */}
-            <div className="flex items-center gap-4">
-              <a 
-                href="tel:01234567890" 
-                className="flex items-center gap-2 hover:text-blue-200 transition-colors"
-              >
-                <Phone className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">01234567890</span>
-              </a>
-              <span className="hidden md:inline text-blue-300">|</span>
-              <span className="hidden md:flex items-center gap-1 text-blue-200">
-                <MessageCircle className="h-3.5 w-3.5" />
-                {isArabic ? 'تواصل معنا الآن' : 'Contact Us Now'}
-              </span>
-            </div>
-
-            {/* Language Selector */}
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleLanguage}
-                className="flex items-center gap-1.5 hover:text-blue-200 transition-colors"
-              >
-                <Languages className="h-4 w-4" />
-                <span>{isArabic ? 'English' : 'العربية'}</span>
-                <ChevronDown className="h-3 w-3" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Main Header - White Section */}
       <div className="bg-white dark:bg-gray-900 shadow-sm">
         <div className="container mx-auto px-4">
@@ -168,6 +132,17 @@ export function Header({ onMenuClick }: HeaderProps) {
 
             {/* Actions */}
             <div className="flex items-center gap-1">
+              {/* Language Toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={toggleLanguage}
+                className="h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                title={isArabic ? 'English' : 'العربية'}
+              >
+                <Languages className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+              </Button>
+
               {/* Theme Toggle */}
               <Button
                 variant="ghost"

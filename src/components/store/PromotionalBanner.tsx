@@ -18,6 +18,7 @@ interface Banner {
   buttonTextAr: string | null;
   active: boolean;
   order: number;
+  position?: number;
 }
 
 // Default hero banners - Updated with new text
@@ -78,25 +79,34 @@ const defaultHeroBanners = {
 
 interface HeroBannerProps {
   isHero?: boolean;
+  position?: 1 | 2; // Position 1 = Hero section, Position 2 = Middle of page
 }
 
-export function PromotionalBanner({ isHero = false }: HeroBannerProps) {
+export function PromotionalBanner({ isHero = false, position = 1 }: HeroBannerProps) {
   const [currentBanner, setCurrentBanner] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
   const { language } = useStore();
   const isArabic = language === 'ar';
 
-  // Fetch banners from API
+  // Fetch banners from API filtered by position
   useEffect(() => {
     const fetchBanners = async () => {
       try {
         const res = await fetch('/api/banners');
         const data = await res.json();
         if (data.success && data.data && data.data.length > 0) {
-          const activeBanners = data.data.filter((b: Banner) => b.active);
-          if (activeBanners.length > 0) {
-            setBanners(activeBanners);
+          // Filter banners by position (order field: 1 = hero, 2 = middle)
+          const positionBanners = data.data.filter((b: Banner) => {
+            // Banner order 1-3 = position 1 (hero), order 4-6 = position 2 (middle)
+            if (position === 1) {
+              return b.active && b.order >= 1 && b.order <= 3;
+            } else {
+              return b.active && b.order >= 4 && b.order <= 6;
+            }
+          });
+          if (positionBanners.length > 0) {
+            setBanners(positionBanners);
           }
         }
       } catch (error) {
@@ -106,7 +116,7 @@ export function PromotionalBanner({ isHero = false }: HeroBannerProps) {
       }
     };
     fetchBanners();
-  }, []);
+  }, [position]);
 
   // Auto-rotate banners every 5 seconds
   useEffect(() => {

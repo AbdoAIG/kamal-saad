@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { X, Plus, Edit, Trash2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard, ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone, MapPin, Mail, User, ChevronDown, ChevronUp, AlertTriangle, Image, ToggleLeft, ToggleRight, Settings, Tag, MessageSquare, Percent, Save, RefreshCw, CreditCard, ImagePlus } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { X, Plus, Edit, Trash2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard, ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone, MapPin, Mail, User, ChevronDown, ChevronUp, AlertTriangle, Image, ToggleLeft, ToggleRight, Settings, Tag, MessageSquare, Percent, Save, RefreshCw, CreditCard, ImagePlus, Instagram, Facebook, Twitter, Globe, Store } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -90,6 +90,29 @@ interface ContactMessage {
   createdAt: string;
 }
 
+interface Customer {
+  id: string;
+  name: string | null;
+  email: string;
+  phone: string | null;
+  createdAt: string;
+  ordersCount: number;
+  totalSpent: number;
+}
+
+interface StoreSettings {
+  storeNameEn: string;
+  storeNameAr: string;
+  phone: string;
+  email: string;
+  address: string;
+  addressAr: string;
+  facebook: string;
+  instagram: string;
+  twitter: string;
+  whatsapp: string;
+}
+
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: any }> = {
   pending: { label: 'قيد الانتظار', color: 'text-yellow-700', bgColor: 'bg-yellow-100', icon: Clock },
   confirmed: { label: 'مؤكد', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: CheckCircle },
@@ -99,7 +122,7 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   cancelled: { label: 'ملغي', color: 'text-red-700', bgColor: 'bg-red-100', icon: XCircle },
 };
 
-export function AdminPanel({ open, onClose, products, categories, onRefresh }: AdminPanelProps) {
+export function AdminPanel({ open, onClose, products: propsProducts, categories, onRefresh }: AdminPanelProps) {
   const { user, logout } = useStore();
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
@@ -115,6 +138,10 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
     featured: false,
     images: ''
   });
+
+  // Internal products state - fetched independently
+  const [products, setProducts] = useState<Product[]>([]);
+  const [productsLoading, setProductsLoading] = useState(false);
 
   // Orders state
   const [orders, setOrders] = useState<Order[]>([]);
@@ -153,6 +180,44 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
   // Search for products
   const [productSearch, setProductSearch] = useState('');
   const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+
+  // Settings state
+  const [settings, setSettings] = useState<StoreSettings>({
+    storeNameEn: '',
+    storeNameAr: '',
+    phone: '',
+    email: '',
+    address: '',
+    addressAr: '',
+    facebook: '',
+    instagram: '',
+    twitter: '',
+    whatsapp: ''
+  });
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSaved, setSettingsSaved] = useState(false);
+
+  // Customers state
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customerSearch, setCustomerSearch] = useState('');
+
+  // Fetch all products with high limit
+  const fetchProducts = useCallback(async () => {
+    setProductsLoading(true);
+    try {
+      const res = await fetch('/api/products?limit=1000');
+      const data = await res.json();
+      // API returns { products, pagination } format
+      if (data.products) {
+        setProducts(data.products);
+      }
+    } catch (error) {
+      console.error('Error fetching products:', error);
+    } finally {
+      setProductsLoading(false);
+    }
+  }, []);
 
   // Fetch orders
   const fetchOrders = async () => {
@@ -204,19 +269,73 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
     }
   };
 
+  // Fetch settings
+  const fetchSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      if (data.success && data.settings) {
+        setSettings({
+          storeNameEn: data.settings.storeNameEn || '',
+          storeNameAr: data.settings.storeNameAr || '',
+          phone: data.settings.storePhone || '',
+          email: data.settings.storeEmail || '',
+          address: data.settings.storeAddress || '',
+          addressAr: data.settings.storeAddressAr || '',
+          facebook: data.settings.facebook || '',
+          instagram: data.settings.instagram || '',
+          twitter: data.settings.twitter || '',
+          whatsapp: data.settings.whatsapp || ''
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  // Fetch customers
+  const fetchCustomers = async () => {
+    setCustomersLoading(true);
+    try {
+      const res = await fetch('/api/admin/customers');
+      const data = await res.json();
+      if (data.success) {
+        setCustomers(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setCustomersLoading(false);
+    }
+  };
+
+  // Fetch all data when panel opens
   useEffect(() => {
     if (open) {
+      fetchProducts();
       fetchOrders();
       fetchBanners();
       fetchContacts();
+      fetchSettings();
+      fetchCustomers();
     }
-  }, [open, orderFilter]);
+  }, [open, fetchProducts]);
+
+  useEffect(() => {
+    if (open && orderFilter) {
+      fetchOrders();
+    }
+  }, [orderFilter]);
 
   // Filter products based on search
   useEffect(() => {
     if (productSearch) {
+      const searchLower = productSearch.toLowerCase();
       const filtered = products.filter(p => 
-        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+        p.name.toLowerCase().includes(searchLower) ||
         p.nameAr.includes(productSearch)
       );
       setFilteredProducts(filtered);
@@ -347,6 +466,40 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
     }
   };
 
+  // Settings handlers
+  const handleSaveSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const settingsArray = [
+        { key: 'storeNameEn', value: settings.storeNameEn, group: 'store', label: 'Store Name (English)', labelAr: 'اسم المتجر بالإنجليزية' },
+        { key: 'storeNameAr', value: settings.storeNameAr, group: 'store', label: 'Store Name (Arabic)', labelAr: 'اسم المتجر بالعربية' },
+        { key: 'storePhone', value: settings.phone, group: 'contact', label: 'Phone Number', labelAr: 'رقم الهاتف' },
+        { key: 'storeEmail', value: settings.email, group: 'contact', label: 'Email', labelAr: 'البريد الإلكتروني' },
+        { key: 'storeAddress', value: settings.address, group: 'contact', label: 'Address (English)', labelAr: 'العنوان بالإنجليزية' },
+        { key: 'storeAddressAr', value: settings.addressAr, group: 'contact', label: 'Address (Arabic)', labelAr: 'العنوان بالعربية' },
+        { key: 'facebook', value: settings.facebook, group: 'social', label: 'Facebook', labelAr: 'فيسبوك' },
+        { key: 'instagram', value: settings.instagram, group: 'social', label: 'Instagram', labelAr: 'انستجرام' },
+        { key: 'twitter', value: settings.twitter, group: 'social', label: 'Twitter', labelAr: 'تويتر' },
+        { key: 'whatsapp', value: settings.whatsapp, group: 'social', label: 'WhatsApp', labelAr: 'واتساب' },
+      ];
+
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ settings: settingsArray })
+      });
+
+      if (res.ok) {
+        setSettingsSaved(true);
+        setTimeout(() => setSettingsSaved(false), 3000);
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       name: '',
@@ -395,6 +548,7 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
         });
       }
       resetForm();
+      fetchProducts();
       onRefresh();
     } catch (error) {
       console.error('Error saving product:', error);
@@ -406,6 +560,7 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
 
     try {
       await fetch(`/api/products/${productId}`, { method: 'DELETE' });
+      fetchProducts();
       onRefresh();
     } catch (error) {
       console.error('Error deleting product:', error);
@@ -445,6 +600,19 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
   const pendingOrders = orders.filter(o => o.status === 'pending').length;
   const totalOrdersValue = orders.reduce((sum, o) => sum + o.total, 0);
 
+  // Customer stats
+  const totalCustomers = customers.length;
+  const totalCustomersSpent = customers.reduce((sum, c) => sum + c.totalSpent, 0);
+
+  // Filter customers based on search
+  const filteredCustomers = customerSearch 
+    ? customers.filter(c => 
+        (c.name?.toLowerCase().includes(customerSearch.toLowerCase())) ||
+        c.email.toLowerCase().includes(customerSearch.toLowerCase()) ||
+        (c.phone?.includes(customerSearch))
+      )
+    : customers;
+
   if (!user || user.role !== 'admin') {
     return null;
   }
@@ -466,7 +634,7 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
         </DialogHeader>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-8">
             <TabsTrigger value="dashboard">نظرة عامة</TabsTrigger>
             <TabsTrigger value="orders" className="gap-2">
               الطلبات
@@ -475,8 +643,10 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
               )}
             </TabsTrigger>
             <TabsTrigger value="products">المنتجات</TabsTrigger>
+            <TabsTrigger value="customers">العملاء</TabsTrigger>
             <TabsTrigger value="banners">البنرات</TabsTrigger>
             <TabsTrigger value="contact">الرسائل</TabsTrigger>
+            <TabsTrigger value="settings">الإعدادات</TabsTrigger>
             <TabsTrigger value="add">إضافة منتج</TabsTrigger>
           </TabsList>
 
@@ -519,12 +689,12 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
               </Card>
               <Card>
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm font-medium text-gray-600">المخزون</CardTitle>
+                  <CardTitle className="text-sm font-medium text-gray-600">العملاء</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="flex items-center gap-2">
-                    <Package className="h-8 w-8 text-purple-600" />
-                    <span className="text-3xl font-bold">{totalStock}</span>
+                    <Users className="h-8 w-8 text-purple-600" />
+                    <span className="text-3xl font-bold">{totalCustomers}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -706,7 +876,7 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
           {/* Products List */}
           <TabsContent value="products" className="space-y-4">
             <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">قائمة المنتجات</h3>
+              <h3 className="text-lg font-semibold">قائمة المنتجات ({products.length})</h3>
               <div className="flex gap-2 items-center">
                 <Input
                   placeholder="بحث عن منتج..."
@@ -720,71 +890,176 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
                 </Button>
               </div>
             </div>
-            <div className="border rounded-lg overflow-hidden">
-              <div className="overflow-x-auto">
-                <table className="w-full">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">المنتج</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">السعر</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">المخزون</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">الحالة</th>
-                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">إجراءات</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y">
-                    {filteredProducts.map((product) => {
-                      const images = JSON.parse(product.images || '[]');
-                      return (
-                        <tr key={product.id} className="hover:bg-gray-50">
+            
+            {productsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">المنتج</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">السعر</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">المخزون</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">الحالة</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">إجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filteredProducts.map((product) => {
+                        const images = JSON.parse(product.images || '[]');
+                        return (
+                          <tr key={product.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <img
+                                  src={images[0] || 'https://via.placeholder.com/50'}
+                                  alt={product.nameAr}
+                                  className="w-10 h-10 object-cover rounded"
+                                />
+                                <div>
+                                  <p className="font-medium">{product.nameAr}</p>
+                                  <p className="text-xs text-gray-500">{product.category?.nameAr}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div>
+                                <span className="font-medium">{product.discountPrice || product.price} ج.م</span>
+                                {product.discountPrice && (
+                                  <span className="text-xs text-gray-400 line-through block">{product.price} ج.م</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={product.stock < 10 ? 'text-red-600 font-medium' : ''}>
+                                {product.stock}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-1">
+                                {product.featured && <Badge className="bg-amber-500">مميز</Badge>}
+                                {product.discountPrice && <Badge className="bg-red-500">خصم</Badge>}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3">
+                              <div className="flex gap-2">
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
+                                  <Edit className="h-4 w-4 text-blue-600" />
+                                </Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
+                                  <Trash2 className="h-4 w-4 text-red-600" />
+                                </Button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Customers Tab */}
+          <TabsContent value="customers" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">العملاء ({customers.length})</h3>
+              <div className="flex gap-2 items-center">
+                <Input
+                  placeholder="بحث عن عميل..."
+                  value={customerSearch}
+                  onChange={(e) => setCustomerSearch(e.target.value)}
+                  className="w-64"
+                />
+              </div>
+            </div>
+
+            {customersLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+              </div>
+            ) : customers.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>لا يوجد عملاء مسجلين</p>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 sticky top-0">
+                      <tr>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">العميل</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">الهاتف</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">تاريخ التسجيل</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">عدد الطلبات</th>
+                        <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">إجمالي المشتريات</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {filteredCustomers.map((customer) => (
+                        <tr key={customer.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-3">
-                              <img
-                                src={images[0] || 'https://via.placeholder.com/50'}
-                                alt={product.nameAr}
-                                className="w-10 h-10 object-cover rounded"
-                              />
+                              <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center">
+                                <User className="h-5 w-5 text-emerald-600" />
+                              </div>
                               <div>
-                                <p className="font-medium">{product.nameAr}</p>
-                                <p className="text-xs text-gray-500">{product.category?.nameAr}</p>
+                                <p className="font-medium">{customer.name || 'بدون اسم'}</p>
+                                <p className="text-xs text-gray-500">{customer.email}</p>
                               </div>
                             </div>
                           </td>
                           <td className="px-4 py-3">
-                            <div>
-                              <span className="font-medium">{product.discountPrice || product.price} ج.م</span>
-                              {product.discountPrice && (
-                                <span className="text-xs text-gray-400 line-through block">{product.price} ج.م</span>
-                              )}
-                            </div>
+                            <span dir="ltr">{customer.phone || '-'}</span>
+                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-500">
+                            {new Date(customer.createdAt).toLocaleDateString('ar-EG')}
                           </td>
                           <td className="px-4 py-3">
-                            <span className={product.stock < 10 ? 'text-red-600 font-medium' : ''}>
-                              {product.stock}
-                            </span>
+                            <Badge variant="outline">{customer.ordersCount}</Badge>
                           </td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-1">
-                              {product.featured && <Badge className="bg-amber-500">مميز</Badge>}
-                              {product.discountPrice && <Badge className="bg-red-500">خصم</Badge>}
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <div className="flex gap-2">
-                              <Button variant="ghost" size="icon" onClick={() => handleEdit(product)}>
-                                <Edit className="h-4 w-4 text-blue-600" />
-                              </Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDelete(product.id)}>
-                                <Trash2 className="h-4 w-4 text-red-600" />
-                              </Button>
-                            </div>
+                          <td className="px-4 py-3 font-bold">
+                            {customer.totalSpent.toLocaleString()} ج.م
                           </td>
                         </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
+            )}
+
+            {/* Customer Stats */}
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">إجمالي العملاء</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <Users className="h-6 w-6 text-purple-600" />
+                    <span className="text-2xl font-bold">{totalCustomers}</span>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium text-gray-600">إجمالي مشتريات العملاء</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-6 w-6 text-green-600" />
+                    <span className="text-xl font-bold">{totalCustomersSpent.toLocaleString()}</span>
+                    <span className="text-sm text-gray-500">ج.م</span>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
@@ -943,6 +1218,184 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
                     ))}
                   </tbody>
                 </table>
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold flex items-center gap-2">
+                <Settings className="h-5 w-5" />
+                إعدادات المتجر
+              </h3>
+              {settingsSaved && (
+                <Badge className="bg-green-500">تم الحفظ بنجاح</Badge>
+              )}
+            </div>
+
+            {settingsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+              </div>
+            ) : (
+              <div className="space-y-6">
+                {/* Store Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Store className="h-4 w-4" />
+                      معلومات المتجر
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>اسم المتجر بالإنجليزية</Label>
+                        <Input
+                          value={settings.storeNameEn}
+                          onChange={(e) => setSettings({ ...settings, storeNameEn: e.target.value })}
+                          placeholder="Store Name"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>اسم المتجر بالعربية</Label>
+                        <Input
+                          value={settings.storeNameAr}
+                          onChange={(e) => setSettings({ ...settings, storeNameAr: e.target.value })}
+                          placeholder="اسم المتجر"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Contact Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      معلومات التواصل
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>رقم الهاتف</Label>
+                        <Input
+                          value={settings.phone}
+                          onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                          placeholder="+20 XXX XXX XXXX"
+                          dir="ltr"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>البريد الإلكتروني</Label>
+                        <Input
+                          type="email"
+                          value={settings.email}
+                          onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                          placeholder="info@store.com"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label>العنوان بالإنجليزية</Label>
+                        <Textarea
+                          value={settings.address}
+                          onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+                          placeholder="Store address in English"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>العنوان بالعربية</Label>
+                        <Textarea
+                          value={settings.addressAr}
+                          onChange={(e) => setSettings({ ...settings, addressAr: e.target.value })}
+                          placeholder="عنوان المتجر بالعربية"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Social Media */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      وسائل التواصل الاجتماعي
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Facebook className="h-4 w-4 text-blue-600" />
+                          فيسبوك
+                        </Label>
+                        <Input
+                          value={settings.facebook}
+                          onChange={(e) => setSettings({ ...settings, facebook: e.target.value })}
+                          placeholder="https://facebook.com/..."
+                          dir="ltr"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Instagram className="h-4 w-4 text-pink-600" />
+                          انستجرام
+                        </Label>
+                        <Input
+                          value={settings.instagram}
+                          onChange={(e) => setSettings({ ...settings, instagram: e.target.value })}
+                          placeholder="https://instagram.com/..."
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Twitter className="h-4 w-4 text-sky-500" />
+                          تويتر
+                        </Label>
+                        <Input
+                          value={settings.twitter}
+                          onChange={(e) => setSettings({ ...settings, twitter: e.target.value })}
+                          placeholder="https://twitter.com/..."
+                          dir="ltr"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="flex items-center gap-2">
+                          <Phone className="h-4 w-4 text-green-600" />
+                          واتساب
+                        </Label>
+                        <Input
+                          value={settings.whatsapp}
+                          onChange={(e) => setSettings({ ...settings, whatsapp: e.target.value })}
+                          placeholder="+20 XXX XXX XXXX"
+                          dir="ltr"
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Save Button */}
+                <div className="flex justify-end">
+                  <Button
+                    onClick={handleSaveSettings}
+                    disabled={settingsLoading}
+                    className="bg-emerald-600 hover:bg-emerald-700 gap-2"
+                  >
+                    <Save className="h-4 w-4" />
+                    حفظ الإعدادات
+                  </Button>
+                </div>
               </div>
             )}
           </TabsContent>
