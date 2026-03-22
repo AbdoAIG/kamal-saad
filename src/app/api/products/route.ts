@@ -87,25 +87,52 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log('[Products API] Creating product with data:', body);
+    
     const { name, nameAr, description, descriptionAr, price, discountPrice, images, stock, categoryId, featured } = body;
+
+    // Validate required fields
+    if (!name || !nameAr || !price || !categoryId) {
+      console.error('[Products API] Missing required fields:', { name, nameAr, price, categoryId });
+      return NextResponse.json({ 
+        error: 'حقول مطلوبة: الاسم، الاسم بالعربية، السعر، الفئة' 
+      }, { status: 400 });
+    }
+
+    // Check if category exists
+    const category = await db.category.findUnique({
+      where: { id: categoryId }
+    });
+
+    if (!category) {
+      console.error('[Products API] Category not found:', categoryId);
+      return NextResponse.json({ 
+        error: 'الفئة غير موجودة' 
+      }, { status: 400 });
+    }
 
     const product = await db.product.create({
       data: {
         name,
         nameAr,
-        description,
-        descriptionAr,
-        price: parseFloat(price),
-        discountPrice: discountPrice ? parseFloat(discountPrice) : null,
+        description: description || '',
+        descriptionAr: descriptionAr || '',
+        price: typeof price === 'string' ? parseFloat(price) : price,
+        discountPrice: discountPrice ? (typeof discountPrice === 'string' ? parseFloat(discountPrice) : discountPrice) : null,
         images: JSON.stringify(images || []),
-        stock: parseInt(stock) || 0,
+        stock: typeof stock === 'string' ? parseInt(stock) : (stock || 0),
         categoryId,
         featured: featured || false
-      }
+      },
+      include: { category: true }
     });
+    
+    console.log('[Products API] Product created successfully:', product.id);
     return NextResponse.json(product);
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating product:', error);
-    return NextResponse.json({ error: 'Failed to create product' }, { status: 500 });
+    return NextResponse.json({ 
+      error: error.message || 'Failed to create product' 
+    }, { status: 500 });
   }
 }

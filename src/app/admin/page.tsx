@@ -285,8 +285,14 @@ export default function AdminPage() {
     setIsAddingProduct(false);
   };
 
+  const [savingProduct, setSavingProduct] = useState(false);
+  const [productMessage, setProductMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSavingProduct(true);
+    setProductMessage(null);
+    
     const productData = {
       name: formData.name,
       nameAr: formData.nameAr,
@@ -299,25 +305,44 @@ export default function AdminPage() {
       featured: formData.featured,
       images: formData.images.split(',').map(url => url.trim()).filter(Boolean)
     };
+    
     try {
-      if (editingProduct) {
-        await fetch(`/api/products/${editingProduct.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData)
+      const res = editingProduct 
+        ? await fetch(`/api/products/${editingProduct.id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+          })
+        : await fetch('/api/products', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(productData)
+          });
+      
+      const data = await res.json();
+      
+      if (res.ok) {
+        setProductMessage({ 
+          type: 'success', 
+          text: editingProduct ? 'تم تحديث المنتج بنجاح' : 'تم إضافة المنتج بنجاح' 
         });
+        resetForm();
+        fetchData();
+        setTimeout(() => {
+          setCurrentPage('products');
+          setProductMessage(null);
+        }, 1500);
       } else {
-        await fetch('/api/products', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(productData)
+        setProductMessage({ 
+          type: 'error', 
+          text: data.error || 'حدث خطأ أثناء حفظ المنتج' 
         });
       }
-      resetForm();
-      fetchData();
-      setCurrentPage('products');
     } catch (error) {
       console.error('Error saving product:', error);
+      setProductMessage({ type: 'error', text: 'حدث خطأ في الاتصال' });
+    } finally {
+      setSavingProduct(false);
     }
   };
 
@@ -928,11 +953,23 @@ export default function AdminPage() {
                         <input type="checkbox" id="featured" checked={formData.featured} onChange={(e) => setFormData({ ...formData, featured: e.target.checked })} className="w-4 h-4" />
                         <Label htmlFor="featured">منتج مميز</Label>
                       </div>
+                      
+                      {/* Success/Error Message */}
+                      {productMessage && (
+                        <div className={`p-3 rounded-xl text-center ${productMessage.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                          {productMessage.text}
+                        </div>
+                      )}
+                      
                       <div className="flex gap-3 pt-4">
-                        <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                          {editingProduct ? 'حفظ التعديلات' : 'إضافة المنتج'}
+                        <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700" disabled={savingProduct}>
+                          {savingProduct ? (
+                            <><Loader2 className="h-4 w-4 animate-spin ml-2" /> جاري الحفظ...</>
+                          ) : (
+                            editingProduct ? 'حفظ التعديلات' : 'إضافة المنتج'
+                          )}
                         </Button>
-                        <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button>
+                        <Button type="button" variant="outline" onClick={resetForm} disabled={savingProduct}>إلغاء</Button>
                       </div>
                     </form>
                   </CardContent>
