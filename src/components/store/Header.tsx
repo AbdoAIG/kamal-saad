@@ -84,59 +84,45 @@ export function Header({ onMenuClick }: HeaderProps) {
       dir={isArabic ? 'rtl' : 'ltr'}
     >
       <div className="container mx-auto px-4">
-        {/* Top Bar - Logo Only */}
-        <div className="flex items-center justify-center py-3 border-b dark:border-gray-800">
-          <Link href="/" className="flex items-center gap-4 group">
+        <div className="flex items-center justify-between h-20 gap-4">
+          {/* Logo */}
+          <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
             <motion.div 
-              whileHover={{ scale: 1.05, rotate: 2 }}
-              className="relative h-16 w-16 md:h-20 md:w-20 rounded-2xl overflow-hidden shadow-2xl ring-4 ring-teal-500/20 dark:ring-teal-400/30 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700"
+              whileHover={{ scale: 1.05 }}
+              className="relative h-14 w-14 rounded-xl overflow-hidden shadow-lg ring-2 ring-teal-100 dark:ring-teal-800 bg-white"
             >
               <img
                 src="/logo.png"
                 alt="Kamal Saad Logo"
-                className="w-full h-full object-contain p-1"
+                className="w-full h-full object-contain"
               />
-              {/* Shine effect */}
-              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </motion.div>
-            <div className="text-center md:text-right">
-              <motion.span 
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="text-2xl md:text-3xl font-black bg-gradient-to-l from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent"
-              >
+            <div className="hidden sm:block">
+              <span className="text-xl font-bold bg-gradient-to-l from-teal-600 to-cyan-600 bg-clip-text text-transparent">
                 {t('siteName', language)}
-              </motion.span>
-              <motion.p 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.2 }}
-                className={`text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium tracking-wide`}
-              >
+              </span>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
                 {t('siteSlogan', language)}
-              </motion.p>
+              </p>
             </div>
           </Link>
-        </div>
 
-        {/* Bottom Bar - Search & Actions */}
-        <div className="flex items-center justify-between h-14 gap-2">
-          {/* Menu Button + Search */}
-          <div className="flex items-center gap-2 flex-1">
+          {/* Categories Button + Search */}
+          <div className="flex items-center gap-2 flex-1 max-w-2xl">
             {/* Categories Menu Button */}
             <Button
               variant="outline"
               onClick={onMenuClick}
-              className={`h-11 gap-2 rounded-xl border-2 border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-900/30 hover:border-teal-400 dark:hover:border-teal-600 transition-all duration-300 ${isArabic ? 'flex-row-reverse' : ''}`}
+              className={`h-11 gap-2 rounded-xl border-2 border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-900/30 hover:border-teal-400 dark:hover:border-teal-600 transition-all duration-300 flex-shrink-0 ${isArabic ? 'flex-row-reverse' : ''}`}
             >
               <LayoutGrid className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-              <span className="hidden sm:inline font-medium text-gray-700 dark:text-gray-300">
+              <span className="hidden md:inline font-medium text-gray-700 dark:text-gray-300">
                 {isArabic ? 'الأقسام' : 'Categories'}
               </span>
             </Button>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="hidden sm:flex flex-1 max-w-xl">
+            <form onSubmit={handleSearch} className="flex-1 hidden sm:block">
               <div className="relative w-full group">
                 <Input
                   type="text"

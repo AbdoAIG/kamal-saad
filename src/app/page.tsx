@@ -3,7 +3,7 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Category, Product } from '@prisma/client';
-import { Loader2, Sparkles, Store, Truck, Shield, Headphones, CreditCard, Package, CheckCircle2, Plus } from 'lucide-react';
+import { Loader2, Sparkles, Store, Package, CheckCircle2, Plus } from 'lucide-react';
 import { Header } from '@/components/store/Header';
 import { Footer } from '@/components/store/Footer';
 import { CartSidebar } from '@/components/store/CartSidebar';
@@ -65,7 +65,6 @@ function HomePageContent() {
       const cats = await catRes.json();
       const prods: ProductsResponse = await productsRes.json();
 
-      // Handle categories
       if (Array.isArray(cats) && cats.length === 0) {
         setIsSeeding(true);
         return;
@@ -75,7 +74,6 @@ function HomePageContent() {
         setCategories(cats);
       }
 
-      // Initial products
       if (prods.products && Array.isArray(prods.products)) {
         setProducts(prods.products);
         setTotalProducts(prods.pagination?.total || 0);
@@ -91,7 +89,6 @@ function HomePageContent() {
     }
   }, [searchQuery, categoryFilter]);
 
-  // Load more products with button
   const loadMoreProducts = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
     
@@ -135,7 +132,6 @@ function HomePageContent() {
     toggleCart();
   };
 
-  // Loading State
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-cyan-50">
@@ -149,7 +145,6 @@ function HomePageContent() {
     );
   }
 
-  // Empty State - Seeding
   if (isSeeding && products.length === 0) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50">
@@ -173,21 +168,10 @@ function HomePageContent() {
     );
   }
 
-  // Category icons mapping
-  const categoryIcons: Record<string, string> = {
-    'pens-pencils': '🖊️',
-    'notebooks': '📓',
-    'school-bags': '🎒',
-    'art-supplies': '🎨',
-    'office-tools': '📎',
-    'educational': '🌍',
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
       
-      {/* Sidebar */}
       <Sidebar
         isOpen={isSidebarOpen}
         onClose={() => setIsSidebarOpen(false)}
@@ -196,7 +180,6 @@ function HomePageContent() {
         onCategorySelect={() => {}}
       />
       
-      {/* Admin Button */}
       {user?.role === 'admin' && (
         <div className="fixed bottom-6 left-6 z-40">
           <Button
@@ -210,78 +193,34 @@ function HomePageContent() {
       )}
       
       <main className="flex-1">
-        {/* Hero Section - Simplified */}
-        <section className="bg-gradient-to-l from-teal-600 via-cyan-600 to-blue-600 text-white py-10">
-          <div className="container mx-auto px-4">
-            <div className="text-center max-w-2xl mx-auto">
-              <h1 className="text-3xl md:text-4xl font-bold mb-4">
-                {isArabic ? 'كل ما تحتاجه للمدرسة والمكتب' : 'Everything You Need for School & Office'}
-              </h1>
-              <p className="text-lg text-teal-100 mb-6">
-                {isArabic ? 'أفضل المنتجات المدرسية والمكتبية بأسعار مناسبة' : 'Best school and office supplies at great prices'}
-              </p>
-              <div className="flex gap-3 justify-center">
-                <Link href="/#products">
-                  <Button size="lg" className="bg-white text-teal-700 hover:bg-gray-100 px-8">
-                    {t('shopNow', language)}
-                  </Button>
-                </Link>
-              </div>
-              
-              {/* Quick Stats */}
-              <div className="flex items-center justify-center gap-6 mt-6">
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{totalProducts.toLocaleString()}+</p>
-                  <p className="text-xs text-teal-200">{isArabic ? 'منتج' : 'Products'}</p>
-                </div>
-                <div className="w-px h-8 bg-white/30" />
-                <div className="text-center">
-                  <p className="text-2xl font-bold">{categories.length}</p>
-                  <p className="text-xs text-teal-200">{isArabic ? 'أقسام' : 'Categories'}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Features Bar */}
-        <section className="bg-white border-b py-4">
-          <div className="container mx-auto px-4">
-            <div className="flex flex-wrap justify-center gap-6">
-              {[
-                { icon: Truck, text: isArabic ? 'توصيل سريع' : 'Fast Delivery' },
-                { icon: Shield, text: isArabic ? 'ضمان الجودة' : 'Quality Guarantee' },
-                { icon: CreditCard, text: isArabic ? 'دفع آمن' : 'Secure Payment' },
-                { icon: Headphones, text: isArabic ? 'دعم متواصل' : '24/7 Support' },
-              ].map((feature, idx) => (
-                <div key={idx} className="flex items-center gap-2 text-gray-700">
-                  <feature.icon className="h-5 w-5 text-teal-600" />
-                  <span className="text-sm font-medium">{feature.text}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Promotional Banner */}
-        <div className="container mx-auto px-4 pt-6">
-          <PromotionalBanner />
-        </div>
+        {/* Hero Banner Slider */}
+        <PromotionalBanner isHero={true} />
 
         {/* Categories Section */}
-        <section className="py-8">
+        <section className="py-6 bg-white border-b">
           <div className="container mx-auto px-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">
-              {isArabic ? 'تسوق حسب القسم' : 'Shop by Category'}
-            </h2>
-            <div className="flex flex-wrap gap-3">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-gray-900">
+                {isArabic ? 'تسوق حسب القسم' : 'Shop by Category'}
+              </h2>
+              <Link href="/?category=all" className="text-teal-600 hover:text-teal-700 text-sm font-medium">
+                {isArabic ? 'عرض الكل' : 'View All'}
+              </Link>
+            </div>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {categories.map((category) => (
-                <Link key={category.id} href={`/?category=${category.id}#products`}>
-                  <div className="bg-white hover:bg-teal-50 border rounded-xl px-4 py-3 text-center transition-colors cursor-pointer">
-                    <div className="text-2xl mb-1">
-                      {categoryIcons[category.slug] || '📦'}
+                <Link key={category.id} href={`/?category=${category.id}#products`} className="group">
+                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 hover:from-teal-100 hover:to-cyan-100 dark:hover:from-gray-700 dark:hover:to-gray-600 border border-teal-100 dark:border-gray-600 rounded-2xl p-4 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
+                    <div className="w-12 h-12 mx-auto mb-2 bg-white dark:bg-gray-600 rounded-xl shadow-sm flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                      {category.slug === 'pens-pencils' && '🖊️'}
+                      {category.slug === 'notebooks' && '📓'}
+                      {category.slug === 'school-bags' && '🎒'}
+                      {category.slug === 'art-supplies' && '🎨'}
+                      {category.slug === 'office-tools' && '📎'}
+                      {category.slug === 'educational' && '🌍'}
+                      {!['pens-pencils', 'notebooks', 'school-bags', 'art-supplies', 'office-tools', 'educational'].includes(category.slug) && '📦'}
                     </div>
-                    <span className="text-sm font-medium text-gray-700">
+                    <span className="text-xs md:text-sm font-medium text-gray-700 dark:text-gray-300 line-clamp-2">
                       {isArabic ? category.nameAr : category.name}
                     </span>
                   </div>
@@ -291,11 +230,16 @@ function HomePageContent() {
           </div>
         </section>
 
-        {/* All Products Section with Load More Button */}
-        <section id="products" className="py-8 bg-white">
+        {/* Promotional Banner */}
+        <div className="container mx-auto px-4 py-6">
+          <PromotionalBanner isHero={false} />
+        </div>
+
+        {/* Products Section */}
+        <section id="products" className="py-6 bg-white">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-gray-900">
                 {searchQuery 
                   ? (isArabic ? `نتائج البحث عن "${searchQuery}"` : `Search results for "${searchQuery}"`)
                   : (isArabic ? 'جميع المنتجات' : 'All Products')
@@ -355,33 +299,30 @@ function HomePageContent() {
                   <p className="text-gray-400 text-sm">
                     {isArabic ? 'تم تحميل جميع المنتجات' : 'All products loaded'}
                   </p>
-                  <p className="text-gray-500 text-xs mt-1">
-                    {isArabic ? `إجمالي ${products.length} منتج` : `Total ${products.length} products`}
-                  </p>
                 </div>
               )}
             </div>
           </div>
         </section>
 
-        {/* How to Order - Simplified */}
-        <section className="py-8 bg-gray-50">
+        {/* How to Order */}
+        <section className="py-6 bg-gray-50">
           <div className="container mx-auto px-4">
-            <h2 className="text-xl font-bold text-gray-900 mb-6 text-center">
+            <h2 className="text-lg font-bold text-gray-900 mb-6 text-center">
               {isArabic ? 'كيف تطلب؟' : 'How to Order?'}
             </h2>
-            <div className="flex flex-wrap justify-center gap-8">
+            <div className="flex flex-wrap justify-center gap-4 md:gap-8">
               {[
-                { icon: Package, text: isArabic ? 'اختر المنتجات' : 'Choose Products' },
-                { icon: CreditCard, text: isArabic ? 'أكمل الطلب' : 'Complete Order' },
-                { icon: Truck, text: isArabic ? 'التوصيل' : 'Delivery' },
-                { icon: CheckCircle2, text: isArabic ? 'استلم واستمتع' : 'Receive' },
+                { step: '1', text: isArabic ? 'اختر المنتجات' : 'Choose Products' },
+                { step: '2', text: isArabic ? 'أكمل الطلب' : 'Complete Order' },
+                { step: '3', text: isArabic ? 'التوصيل' : 'Delivery' },
+                { step: '4', text: isArabic ? 'استلم واستمتع' : 'Receive' },
               ].map((item, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <div className="h-10 w-10 bg-teal-100 rounded-lg flex items-center justify-center">
-                    <item.icon className="h-5 w-5 text-teal-600" />
+                <div key={index} className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl shadow-sm">
+                  <div className="h-8 w-8 bg-gradient-to-l from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
+                    {item.step}
                   </div>
-                  <span className="font-medium text-gray-700">{item.text}</span>
+                  <span className="font-medium text-gray-700 text-sm">{item.text}</span>
                 </div>
               ))}
             </div>
