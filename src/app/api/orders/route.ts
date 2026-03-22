@@ -1,5 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
+import { NotificationService } from '@/lib/notification-service';
+import { logger } from '@/lib/logger';
 
 // GET - Get orders for user
 export async function GET(request: NextRequest) {
@@ -152,6 +154,30 @@ export async function POST(request: NextRequest) {
       }
     } catch {
       // Ignore cart clear errors for guest users
+    }
+    
+    // Send notifications
+    try {
+      // Get user info for notification
+      const orderUser = await db.user.findUnique({
+        where: { id: orderUserId },
+        select: { name: true, email: true },
+      });
+      
+      // Notify customer
+      await NotificationService.notifyOrderCreated(orderUserId, order.id, calculatedTotal);
+      
+      // Notify admins
+      await NotificationService.notifyAdminsNewOrder(
+        order.id,
+        calculatedTotal,
+        orderUser?.name || orderUser?.email || 'Guest Customer'
+      );
+      
+      logger.info('Order notifications sent', { orderId: order.id, userId: orderUserId });
+    } catch (notificationError) {
+      // Don't fail the order if notification fails
+      logger.error('Failed to send order notifications', { error: String(notificationError) });
     }
     
     return NextResponse.json({

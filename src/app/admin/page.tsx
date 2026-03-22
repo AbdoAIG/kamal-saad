@@ -9,6 +9,7 @@ import {
   MapPin, Mail, User, Plus, Edit, Trash2, Settings, Bell, ChevronLeft,
   BarChart3, FileText, Store, Menu, X, Home, Tag, Percent, MessageSquare, Image
 } from 'lucide-react';
+import { ReportsDashboard } from '@/components/admin/ReportsDashboard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -1060,7 +1061,7 @@ export default function AdminPage() {
 
           {/* Reports Page */}
           {currentPage === 'reports' && (
-            <ReportsPage orders={orders} products={products} />
+            <ReportsDashboard orders={orders} products={products} />
           )}
 
           {/* Settings Page */}

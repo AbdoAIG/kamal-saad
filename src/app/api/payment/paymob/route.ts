@@ -1,12 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { db } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // Paymob Payment Gateway Integration
 // Documentation: https://docs.paymob.com/
 
+interface PaymobAuthResponse {
+  token: string;
+}
+
+interface PaymobOrderResponse {
+  id: number;
+}
+
+interface PaymobPaymentKeyResponse {
+  token: string;
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { amount, cardData } = body;
+    const { amount, orderId, cardData, billingData } = body;
 
     // Validate input
     if (!amount || amount <= 0) {
@@ -16,101 +30,135 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // In production, you would:
-    // 1. Authentication Request to Paymob
-    // 2. Order Registration
-    // 3. Payment Key Request
-    // 4. Redirect to Paymob payment page
-
     // Paymob API Configuration
     const PAYMOB_API_KEY = process.env.PAYMOB_API_KEY;
     const PAYMOB_INTEGRATION_ID = process.env.PAYMOB_INTEGRATION_ID;
-    
-    // For demo purposes, simulate successful payment
-    // In production, replace with actual Paymob API calls
-    
+    const PAYMOB_IFRAME_ID = process.env.PAYMOB_IFRAME_ID;
+    const PAYMOB_HMAC_SECRET = process.env.PAYMOB_HMAC_SECRET;
+
+    // Demo mode - no API key configured
     if (!PAYMOB_API_KEY) {
-      // Demo mode - simulate successful payment
-      const transactionId = `PAYMOB-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const transactionId = `PAYMOB-DEMO-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      
+      logger.info('Paymob demo payment', { transactionId, amount, orderId });
       
       return NextResponse.json({
         success: true,
         transactionId,
         message: 'Payment processed successfully (Demo Mode)',
         demo: true,
-        // In production, this would redirect to Paymob's payment page
         paymentUrl: null,
       });
     }
 
-    // Production implementation would be:
-    /*
+    // Production implementation
+    const PAYMOB_BASE_URL = 'https://accept.paymob.com/api';
+
     // Step 1: Authentication Request
-    const authResponse = await fetch('https://accept.paymob.com/api/auth/tokens', {
+    const authResponse = await fetch(`${PAYMOB_BASE_URL}/auth/tokens`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ api_key: PAYMOB_API_KEY }),
     });
-    const { token } = await authResponse.json();
+
+    if (!authResponse.ok) {
+      throw new Error('Paymob authentication failed');
+    }
+
+    const authData = (await authResponse.json()) as PaymobAuthResponse;
+    const authToken = authData.token;
 
     // Step 2: Order Registration
-    const orderResponse = await fetch('https://accept.paymob.com/api/ecommerce/orders', {
+    const orderPayload = {
+      auth_token: authToken,
+      delivery_needed: false,
+      amount_cents: Math.round(amount * 100), // Paymob expects cents
+      currency: 'EGP',
+      merchant_order_id: orderId || `ORD-${Date.now()}`,
+      items: [],
+      shipping_data: billingData ? {
+        first_name: billingData.firstName || 'Customer',
+        last_name: billingData.lastName || 'Name',
+        phone_number: billingData.phone || '+201000000000',
+        email: billingData.email || 'customer@example.com',
+        country: 'EG',
+        city: billingData.city || 'Cairo',
+        street: billingData.address || 'NA',
+        building: 'NA',
+        floor: 'NA',
+        apartment: 'NA',
+      } : undefined,
+    };
+
+    const orderResponse = await fetch(`${PAYMOB_BASE_URL}/ecommerce/orders`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        auth_token: token,
-        delivery_needed: false,
-        amount_cents: amount * 100, // Paymob expects cents
-        currency: 'EGP',
-        items: [],
-      }),
+      body: JSON.stringify(orderPayload),
     });
-    const { id: orderId } = await orderResponse.json();
+
+    if (!orderResponse.ok) {
+      const errorData = await orderResponse.json();
+      logger.error('Paymob order registration failed', { error: errorData });
+      throw new Error('Paymob order registration failed');
+    }
+
+    const orderData = (await orderResponse.json()) as PaymobOrderResponse;
+    const paymobOrderId = orderData.id;
 
     // Step 3: Payment Key Request
-    const paymentKeyResponse = await fetch('https://accept.paymob.com/api/acceptance/payment_keys', {
+    const paymentKeyPayload = {
+      auth_token: authToken,
+      amount_cents: Math.round(amount * 100),
+      expiration: 3600,
+      order_id: paymobOrderId,
+      billing_data: {
+        first_name: billingData?.firstName || 'Customer',
+        last_name: billingData?.lastName || 'Name',
+        email: billingData?.email || 'customer@example.com',
+        phone_number: billingData?.phone || '+201000000000',
+        country: 'EG',
+        city: billingData?.city || 'Cairo',
+        street: billingData?.address || 'NA',
+        building: 'NA',
+        floor: 'NA',
+        apartment: 'NA',
+      },
+      currency: 'EGP',
+      integration_id: PAYMOB_INTEGRATION_ID,
+    };
+
+    const paymentKeyResponse = await fetch(`${PAYMOB_BASE_URL}/acceptance/payment_keys`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        auth_token: token,
-        amount_cents: amount * 100,
-        expiration: 3600,
-        order_id: orderId,
-        billing_data: {
-          first_name: 'Customer',
-          last_name: 'Name',
-          email: 'customer@example.com',
-          phone_number: '+201000000000',
-          country: 'EG',
-          city: 'Cairo',
-          street: 'NA',
-          building: 'NA',
-          floor: 'NA',
-          apartment: 'NA',
-        },
-        currency: 'EGP',
-        integration_id: PAYMOB_INTEGRATION_ID,
-      }),
+      body: JSON.stringify(paymentKeyPayload),
     });
-    const { token: paymentKey } = await paymentKeyResponse.json();
+
+    if (!paymentKeyResponse.ok) {
+      const errorData = await paymentKeyResponse.json();
+      logger.error('Paymob payment key request failed', { error: errorData });
+      throw new Error('Paymob payment key request failed');
+    }
+
+    const paymentKeyData = (await paymentKeyResponse.json()) as PaymobPaymentKeyResponse;
+    const paymentKey = paymentKeyData.token;
+
+    // Generate payment URL
+    const paymentUrl = PAYMOB_IFRAME_ID
+      ? `${PAYMOB_BASE_URL}/acceptance/iframes/${PAYMOB_IFRAME_ID}?payment_token=${paymentKey}`
+      : null;
+
+    logger.info('Paymob payment initiated', { paymobOrderId, amount, orderId });
 
     return NextResponse.json({
       success: true,
       paymentKey,
-      orderId,
-      paymentUrl: `https://accept.paymob.com/api/acceptance/iframes/${PAYMOB_IFRAME_ID}?payment_token=${paymentKey}`,
-    });
-    */
-
-    // Demo response
-    return NextResponse.json({
-      success: true,
-      transactionId: `PAYMOB-${Date.now()}`,
-      message: 'Payment processed successfully',
+      paymobOrderId,
+      paymentUrl,
+      message: 'Payment initiated successfully',
     });
 
   } catch (error) {
-    console.error('Paymob payment error:', error);
+    logger.error('Paymob payment error', { error: String(error) });
     return NextResponse.json(
       { success: false, error: 'Payment processing failed' },
       { status: 500 }

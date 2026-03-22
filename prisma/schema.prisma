@@ -127,24 +127,26 @@ model Notification {
 }
 
 model Order {
-  id              String      @id @default(cuid())
-  userId          String
-  status          String      @default("pending")
-  total           Float
-  discount        Float       @default(0)
-  shippingAddress String?     @db.Text
-  phone           String?
-  paymentMethod   String?     @default("cod")
-  notes           String?     @db.Text
-  couponId        String?
-  pointsUsed      Int         @default(0)
-  pointsEarned    Int         @default(0)
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
-  coupon          Coupon?     @relation(fields: [couponId], references: [id])
-  user            User        @relation(fields: [userId], references: [id])
-  items           OrderItem[]
-  returns         Return[]
+  id               String      @id @default(cuid())
+  userId           String
+  status           String      @default("pending")
+  total            Float
+  discount         Float       @default(0)
+  shippingAddress  String?     @db.Text
+  phone            String?
+  paymentMethod    String?     @default("cod")
+  paymentStatus    String?     @default("pending")
+  paymentReference String?
+  notes            String?     @db.Text
+  couponId         String?
+  pointsUsed       Int         @default(0)
+  pointsEarned     Int         @default(0)
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  coupon           Coupon?     @relation(fields: [couponId], references: [id])
+  user             User        @relation(fields: [userId], references: [id])
+  items            OrderItem[]
+  returns          Return[]
 }
 
 model OrderItem {
