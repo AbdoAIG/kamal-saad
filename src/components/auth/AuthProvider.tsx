@@ -8,5 +8,12 @@ interface Props {
 }
 
 export function AuthProvider({ children }: Props) {
-  return <SessionProvider>{children}</SessionProvider>;
+  return (
+    <SessionProvider 
+      refetchInterval={30} // Refetch every 30 seconds
+      refetchOnWindowFocus={true}
+    >
+      {children}
+    </SessionProvider>
+  );
 }
