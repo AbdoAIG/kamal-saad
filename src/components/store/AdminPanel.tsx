@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Plus, Edit, Trash2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard, ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone, MapPin, Mail, User, ChevronDown, ChevronUp, AlertTriangle, Image, ToggleLeft, ToggleRight, Settings, Tag, MessageSquare, Percent, Save, RefreshCw, CreditCard } from 'lucide-react';
+import { X, Plus, Edit, Trash2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard, ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone, MapPin, Mail, User, ChevronDown, ChevronUp, AlertTriangle, Image, ToggleLeft, ToggleRight, Settings, Tag, MessageSquare, Percent, Save, RefreshCw, CreditCard, ImagePlus } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -64,6 +64,32 @@ interface Order {
   items: OrderItem[];
 }
 
+interface Banner {
+  id: string;
+  title: string;
+  titleAr: string;
+  subtitle?: string;
+  subtitleAr?: string;
+  image: string;
+  link?: string;
+  buttonText?: string;
+  buttonTextAr?: string;
+  active: boolean;
+  order: number;
+}
+
+interface ContactMessage {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+  subject?: string;
+  message: string;
+  status: string;
+  reply?: string;
+  createdAt: string;
+}
+
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: any }> = {
   pending: { label: 'قيد الانتظار', color: 'text-yellow-700', bgColor: 'bg-yellow-100', icon: Clock },
   confirmed: { label: 'مؤكد', color: 'text-blue-700', bgColor: 'bg-blue-100', icon: CheckCircle },
@@ -99,6 +125,35 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
+  // Banners state
+  const [banners, setBanners] = useState<Banner[]>([]);
+  const [bannersLoading, setBannersLoading] = useState(false);
+  const [showBannerForm, setShowBannerForm] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
+  const [bannerForm, setBannerForm] = useState({
+    title: '',
+    titleAr: '',
+    subtitle: '',
+    subtitleAr: '',
+    image: '',
+    link: '',
+    buttonText: '',
+    buttonTextAr: '',
+    active: true,
+    order: 0
+  });
+
+  // Contact messages state
+  const [contacts, setContacts] = useState<ContactMessage[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [selectedContact, setSelectedContact] = useState<ContactMessage | null>(null);
+  const [showContactDetails, setShowContactDetails] = useState(false);
+  const [replyText, setReplyText] = useState('');
+
+  // Search for products
+  const [productSearch, setProductSearch] = useState('');
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+
   // Fetch orders
   const fetchOrders = async () => {
     setOrdersLoading(true);
@@ -119,11 +174,56 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
     }
   };
 
+  // Fetch banners
+  const fetchBanners = async () => {
+    setBannersLoading(true);
+    try {
+      const res = await fetch('/api/banners');
+      const data = await res.json();
+      if (data.success) {
+        setBanners(data.data);
+      }
+    } catch (error) {
+      console.error('Error fetching banners:', error);
+    } finally {
+      setBannersLoading(false);
+    }
+  };
+
+  // Fetch contact messages
+  const fetchContacts = async () => {
+    setContactsLoading(true);
+    try {
+      const res = await fetch('/api/contact');
+      const data = await res.json();
+      setContacts(Array.isArray(data) ? data : []);
+    } catch (error) {
+      console.error('Error fetching contacts:', error);
+    } finally {
+      setContactsLoading(false);
+    }
+  };
+
   useEffect(() => {
     if (open) {
       fetchOrders();
+      fetchBanners();
+      fetchContacts();
     }
   }, [open, orderFilter]);
+
+  // Filter products based on search
+  useEffect(() => {
+    if (productSearch) {
+      const filtered = products.filter(p => 
+        p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+        p.nameAr.includes(productSearch)
+      );
+      setFilteredProducts(filtered);
+    } else {
+      setFilteredProducts(products);
+    }
+  }, [productSearch, products]);
 
   const handleSearchOrders = () => {
     fetchOrders();
@@ -161,6 +261,89 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
       }
     } catch (error) {
       console.error('Error fetching order details:', error);
+    }
+  };
+
+  // Banner handlers
+  const handleBannerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const method = editingBanner ? 'PUT' : 'POST';
+      const body = editingBanner ? { id: editingBanner.id, ...bannerForm } : bannerForm;
+      
+      const res = await fetch('/api/banners', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      if (res.ok) {
+        fetchBanners();
+        resetBannerForm();
+      }
+    } catch (error) {
+      console.error('Error saving banner:', error);
+    }
+  };
+
+  const handleDeleteBanner = async (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا البانر؟')) return;
+    try {
+      await fetch(`/api/banners?id=${id}`, { method: 'DELETE' });
+      fetchBanners();
+    } catch (error) {
+      console.error('Error deleting banner:', error);
+    }
+  };
+
+  const handleEditBanner = (banner: Banner) => {
+    setBannerForm({
+      title: banner.title,
+      titleAr: banner.titleAr,
+      subtitle: banner.subtitle || '',
+      subtitleAr: banner.subtitleAr || '',
+      image: banner.image,
+      link: banner.link || '',
+      buttonText: banner.buttonText || '',
+      buttonTextAr: banner.buttonTextAr || '',
+      active: banner.active,
+      order: banner.order
+    });
+    setEditingBanner(banner);
+    setShowBannerForm(true);
+  };
+
+  const resetBannerForm = () => {
+    setBannerForm({
+      title: '',
+      titleAr: '',
+      subtitle: '',
+      subtitleAr: '',
+      image: '',
+      link: '',
+      buttonText: '',
+      buttonTextAr: '',
+      active: true,
+      order: 0
+    });
+    setEditingBanner(null);
+    setShowBannerForm(false);
+  };
+
+  // Contact handlers
+  const handleReplyToMessage = async () => {
+    if (!selectedContact || !replyText.trim()) return;
+    try {
+      await fetch(`/api/contact/${selectedContact.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reply: replyText, status: 'replied' })
+      });
+      setReplyText('');
+      fetchContacts();
+      setShowContactDetails(false);
+    } catch (error) {
+      console.error('Error replying to message:', error);
     }
   };
 
@@ -283,7 +466,7 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
         </DialogHeader>
 
         <Tabs defaultValue="dashboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-6">
             <TabsTrigger value="dashboard">نظرة عامة</TabsTrigger>
             <TabsTrigger value="orders" className="gap-2">
               الطلبات
@@ -292,6 +475,8 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
               )}
             </TabsTrigger>
             <TabsTrigger value="products">المنتجات</TabsTrigger>
+            <TabsTrigger value="banners">البنرات</TabsTrigger>
+            <TabsTrigger value="contact">الرسائل</TabsTrigger>
             <TabsTrigger value="add">إضافة منتج</TabsTrigger>
           </TabsList>
 
@@ -522,10 +707,18 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
           <TabsContent value="products" className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-lg font-semibold">قائمة المنتجات</h3>
-              <Button onClick={() => { resetForm(); setIsAddingProduct(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-                <Plus className="h-4 w-4" />
-                إضافة منتج
-              </Button>
+              <div className="flex gap-2 items-center">
+                <Input
+                  placeholder="بحث عن منتج..."
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  className="w-64"
+                />
+                <Button onClick={() => { resetForm(); setIsAddingProduct(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                  <Plus className="h-4 w-4" />
+                  إضافة منتج
+                </Button>
+              </div>
             </div>
             <div className="border rounded-lg overflow-hidden">
               <div className="overflow-x-auto">
@@ -540,7 +733,7 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {products.map((product) => {
+                    {filteredProducts.map((product) => {
                       const images = JSON.parse(product.images || '[]');
                       return (
                         <tr key={product.id} className="hover:bg-gray-50">
@@ -593,6 +786,165 @@ export function AdminPanel({ open, onClose, products, categories, onRefresh }: A
                 </table>
               </div>
             </div>
+          </TabsContent>
+
+          {/* Banners Management */}
+          <TabsContent value="banners" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg font-semibold">إدارة البنرات الإعلانية</h3>
+              <Button onClick={() => { resetBannerForm(); setShowBannerForm(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                <ImagePlus className="h-4 w-4" />
+                إضافة بانر
+              </Button>
+            </div>
+
+            {showBannerForm && (
+              <Card className="p-4">
+                <h4 className="font-medium mb-4">{editingBanner ? 'تعديل البانر' : 'إضافة بانر جديد'}</h4>
+                <form onSubmit={handleBannerSubmit} className="space-y-4">
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>العنوان بالإنجليزية</Label>
+                      <Input value={bannerForm.title} onChange={(e) => setBannerForm({ ...bannerForm, title: e.target.value })} required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>العنوان بالعربية</Label>
+                      <Input value={bannerForm.titleAr} onChange={(e) => setBannerForm({ ...bannerForm, titleAr: e.target.value })} required />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>العنوان الفرعي بالإنجليزية</Label>
+                      <Input value={bannerForm.subtitle} onChange={(e) => setBannerForm({ ...bannerForm, subtitle: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>العنوان الفرعي بالعربية</Label>
+                      <Input value={bannerForm.subtitleAr} onChange={(e) => setBannerForm({ ...bannerForm, subtitleAr: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>رابط الصورة</Label>
+                    <Input value={bannerForm.image} onChange={(e) => setBannerForm({ ...bannerForm, image: e.target.value })} placeholder="https://example.com/image.jpg" required />
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>نص الزر بالإنجليزية</Label>
+                      <Input value={bannerForm.buttonText} onChange={(e) => setBannerForm({ ...bannerForm, buttonText: e.target.value })} />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>نص الزر بالعربية</Label>
+                      <Input value={bannerForm.buttonTextAr} onChange={(e) => setBannerForm({ ...bannerForm, buttonTextAr: e.target.value })} />
+                    </div>
+                  </div>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label>رابط عند الضغط</Label>
+                      <Input value={bannerForm.link} onChange={(e) => setBannerForm({ ...bannerForm, link: e.target.value })} placeholder="https://..." />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>الترتيب</Label>
+                      <Input type="number" value={bannerForm.order} onChange={(e) => setBannerForm({ ...bannerForm, order: parseInt(e.target.value) || 0 })} />
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input type="checkbox" id="active" checked={bannerForm.active} onChange={(e) => setBannerForm({ ...bannerForm, active: e.target.checked })} className="w-4 h-4" />
+                    <Label htmlFor="active">فعال</Label>
+                  </div>
+                  <div className="flex gap-3">
+                    <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">{editingBanner ? 'حفظ التعديلات' : 'إضافة البانر'}</Button>
+                    <Button type="button" variant="outline" onClick={resetBannerForm}>إلغاء</Button>
+                  </div>
+                </form>
+              </Card>
+            )}
+
+            {bannersLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+              </div>
+            ) : banners.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <Image className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>لا توجد بنرات</p>
+              </div>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-4">
+                {banners.map((banner) => (
+                  <Card key={banner.id} className="overflow-hidden">
+                    <div className="relative h-32">
+                      <img src={banner.image} alt={banner.titleAr} className="w-full h-full object-cover" />
+                      <Badge className={`absolute top-2 right-2 ${banner.active ? 'bg-green-500' : 'bg-gray-500'}`}>
+                        {banner.active ? 'فعال' : 'غير فعال'}
+                      </Badge>
+                    </div>
+                    <CardContent className="p-4">
+                      <h4 className="font-medium">{banner.titleAr}</h4>
+                      <p className="text-sm text-gray-500">{banner.subtitleAr}</p>
+                      <div className="flex gap-2 mt-3">
+                        <Button variant="outline" size="sm" onClick={() => handleEditBanner(banner)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="outline" size="sm" className="text-red-600" onClick={() => handleDeleteBanner(banner.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Contact Messages */}
+          <TabsContent value="contact" className="space-y-4">
+            <h3 className="text-lg font-semibold">رسائل التواصل</h3>
+            {contactsLoading ? (
+              <div className="flex justify-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+              </div>
+            ) : contacts.length === 0 ? (
+              <div className="text-center py-12 text-gray-500">
+                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>لا توجد رسائل</p>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">الاسم</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">البريد الإلكتروني</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">الموضوع</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">الحالة</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">التاريخ</th>
+                      <th className="px-4 py-3 text-right text-sm font-medium text-gray-600">إجراءات</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {contacts.map((contact) => (
+                      <tr key={contact.id} className="hover:bg-gray-50">
+                        <td className="px-4 py-3">{contact.name}</td>
+                        <td className="px-4 py-3">{contact.email}</td>
+                        <td className="px-4 py-3">{contact.subject || '-'}</td>
+                        <td className="px-4 py-3">
+                          <Badge className={contact.status === 'new' ? 'bg-blue-500' : contact.status === 'replied' ? 'bg-green-500' : 'bg-gray-500'}>
+                            {contact.status === 'new' ? 'جديد' : contact.status === 'replied' ? 'تم الرد' : 'مقروء'}
+                          </Badge>
+                        </td>
+                        <td className="px-4 py-3 text-sm text-gray-500">
+                          {new Date(contact.createdAt).toLocaleDateString('ar-EG')}
+                        </td>
+                        <td className="px-4 py-3">
+                          <Button variant="ghost" size="icon" onClick={() => { setSelectedContact(contact); setShowContactDetails(true); }}>
+                            <Eye className="h-4 w-4 text-blue-600" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </TabsContent>
 
           {/* Add/Edit Product */}

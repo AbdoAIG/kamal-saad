@@ -11,7 +11,11 @@ export async function GET(request: Request) {
     const maxPrice = searchParams.get('maxPrice');
     const sortBy = searchParams.get('sortBy') || 'createdAt';
     const sortOrder = searchParams.get('sortOrder') || 'desc';
-    const limit = searchParams.get('limit');
+    
+    // Pagination parameters
+    const page = parseInt(searchParams.get('page') || '1');
+    const limit = parseInt(searchParams.get('limit') || '20');
+    const skip = (page - 1) * limit;
 
     const where: Record<string, unknown> = {};
 
@@ -49,18 +53,31 @@ export async function GET(request: Request) {
       orderBy.createdAt = sortOrder;
     }
 
-    let query: Record<string, unknown> = {
+    // Get total count for pagination
+    const total = await db.product.count({ where });
+    
+    // Get paginated products
+    const products = await db.product.findMany({
       where,
       include: { category: true },
       orderBy,
-    };
+      skip,
+      take: limit,
+    });
 
-    if (limit) {
-      query.take = parseInt(limit);
-    }
+    const totalPages = Math.ceil(total / limit);
+    const hasMore = page < totalPages;
 
-    const products = await db.product.findMany(query);
-    return NextResponse.json(products);
+    return NextResponse.json({
+      products,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+        hasMore
+      }
+    });
   } catch (error) {
     console.error('Error fetching products:', error);
     return NextResponse.json({ error: 'Failed to fetch products' }, { status: 500 });
