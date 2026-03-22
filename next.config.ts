@@ -38,7 +38,7 @@ const nextConfig: NextConfig = {
             key: 'Permissions-Policy',
             value: 'camera=(), microphone=(), geolocation=(), interest-cohort=()',
           },
-          // Content Security Policy
+          // Content Security Policy - Updated for OAuth
           {
             key: 'Content-Security-Policy',
             value: [
@@ -47,10 +47,10 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: https: blob:",
-              "connect-src 'self' https://vercel.live https://api.paymob.com https://accept.paymob.com https://fawry.com https://valu.com",
+              "connect-src 'self' https://vercel.live https://api.paymob.com https://accept.paymob.com https://fawry.com https://valu.com https://accounts.google.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
-              "form-action 'self'",
+              // Removed form-action restriction to allow OAuth redirects
             ].join('; '),
           },
           // Strict Transport Security (HSTS)

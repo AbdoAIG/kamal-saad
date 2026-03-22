@@ -82,15 +82,26 @@ export function AuthModal() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setSocialLoading('google');
-    // Store current URL to return to after login
-    const callbackUrl = window.location.pathname + window.location.search;
-    // For OAuth providers, we need to use redirect
-    signIn('google', { 
-      callbackUrl: callbackUrl !== '/' ? callbackUrl : '/',
-      redirect: true 
-    });
+    console.log('[AuthModal] Initiating Google OAuth login');
+    
+    try {
+      // Store current URL to return to after login
+      const callbackUrl = window.location.pathname + window.location.search;
+      
+      // Use redirect for OAuth providers
+      const result = await signIn('google', { 
+        callbackUrl: callbackUrl !== '/' ? callbackUrl : '/',
+        redirect: true 
+      });
+      
+      // This code won't run because redirect: true causes full page redirect
+      console.log('[AuthModal] signIn result:', result);
+    } catch (error) {
+      console.error('[AuthModal] Google login error:', error);
+      setSocialLoading(null);
+    }
   };
 
   const handleFacebookLogin = () => {
