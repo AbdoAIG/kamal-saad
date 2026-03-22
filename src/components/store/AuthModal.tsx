@@ -79,7 +79,7 @@ export function AuthModal() {
     }
   };
 
-  // Google OAuth - Simple redirect to NextAuth endpoint
+  // Google OAuth - Redirect to our custom endpoint
   const handleGoogleLogin = () => {
     // Close modal first
     setAuthModalOpen(false);
@@ -88,9 +88,8 @@ export function AuthModal() {
     const currentPath = window.location.pathname + window.location.search;
     const callbackUrl = currentPath !== '/' ? currentPath : '/';
     
-    // Redirect to NextAuth Google signin
-    // NextAuth v5 handlers will process this
-    window.location.href = `/api/auth/signin/google?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+    // Redirect to our Google start endpoint which handles CSRF and OAuth
+    window.location.href = `/api/auth/google-start?callbackUrl=${encodeURIComponent(callbackUrl)}`;
   };
 
   return (
