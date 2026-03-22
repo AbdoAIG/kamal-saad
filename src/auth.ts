@@ -75,11 +75,49 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   
   // Callbacks
   callbacks: {
-    async jwt({ token, user }) {
+    async signIn({ user, account, profile }) {
+      // For Google OAuth - ensure user has correct role
+      if (account?.provider === 'google' && profile?.email) {
+        // Check if user exists
+        const existingUser = await prisma.user.findUnique({
+          where: { email: profile.email }
+        });
+        
+        if (existingUser) {
+          // User exists - keep their current role
+          return true;
+        }
+        
+        // New user - PrismaAdapter will create them
+        // We'll set their role to 'customer' in the session callback
+        return true;
+      }
+      
+      return true;
+    },
+    
+    async jwt({ token, user, account }) {
       // On initial sign in, add user info to token
       if (user) {
         token.id = user.id;
-        token.role = (user as any).role;
+        
+        // For Google OAuth, fetch role from database
+        if (account?.provider === 'google') {
+          const dbUser = await prisma.user.findUnique({
+            where: { email: user.email! },
+            select: { id: true, role: true }
+          });
+          
+          if (dbUser) {
+            token.id = dbUser.id;
+            token.role = dbUser.role;
+          } else {
+            // New user - default to customer
+            token.role = 'customer';
+          }
+        } else {
+          token.role = (user as any).role;
+        }
       }
       return token;
     },
@@ -91,6 +129,19 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         (session.user as any).role = token.role;
       }
       return session;
+    },
+  },
+  
+  // Events - set default role for new users
+  events: {
+    async createUser({ user }) {
+      // Set default role for new users created via OAuth
+      if (user.email) {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { role: 'customer' }
+        });
+      }
     },
   },
   
