@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { 
   ShoppingCart, Search, User, Menu, X, Heart, Bell, 
-  Sun, Moon, Languages, LayoutGrid, Package, Settings, LogOut, MapPin, MessageCircle
+  Sun, Moon, Languages, Phone, Flame, Package, Settings, LogOut, MapPin, MessageCircle, ChevronDown
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,15 +26,26 @@ interface HeaderProps {
   onMenuClick?: () => void;
 }
 
+const navItems = [
+  { id: 'home', labelAr: 'الرئيسية', labelEn: 'Home', icon: Flame, href: '/' },
+  { id: 'new', labelAr: 'المنتجات الحديثة', labelEn: 'New Products', href: '/?sort=new' },
+  { id: 'offers', labelAr: 'أفضل العروض', labelEn: 'Best Offers', href: '/?sort=offers' },
+  { id: 'featured', labelAr: 'المنتجات المميزة', labelEn: 'Featured', href: '/?sort=featured' },
+  { id: 'recommended', labelAr: 'المنتجات الموصى بها', labelEn: 'Recommended', href: '/?sort=recommended' },
+  { id: 'bestseller', labelAr: 'الأكثر مبيعاً', labelEn: 'Best Selling', href: '/?sort=bestseller' },
+  { id: 'special', labelAr: 'عروض خاصة', labelEn: 'Special Offers', href: '/?sort=special' },
+  { id: 'support', labelAr: 'خدمات العملاء', labelEn: 'Customer Service', href: '/contact' },
+  { id: 'about', labelAr: 'عن المتجر', labelEn: 'About Us', href: '/about' },
+];
+
 export function Header({ onMenuClick }: HeaderProps) {
   const router = useRouter();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [localSearch, setLocalSearch] = useState('');
-  const [isScrolled, setIsScrolled] = useState(false);
   
   const { 
     items, toggleCart, toggleAuthModal, user, searchQuery, setSearchQuery,
-    theme, toggleTheme, language, toggleLanguage, favorites, toggleFavorites, logout
+    theme, toggleTheme, language, toggleLanguage, favorites, logout
   } = useStore();
 
   const isArabic = language === 'ar';
@@ -43,14 +54,6 @@ export function Header({ onMenuClick }: HeaderProps) {
   useEffect(() => {
     setLocalSearch(searchQuery);
   }, [searchQuery]);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
 
   useEffect(() => {
     if (theme === 'dark') {
@@ -73,243 +76,274 @@ export function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <motion.header
-      initial={{ y: -100 }}
-      animate={{ y: 0 }}
-      className={`sticky top-0 z-50 transition-all duration-300 ${
-        isScrolled 
-          ? 'bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-lg' 
-          : 'bg-white dark:bg-gray-900'
-      }`}
+    <header 
+      className="sticky top-0 z-50"
       dir={isArabic ? 'rtl' : 'ltr'}
     >
-      <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-20 gap-4">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
-            <motion.div 
-              whileHover={{ scale: 1.05 }}
-              className="relative h-14 w-14 rounded-xl overflow-hidden shadow-lg ring-2 ring-teal-100 dark:ring-teal-800 bg-white"
-            >
-              <img
-                src="/logo.png"
-                alt="Kamal Saad Logo"
-                className="w-full h-full object-contain"
-              />
-            </motion.div>
-            <div className="hidden sm:block">
-              <span className="text-xl font-bold bg-gradient-to-l from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                {t('siteName', language)}
+      {/* Top Bar - Dark Blue */}
+      <div className="bg-gradient-to-r from-blue-900 to-blue-800 text-white">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-9 text-sm">
+            {/* Contact Info */}
+            <div className="flex items-center gap-4">
+              <a 
+                href="tel:01234567890" 
+                className="flex items-center gap-2 hover:text-blue-200 transition-colors"
+              >
+                <Phone className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">01234567890</span>
+              </a>
+              <span className="hidden md:inline text-blue-300">|</span>
+              <span className="hidden md:flex items-center gap-1 text-blue-200">
+                <MessageCircle className="h-3.5 w-3.5" />
+                {isArabic ? 'تواصل معنا الآن' : 'Contact Us Now'}
               </span>
-              <p className="text-xs text-gray-500 dark:text-gray-400">
-                {t('siteSlogan', language)}
-              </p>
             </div>
-          </Link>
 
-          {/* Categories Button + Search */}
-          <div className="flex items-center gap-2 flex-1 max-w-2xl">
-            {/* Categories Menu Button */}
-            <Button
-              variant="outline"
-              onClick={onMenuClick}
-              className={`h-11 gap-2 rounded-xl border-2 border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-900/30 hover:border-teal-400 dark:hover:border-teal-600 transition-all duration-300 flex-shrink-0 ${isArabic ? 'flex-row-reverse' : ''}`}
-            >
-              <LayoutGrid className="h-5 w-5 text-teal-600 dark:text-teal-400" />
-              <span className="hidden md:inline font-medium text-gray-700 dark:text-gray-300">
-                {isArabic ? 'الأقسام' : 'Categories'}
-              </span>
-            </Button>
+            {/* Language Selector */}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleLanguage}
+                className="flex items-center gap-1.5 hover:text-blue-200 transition-colors"
+              >
+                <Languages className="h-4 w-4" />
+                <span>{isArabic ? 'English' : 'العربية'}</span>
+                <ChevronDown className="h-3 w-3" />
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Header - White Section */}
+      <div className="bg-white dark:bg-gray-900 shadow-sm">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center justify-between h-16 lg:h-20 gap-3">
+            {/* Logo */}
+            <Link href="/" className="flex items-center gap-3 group flex-shrink-0">
+              <motion.div 
+                whileHover={{ scale: 1.05 }}
+                className="relative h-12 lg:h-14 w-12 lg:w-14 rounded-xl overflow-hidden shadow-lg ring-2 ring-blue-100 dark:ring-blue-800 bg-white"
+              >
+                <img
+                  src="/logo.png"
+                  alt="Kamal Saad Logo"
+                  className="w-full h-full object-contain"
+                />
+              </motion.div>
+              <div className="hidden sm:block">
+                <div className="flex flex-col">
+                  <span className="text-lg lg:text-xl font-bold text-blue-900 dark:text-blue-400">
+                    KMS
+                  </span>
+                  <span className="text-xs text-gray-500 dark:text-gray-400">
+                    {isArabic ? 'كمال محمد سعد' : 'Kamal Mohamed Saad'}
+                  </span>
+                </div>
+              </div>
+            </Link>
 
             {/* Search Bar */}
-            <form onSubmit={handleSearch} className="flex-1 hidden sm:block">
-              <div className="relative w-full group">
+            <form onSubmit={handleSearch} className="flex-1 max-w-xl hidden md:block">
+              <div className="relative w-full">
                 <Input
                   type="text"
                   placeholder={t('searchPlaceholder', language)}
                   value={localSearch}
                   onChange={(e) => setLocalSearch(e.target.value)}
-                  className={`w-full h-11 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 focus:border-teal-500 focus:bg-white dark:focus:bg-gray-900 rounded-xl transition-all duration-300 ${
-                    isArabic ? 'pr-11 pl-4 text-right' : 'pl-11 pr-4 text-left'
+                  className={`w-full h-11 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 focus:bg-white dark:focus:bg-gray-900 rounded-r-xl transition-all duration-300 ${
+                    isArabic ? 'pr-4 pl-24 text-right' : 'pl-4 pr-24 text-left'
                   }`}
                 />
                 <Button
                   type="submit"
-                  size="icon"
-                  className={`absolute top-1 h-9 w-9 bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 rounded-lg ${
-                    isArabic ? 'right-1' : 'left-1'
+                  className={`absolute top-0 h-11 px-4 bg-blue-600 hover:bg-blue-700 rounded-l-none rounded-r-xl ${
+                    isArabic ? 'left-0 rounded-l-xl rounded-r-none' : 'right-0 rounded-r-xl rounded-l-none'
                   }`}
                 >
-                  <Search className="h-4 w-4" />
+                  <Search className="h-5 w-5" />
                 </Button>
               </div>
             </form>
-          </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1">
-            {/* Language Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleLanguage}
-              className="h-10 w-10 rounded-full hover:bg-teal-50 dark:hover:bg-teal-900/30"
-              title={isArabic ? 'English' : 'العربية'}
-            >
-              <Languages className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-            </Button>
-
-            {/* Theme Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={toggleTheme}
-              className="h-10 w-10 rounded-full hover:bg-teal-50 dark:hover:bg-teal-900/30"
-              title={theme === 'dark' ? t('lightMode', language) : t('darkMode', language)}
-            >
-              {theme === 'dark' ? (
-                <Sun className="h-5 w-5 text-yellow-500" />
-              ) : (
-                <Moon className="h-5 w-5 text-gray-600" />
-              )}
-            </Button>
-
-            {/* Notifications */}
-            {user && <NotificationDropdown />}
-
-            {/* Favorites */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative h-10 w-10 rounded-full hover:bg-rose-50 dark:hover:bg-rose-900/30"
-              onClick={toggleFavorites}
-            >
-              <Heart className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              <AnimatePresence>
-                {favoritesCount > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="absolute -top-1 -left-1 h-5 w-5 flex items-center justify-center bg-gradient-to-l from-rose-500 to-pink-500 text-white text-xs rounded-full font-bold"
-                  >
-                    {favoritesCount}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </Button>
-
-            {/* Cart */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="relative h-10 w-10 rounded-full hover:bg-teal-50 dark:hover:bg-teal-900/30"
-              onClick={toggleCart}
-            >
-              <ShoppingCart className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-              <AnimatePresence>
-                {items.length > 0 && (
-                  <motion.span
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    exit={{ scale: 0 }}
-                    className="absolute -top-1 -left-1 h-5 w-5 flex items-center justify-center bg-gradient-to-l from-teal-500 to-cyan-500 text-white text-xs rounded-full font-bold"
-                  >
-                    {items.reduce((sum, item) => sum + item.quantity, 0)}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-            </Button>
-
-            {/* User Menu */}
-            {user ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="sm" className="hidden md:flex gap-2 h-10 rounded-full hover:bg-teal-50 dark:hover:bg-teal-900/30">
-                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-400 flex items-center justify-center text-white font-bold text-sm">
-                      {user.name?.charAt(0) || 'K'}
-                    </div>
-                    <span className="text-gray-700 dark:text-gray-300">{user.name}</span>
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align={isArabic ? 'start' : 'end'} className="w-56">
-                  <DropdownMenuLabel className={isArabic ? 'text-right' : 'text-left'}>
-                    {user.email}
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/profile" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
-                      <User className="h-4 w-4" />
-                      <span>{t('myProfile', language)}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/orders" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
-                      <Package className="h-4 w-4" />
-                      <span>{t('myOrders', language)}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/profile?tab=addresses" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
-                      <MapPin className="h-4 w-4" />
-                      <span>{t('myAddresses', language)}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/profile?tab=loyalty" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
-                      <Settings className="h-4 w-4" />
-                      <span>{t('loyaltyPoints', language)}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem asChild className="cursor-pointer">
-                    <Link href="/contact" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
-                      <MessageCircle className="h-4 w-4" />
-                      <span>{t('contactUs', language)}</span>
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem 
-                    onClick={handleLogout}
-                    className={`text-red-500 focus:text-red-500 cursor-pointer ${isArabic ? 'flex-row-reverse justify-start' : ''}`}
-                  >
-                    <LogOut className={`h-4 w-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
-                    <span>{isArabic ? 'تسجيل الخروج' : 'Logout'}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
+            {/* Actions */}
+            <div className="flex items-center gap-1">
+              {/* Theme Toggle */}
               <Button
                 variant="ghost"
-                className="hidden md:flex gap-2 h-10 rounded-full hover:bg-teal-50 dark:hover:bg-teal-900/30"
-                onClick={() => toggleAuthModal('login')}
+                size="icon"
+                onClick={toggleTheme}
+                className="h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                title={theme === 'dark' ? t('lightMode', language) : t('darkMode', language)}
               >
-                <User className="h-5 w-5 text-gray-600 dark:text-gray-300" />
-                <span className="text-gray-700 dark:text-gray-300">{t('login', language)}</span>
+                {theme === 'dark' ? (
+                  <Sun className="h-5 w-5 text-yellow-500" />
+                ) : (
+                  <Moon className="h-5 w-5 text-gray-600" />
+                )}
               </Button>
-            )}
 
-            {/* Mobile Menu Toggle */}
-            <Button
-              variant="ghost"
-              size="icon"
-              className="lg:hidden h-10 w-10 rounded-full hover:bg-teal-50 dark:hover:bg-teal-900/30"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X className="h-5 w-5 text-gray-600 dark:text-gray-300" /> : <Menu className="h-5 w-5 text-gray-600 dark:text-gray-300" />}
-            </Button>
+              {/* Favorites */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9 rounded-full hover:bg-rose-50 dark:hover:bg-rose-900/30"
+                onClick={() => useStore.getState().toggleFavorites()}
+              >
+                <Heart className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                <AnimatePresence>
+                  {favoritesCount > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-1 -left-1 h-5 w-5 flex items-center justify-center bg-rose-500 text-white text-xs rounded-full font-bold"
+                    >
+                      {favoritesCount}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </Button>
+
+              {/* Cart */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="relative h-9 w-9 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                onClick={toggleCart}
+              >
+                <ShoppingCart className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                <AnimatePresence>
+                  {items.length > 0 && (
+                    <motion.span
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      exit={{ scale: 0 }}
+                      className="absolute -top-1 -left-1 h-5 w-5 flex items-center justify-center bg-blue-600 text-white text-xs rounded-full font-bold"
+                    >
+                      {items.reduce((sum, item) => sum + item.quantity, 0)}
+                    </motion.span>
+                  )}
+                </AnimatePresence>
+              </Button>
+
+              {/* User Menu */}
+              {user ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="sm" className="hidden md:flex gap-2 h-9 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30">
+                      <div className="h-7 w-7 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center text-white font-bold text-xs">
+                        {user.name?.charAt(0) || 'K'}
+                      </div>
+                      <span className="text-gray-700 dark:text-gray-300 text-sm">{user.name}</span>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align={isArabic ? 'start' : 'end'} className="w-56">
+                    <DropdownMenuLabel className={isArabic ? 'text-right' : 'text-left'}>
+                      {user.email}
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/profile" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
+                        <User className="h-4 w-4" />
+                        <span>{t('myProfile', language)}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/orders" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
+                        <Package className="h-4 w-4" />
+                        <span>{t('myOrders', language)}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/profile?tab=addresses" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
+                        <MapPin className="h-4 w-4" />
+                        <span>{t('myAddresses', language)}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild className="cursor-pointer">
+                      <Link href="/contact" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
+                        <MessageCircle className="h-4 w-4" />
+                        <span>{t('contactUs', language)}</span>
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem 
+                      onClick={handleLogout}
+                      className={`text-red-500 focus:text-red-500 cursor-pointer ${isArabic ? 'flex-row-reverse justify-start' : ''}`}
+                    >
+                      <LogOut className={`h-4 w-4 ${isArabic ? 'ml-2' : 'mr-2'}`} />
+                      <span>{isArabic ? 'تسجيل الخروج' : 'Logout'}</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="hidden md:flex gap-2 h-9 rounded-full hover:bg-blue-50 dark:hover:bg-blue-900/30"
+                  onClick={() => toggleAuthModal('login')}
+                >
+                  <User className="h-5 w-5 text-gray-600 dark:text-gray-300" />
+                  <span className="text-gray-700 dark:text-gray-300 text-sm">{t('login', language)}</span>
+                </Button>
+              )}
+
+              {/* Menu Button - Orange */}
+              <Button
+                onClick={onMenuClick}
+                className="h-9 gap-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg flex-shrink-0 lg:hidden"
+              >
+                <Menu className="h-5 w-5" />
+                <span className="hidden sm:inline text-sm">{isArabic ? 'القائمة الرئيسية' : 'Menu'}</span>
+              </Button>
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Mobile Menu */}
-        <AnimatePresence>
-          {isMenuOpen && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="lg:hidden py-4 border-t dark:border-gray-700"
+      {/* Navigation Bar - Blue */}
+      <div className="bg-blue-600 dark:bg-blue-700 shadow-md hidden lg:block">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center">
+            {/* Categories Menu Button */}
+            <Button
+              onClick={onMenuClick}
+              className="h-12 px-4 gap-2 bg-orange-500 hover:bg-orange-600 text-white rounded-none flex-shrink-0"
             >
+              <Menu className="h-5 w-5" />
+              <span className="font-medium">{isArabic ? 'القائمة الرئيسية' : 'Main Menu'}</span>
+            </Button>
+
+            {/* Navigation Links */}
+            <nav className="flex-1 flex items-center overflow-x-auto scrollbar-hide">
+              {navItems.map((item, index) => (
+                <Link
+                  key={item.id}
+                  href={item.href}
+                  className={`flex items-center gap-1.5 px-4 py-3 text-white hover:bg-blue-700 dark:hover:bg-blue-800 transition-colors whitespace-nowrap text-sm font-medium ${
+                    index === 0 ? (isArabic ? 'border-r border-blue-500' : 'border-l border-blue-500') : ''
+                  }`}
+                >
+                  {item.icon && <item.icon className="h-4 w-4" />}
+                  <span>{isArabic ? item.labelAr : item.labelEn}</span>
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </div>
+      </div>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            className="lg:hidden bg-white dark:bg-gray-900 border-b dark:border-gray-700 shadow-lg"
+          >
+            <div className="container mx-auto px-4 py-4">
               <form onSubmit={handleSearch} className="mb-4">
                 <Input
                   type="text"
@@ -319,63 +353,81 @@ export function Header({ onMenuClick }: HeaderProps) {
                   className="w-full h-12 rounded-xl bg-gray-50 dark:bg-gray-800 dark:border-gray-700"
                 />
               </form>
-              <div className="flex flex-col gap-2">
-                {user ? (
-                  <>
-                    <div className="flex items-center gap-2 px-3 py-2 text-gray-700 dark:text-gray-300">
-                      <div className="h-8 w-8 rounded-full bg-gradient-to-br from-teal-400 to-cyan-400 flex items-center justify-center text-white font-bold text-sm">
-                        {user.name?.charAt(0) || 'K'}
-                      </div>
-                      <span>{user.name}</span>
+              <nav className="flex flex-col gap-1">
+                {navItems.map((item) => (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center gap-2 px-4 py-3 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                  >
+                    {item.icon && <item.icon className="h-5 w-5 text-blue-600 dark:text-blue-400" />}
+                    <span>{isArabic ? item.labelAr : item.labelEn}</span>
+                  </Link>
+                ))}
+              </nav>
+              {user ? (
+                <div className="mt-4 pt-4 border-t dark:border-gray-700">
+                  <div className="flex items-center gap-2 px-4 py-2 text-gray-700 dark:text-gray-300">
+                    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-500 flex items-center justify-center text-white font-bold text-sm">
+                      {user.name?.charAt(0) || 'K'}
                     </div>
-                    <Button variant="ghost" asChild className="justify-start gap-2 rounded-xl text-gray-700 dark:text-gray-300">
-                      <Link href="/profile" onClick={() => setIsMenuOpen(false)}>
-                        <User className="h-5 w-5" />
-                        {t('myProfile', language)}
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" asChild className="justify-start gap-2 rounded-xl text-gray-700 dark:text-gray-300">
-                      <Link href="/orders" onClick={() => setIsMenuOpen(false)}>
-                        <Package className="h-5 w-5" />
-                        {t('myOrders', language)}
-                      </Link>
-                    </Button>
-                    <Button variant="ghost" asChild className="justify-start gap-2 rounded-xl text-gray-700 dark:text-gray-300">
-                      <Link href="/contact" onClick={() => setIsMenuOpen(false)}>
-                        <MessageCircle className="h-5 w-5" />
-                        {t('contactUs', language)}
-                      </Link>
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      className="justify-start gap-2 rounded-xl text-red-500"
-                      onClick={() => {
-                        handleLogout();
-                        setIsMenuOpen(false);
-                      }}
-                    >
-                      <LogOut className="h-5 w-5" />
-                      {isArabic ? 'تسجيل الخروج' : 'Logout'}
-                    </Button>
-                  </>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    className="justify-start gap-2 rounded-xl text-gray-700 dark:text-gray-300"
+                    <span>{user.name}</span>
+                  </div>
+                  <Button 
+                    variant="ghost" 
+                    className="w-full justify-start gap-2 rounded-xl text-red-500 mt-2"
                     onClick={() => {
-                      toggleAuthModal('login');
-                      setIsMenuOpen(false);
+                      handleLogout();
+                      setIsMobileMenuOpen(false);
                     }}
                   >
-                    <User className="h-5 w-5" />
-                    {t('login', language)}
+                    <LogOut className="h-5 w-5" />
+                    {isArabic ? 'تسجيل الخروج' : 'Logout'}
                   </Button>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+                </div>
+              ) : (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-2 rounded-xl text-gray-700 dark:text-gray-300 mt-4"
+                  onClick={() => {
+                    toggleAuthModal('login');
+                    setIsMobileMenuOpen(false);
+                  }}
+                >
+                  <User className="h-5 w-5" />
+                  {t('login', language)}
+                </Button>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Mobile Search Bar */}
+      <div className="md:hidden bg-white dark:bg-gray-900 border-b dark:border-gray-700 px-4 py-2">
+        <form onSubmit={handleSearch}>
+          <div className="relative w-full">
+            <Input
+              type="text"
+              placeholder={t('searchPlaceholder', language)}
+              value={localSearch}
+              onChange={(e) => setLocalSearch(e.target.value)}
+              className={`w-full h-10 bg-gray-50 dark:bg-gray-800 border-2 border-gray-200 dark:border-gray-700 focus:border-blue-500 rounded-r-lg ${
+                isArabic ? 'pr-3 pl-20 text-right' : 'pl-3 pr-20 text-left'
+              }`}
+            />
+            <Button
+              type="submit"
+              className={`absolute top-0 h-10 px-3 bg-blue-600 hover:bg-blue-700 rounded-l-none rounded-r-lg ${
+                isArabic ? 'left-0 rounded-l-lg rounded-r-none' : 'right-0 rounded-r-lg rounded-l-none'
+              }`}
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+          </div>
+        </form>
       </div>
-    </motion.header>
+    </header>
   );
 }
