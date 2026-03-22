@@ -163,14 +163,14 @@ export default function AdminPage() {
 
   const fetchData = async () => {
     try {
-      const [productsRes, categoriesRes] = await Promise.all([
-        fetch('/api/products'),
-        fetch('/api/categories')
-      ]);
+      // Fetch all products with high limit
+      const productsRes = await fetch('/api/products?limit=10000');
       if (productsRes.ok) {
         const data = await productsRes.json();
         setProducts(data.products || data);
       }
+      
+      const categoriesRes = await fetch('/api/categories');
       if (categoriesRes.ok) {
         const data = await categoriesRes.json();
         setCategories(data.categories || data);
@@ -327,6 +327,28 @@ export default function AdminPage() {
       fetchData();
     } catch (error) {
       console.error('Error deleting product:', error);
+    }
+  };
+
+  const [deletingAll, setDeletingAll] = useState(false);
+
+  const handleDeleteAllProducts = async () => {
+    if (!confirm(`هل أنت متأكد من حذف جميع المنتجات؟\nسيتم حذف ${products.length} منتج!`)) return;
+    if (!confirm('هذا الإجراء لا يمكن التراجع عنه!\nهل أنت متأكد تماماً؟')) return;
+    
+    setDeletingAll(true);
+    try {
+      const res = await fetch('/api/products/delete-all', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setProducts([]);
+        alert(`تم حذف ${data.deletedCount} منتج بنجاح`);
+      }
+    } catch (error) {
+      console.error('Error deleting all products:', error);
+      alert('حدث خطأ أثناء حذف المنتجات');
+    } finally {
+      setDeletingAll(false);
     }
   };
 
@@ -921,7 +943,7 @@ export default function AdminPage() {
                 <CardHeader className="bg-gray-50 rounded-t-xl flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5 text-emerald-600" />
-                    قائمة المنتجات ({filteredProducts.length})
+                    قائمة المنتجات ({filteredProducts.length} من {products.length})
                   </CardTitle>
                   <div className="flex items-center gap-3">
                     <div className="relative">
@@ -933,6 +955,17 @@ export default function AdminPage() {
                         className="pr-9 w-64 h-9"
                       />
                     </div>
+                    <Button 
+                      onClick={handleDeleteAllProducts} 
+                      disabled={deletingAll || products.length === 0}
+                      className="bg-red-600 hover:bg-red-700 gap-2"
+                    >
+                      {deletingAll ? (
+                        <><Loader2 className="h-4 w-4 animate-spin" /> جاري الحذف...</>
+                      ) : (
+                        <><Trash2 className="h-4 w-4" /> حذف الكل</>
+                      )}
+                    </Button>
                     <Button onClick={() => { resetForm(); setIsAddingProduct(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
                       <Plus className="h-4 w-4" />
                       إضافة منتج
@@ -1503,7 +1536,7 @@ function CustomersManagement() {
     try {
       const res = await fetch('/api/admin/customers');
       const data = await res.json();
-      setCustomers(data.customers || data);
+      setCustomers(data.data || data.customers || data || []);
     } catch (error) {
       console.error('Error fetching customers:', error);
     } finally {
