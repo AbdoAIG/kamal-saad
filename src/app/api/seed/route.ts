@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import bcrypt from 'bcryptjs';
 
 const categories = [
   { name: 'Pens & Pencils', nameAr: 'أقلام ومصنفات', slug: 'pens-pencils' },
@@ -64,12 +65,13 @@ export async function POST() {
     await db.category.deleteMany();
     await db.user.deleteMany();
 
-    // Create admin user
+    // Create admin user with hashed password
+    const hashedPassword = await bcrypt.hash('admin123', 10);
     await db.user.create({
       data: {
         email: 'admin@maktbati.com',
         name: 'المشرف',
-        password: 'admin123',
+        password: hashedPassword,
         role: 'admin'
       }
     });
