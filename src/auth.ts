@@ -1,90 +1,29 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
-// Use AUTH_SECRET (NextAuth v5) or fallback to NEXTAUTH_SECRET (v4)
-const secret = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
-
-if (!secret) {
-  console.error("WARNING: No AUTH_SECRET or NEXTAUTH_SECRET found in environment!");
-}
-
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  secret,
+  // Use Prisma adapter for database
+  adapter: PrismaAdapter(prisma),
+  
+  // Secret for signing cookies
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
+  
+  // Trust the host in production
   trustHost: true,
   
-  // Session configuration
+  // Use JWT sessions (simpler for OAuth)
   session: {
     strategy: "jwt",
-    maxAge: 30 * 24 * 60 * 60, // 30 days
   },
   
-  // Pages configuration
+  // Custom pages
   pages: {
     signIn: "/",
     error: "/",
-  },
-  
-  // Cookie configuration for production
-  cookies: {
-    sessionToken: {
-      name: `next-auth.session-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true,
-      },
-    },
-    callbackUrl: {
-      name: `next-auth.callback-url`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true,
-      },
-    },
-    csrfToken: {
-      name: `next-auth.csrf-token`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true,
-      },
-    },
-    pkceCodeVerifier: {
-      name: `next-auth.pkce.code_verifier`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true,
-        maxAge: 900,
-      },
-    },
-    state: {
-      name: `next-auth.state`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true,
-        maxAge: 900,
-      },
-    },
-    nonce: {
-      name: `next-auth.nonce`,
-      options: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: true,
-      },
-    },
   },
   
   // Providers
@@ -92,6 +31,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+      // Allow linking existing accounts by email
       allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
@@ -105,163 +45,55 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        try {
-          const user = await prisma.user.findUnique({
-            where: { email: credentials.email as string },
-          });
+        const user = await prisma.user.findUnique({
+          where: { email: credentials.email as string },
+        });
 
-          if (!user || !user.password) {
-            return null;
-          }
-
-          const isPasswordValid = await bcrypt.compare(
-            credentials.password as string,
-            user.password
-          );
-
-          if (!isPasswordValid) {
-            return null;
-          }
-
-          return {
-            id: user.id,
-            email: user.email,
-            name: user.name,
-            image: user.image,
-            role: user.role,
-          };
-        } catch (error) {
-          console.error("Auth error:", error);
+        if (!user || !user.password) {
           return null;
         }
+
+        const isValid = await bcrypt.compare(
+          credentials.password as string,
+          user.password
+        );
+
+        if (!isValid) {
+          return null;
+        }
+
+        return {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          image: user.image,
+          role: user.role,
+        };
       },
     }),
   ],
   
   // Callbacks
   callbacks: {
-    async signIn({ user, account, profile }) {
-      console.log("[AUTH] signIn callback triggered", { 
-        provider: account?.provider, 
-        email: profile?.email,
-        userId: user.id
-      });
-      
-      // Handle Google OAuth
-      if (account?.provider === 'google' && profile?.email) {
-        try {
-          // Check if user exists
-          let existingUser = await prisma.user.findUnique({
-            where: { email: profile.email }
-          });
-
-          if (!existingUser) {
-            // Create new user
-            console.log("[AUTH] Creating new user for Google OAuth:", profile.email);
-            existingUser = await prisma.user.create({
-              data: {
-                email: profile.email,
-                name: profile.name || user.name || '',
-                image: (profile as any).picture || user.image || null,
-                role: 'customer',
-                emailVerified: new Date(),
-              }
-            });
-            console.log("[AUTH] New user created:", existingUser.id);
-          } else {
-            console.log("[AUTH] Existing user found:", existingUser.id);
-            
-            // Update user info from Google if needed
-            if (!existingUser.image && (profile as any).picture) {
-              await prisma.user.update({
-                where: { id: existingUser.id },
-                data: { image: (profile as any).picture }
-              });
-            }
-          }
-
-          // Update user object with database info
-          user.id = existingUser.id;
-          (user as any).role = existingUser.role;
-          
-          console.log("[AUTH] SignIn successful for user:", existingUser.id);
-          return true;
-        } catch (error) {
-          console.error("[AUTH] Google sign in error:", error);
-          return false;
-        }
-      }
-      
-      return true;
-    },
-    
-    async jwt({ token, user, account, trigger, session }) {
-      // Initial sign in
+    async jwt({ token, user }) {
+      // On initial sign in, add user info to token
       if (user) {
-        console.log("[AUTH] JWT callback - initial sign in for user:", user.id);
         token.id = user.id;
         token.role = (user as any).role;
-
-        // For Google OAuth, fetch fresh user data
-        if (account?.provider === 'google') {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: user.email! }
-          });
-          if (dbUser) {
-            token.id = dbUser.id;
-            token.role = dbUser.role;
-            token.email = dbUser.email;
-            token.name = dbUser.name;
-            token.picture = dbUser.image;
-          }
-        }
       }
-      
-      // Handle session update
-      if (trigger === "update" && session) {
-        console.log("[AUTH] JWT callback - session update");
-        token = { ...token, ...session };
-      }
-      
       return token;
     },
     
     async session({ session, token }) {
-      if (session.user && token) {
-        (session.user as any).id = token.id as string;
-        (session.user as any).role = token.role as string;
+      // Add token info to session
+      if (session.user) {
+        (session.user as any).id = token.id;
+        (session.user as any).role = token.role;
       }
       return session;
     },
-    
-    async redirect({ url, baseUrl }) {
-      console.log("[AUTH] Redirect callback", { url, baseUrl });
-      
-      // Allows relative callback URLs
-      if (url.startsWith("/")) return `${baseUrl}${url}`;
-      
-      // Allows callback URLs on the same origin
-      try {
-        if (new URL(url).origin === baseUrl) return url;
-      } catch (e) {
-        // Invalid URL, use baseUrl
-      }
-      
-      // Default redirect to baseUrl
-      return baseUrl;
-    },
   },
   
-  // Events for debugging
-  events: {
-    async signIn(message) {
-      console.log("[AUTH EVENT] User signed in:", message.user?.email);
-    },
-    async signOut(message) {
-      console.log("[AUTH EVENT] User signed out");
-    },
-  },
-  
-  // Enable debug mode
-  debug: true,
+  // Debug in development
+  debug: process.env.NODE_ENV === "development",
 });
