@@ -53,7 +53,6 @@ export function Header({ onMenuClick }: HeaderProps) {
   }, []);
 
   useEffect(() => {
-    // Apply theme on mount
     if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
@@ -85,61 +84,81 @@ export function Header({ onMenuClick }: HeaderProps) {
       dir={isArabic ? 'rtl' : 'ltr'}
     >
       <div className="container mx-auto px-4">
-        <div className="flex items-center justify-between h-28 py-2">
-          {/* Logo */}
+        {/* Top Bar - Logo Only */}
+        <div className="flex items-center justify-center py-3 border-b dark:border-gray-800">
           <Link href="/" className="flex items-center gap-4 group">
-            {/* Categories Menu Button */}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onMenuClick}
-              className="h-12 w-12 rounded-xl bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-lg hover:shadow-xl transition-all duration-300"
-            >
-              <LayoutGrid className="h-6 w-6" />
-            </Button>
             <motion.div 
-              whileHover={{ scale: 1.08 }}
-              className="relative h-20 w-20 rounded-xl overflow-hidden shadow-xl ring-2 ring-teal-100 dark:ring-teal-800 bg-white"
+              whileHover={{ scale: 1.05, rotate: 2 }}
+              className="relative h-16 w-16 md:h-20 md:w-20 rounded-2xl overflow-hidden shadow-2xl ring-4 ring-teal-500/20 dark:ring-teal-400/30 bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700"
             >
               <img
                 src="/logo.png"
                 alt="Kamal Saad Logo"
-                className="w-full h-full object-contain"
+                className="w-full h-full object-contain p-1"
               />
+              {/* Shine effect */}
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             </motion.div>
-            <div className="block">
-              <span className="text-3xl font-bold bg-gradient-to-l from-teal-600 to-cyan-600 bg-clip-text text-transparent">
+            <div className="text-center md:text-right">
+              <motion.span 
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-2xl md:text-3xl font-black bg-gradient-to-l from-teal-600 via-cyan-600 to-blue-600 bg-clip-text text-transparent"
+              >
                 {t('siteName', language)}
-              </span>
-              <p className={`text-xs text-gray-500 dark:text-gray-400 ${isArabic ? '-mt-1' : 'mt-0'}`}>
+              </motion.span>
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className={`text-xs md:text-sm text-gray-500 dark:text-gray-400 font-medium tracking-wide`}
+              >
                 {t('siteSlogan', language)}
-              </p>
+              </motion.p>
             </div>
           </Link>
+        </div>
 
-          {/* Search Bar - Desktop */}
-          <form onSubmit={handleSearch} className="hidden lg:flex flex-1 max-w-2xl mx-8">
-            <div className="relative w-full group">
-              <Input
-                type="text"
-                placeholder={t('searchPlaceholder', language)}
-                value={localSearch}
-                onChange={(e) => setLocalSearch(e.target.value)}
-                className={`w-full h-12 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 focus:border-teal-500 focus:bg-white dark:focus:bg-gray-900 rounded-xl transition-all duration-300 ${
-                  isArabic ? 'pr-12 pl-4 text-right' : 'pl-12 pr-4 text-left'
-                }`}
-              />
-              <Button
-                type="submit"
-                size="icon"
-                className={`absolute top-1 h-10 w-10 bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 rounded-lg ${
-                  isArabic ? 'right-1' : 'left-1'
-                }`}
-              >
-                <Search className="h-5 w-5" />
-              </Button>
-            </div>
-          </form>
+        {/* Bottom Bar - Search & Actions */}
+        <div className="flex items-center justify-between h-14 gap-2">
+          {/* Menu Button + Search */}
+          <div className="flex items-center gap-2 flex-1">
+            {/* Categories Menu Button */}
+            <Button
+              variant="outline"
+              onClick={onMenuClick}
+              className={`h-11 gap-2 rounded-xl border-2 border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-900/30 hover:border-teal-400 dark:hover:border-teal-600 transition-all duration-300 ${isArabic ? 'flex-row-reverse' : ''}`}
+            >
+              <LayoutGrid className="h-5 w-5 text-teal-600 dark:text-teal-400" />
+              <span className="hidden sm:inline font-medium text-gray-700 dark:text-gray-300">
+                {isArabic ? 'الأقسام' : 'Categories'}
+              </span>
+            </Button>
+
+            {/* Search Bar */}
+            <form onSubmit={handleSearch} className="hidden sm:flex flex-1 max-w-xl">
+              <div className="relative w-full group">
+                <Input
+                  type="text"
+                  placeholder={t('searchPlaceholder', language)}
+                  value={localSearch}
+                  onChange={(e) => setLocalSearch(e.target.value)}
+                  className={`w-full h-11 bg-gray-50 dark:bg-gray-800 border-2 border-gray-100 dark:border-gray-700 focus:border-teal-500 focus:bg-white dark:focus:bg-gray-900 rounded-xl transition-all duration-300 ${
+                    isArabic ? 'pr-11 pl-4 text-right' : 'pl-11 pr-4 text-left'
+                  }`}
+                />
+                <Button
+                  type="submit"
+                  size="icon"
+                  className={`absolute top-1 h-9 w-9 bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 rounded-lg ${
+                    isArabic ? 'right-1' : 'left-1'
+                  }`}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            </form>
+          </div>
 
           {/* Actions */}
           <div className="flex items-center gap-1">

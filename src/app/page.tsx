@@ -1,9 +1,9 @@
 'use client';
 
-import { Suspense, useEffect, useState, useCallback, useRef } from 'react';
+import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Category, Product } from '@prisma/client';
-import { Loader2, Sparkles, Store, Truck, Shield, Headphones, CreditCard, Package, CheckCircle2, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Loader2, Sparkles, Store, Truck, Shield, Headphones, CreditCard, Package, CheckCircle2, Plus } from 'lucide-react';
 import { Header } from '@/components/store/Header';
 import { Footer } from '@/components/store/Footer';
 import { CartSidebar } from '@/components/store/CartSidebar';
@@ -50,8 +50,6 @@ function HomePageContent() {
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
-  const observerRef = useRef<IntersectionObserver | null>(null);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   const { user, addItem, toggleCart, language } = useStore();
   const isArabic = language === 'ar';
@@ -82,6 +80,7 @@ function HomePageContent() {
         setProducts(prods.products);
         setTotalProducts(prods.pagination?.total || 0);
         setHasMore(prods.pagination?.hasMore || false);
+        setPage(1);
       }
       
       setIsSeeding(false);
@@ -92,7 +91,7 @@ function HomePageContent() {
     }
   }, [searchQuery, categoryFilter]);
 
-  // Load more products
+  // Load more products with button
   const loadMoreProducts = useCallback(async () => {
     if (isLoadingMore || !hasMore) return;
     
@@ -113,32 +112,6 @@ function HomePageContent() {
       setIsLoadingMore(false);
     }
   }, [page, hasMore, isLoadingMore, searchQuery, categoryFilter]);
-
-  // Intersection Observer for infinite scroll
-  useEffect(() => {
-    if (observerRef.current) {
-      observerRef.current.disconnect();
-    }
-
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
-          loadMoreProducts();
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    if (loadMoreRef.current) {
-      observerRef.current.observe(loadMoreRef.current);
-    }
-
-    return () => {
-      if (observerRef.current) {
-        observerRef.current.disconnect();
-      }
-    };
-  }, [hasMore, isLoadingMore, loadMoreProducts]);
 
   const seedDatabase = async () => {
     setIsSeeding(true);
@@ -318,7 +291,7 @@ function HomePageContent() {
           </div>
         </section>
 
-        {/* All Products Section with Infinite Scroll */}
+        {/* All Products Section with Load More Button */}
         <section id="products" className="py-8 bg-white">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-4">
@@ -329,7 +302,7 @@ function HomePageContent() {
                 }
               </h2>
               <span className="text-sm text-gray-500">
-                {totalProducts.toLocaleString()} {isArabic ? 'منتج' : 'products'}
+                {products.length} / {totalProducts.toLocaleString()} {isArabic ? 'منتج' : 'products'}
               </span>
             </div>
             
@@ -355,15 +328,37 @@ function HomePageContent() {
               ))}
             </div>
 
-            {/* Load More Trigger */}
-            <div ref={loadMoreRef} className="flex justify-center py-6">
-              {isLoadingMore && (
-                <Loader2 className="h-6 w-6 animate-spin text-teal-500" />
+            {/* Load More Button */}
+            <div className="flex flex-col items-center gap-4 py-8">
+              {hasMore && (
+                <Button
+                  onClick={loadMoreProducts}
+                  disabled={isLoadingMore}
+                  className="bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-8 py-6 text-lg rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 gap-2"
+                >
+                  {isLoadingMore ? (
+                    <>
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                      {isArabic ? 'جاري التحميل...' : 'Loading...'}
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-5 w-5" />
+                      {isArabic ? 'تحميل المزيد' : 'Load More'}
+                    </>
+                  )}
+                </Button>
               )}
+              
               {!hasMore && products.length > 0 && (
-                <p className="text-gray-400 text-sm">
-                  {isArabic ? 'تم تحميل جميع المنتجات' : 'All products loaded'}
-                </p>
+                <div className="text-center">
+                  <p className="text-gray-400 text-sm">
+                    {isArabic ? 'تم تحميل جميع المنتجات' : 'All products loaded'}
+                  </p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    {isArabic ? `إجمالي ${products.length} منتج` : `Total ${products.length} products`}
+                  </p>
+                </div>
               )}
             </div>
           </div>

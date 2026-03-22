@@ -4,7 +4,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { 
   Store, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Youtube,
-  CreditCard, Shield, Truck, Clock
+  CreditCard, Shield, Truck, Clock, Heart
 } from 'lucide-react';
 import { useStore, t } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
@@ -175,13 +175,28 @@ export function Footer() {
         </div>
       </div>
 
-      {/* Bottom */}
-      <div className="border-t border-gray-800">
+      {/* Bottom - Copyright */}
+      <div className="border-t border-gray-800 bg-gray-950">
         <div className="container mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <p className="text-sm text-gray-500">
-              © 2024 {t('siteName', language)}. {t('allRightsReserved', language)}
-            </p>
+            <div className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse' : ''}`}>
+              <Heart className="h-4 w-4 text-red-500 fill-red-500" />
+              <p className="text-sm text-gray-400">
+                {isArabic ? (
+                  <>
+                    © 2024 <span className="text-teal-400 font-bold">كمال سعد</span>. جميع الحقوق محفوظة. 
+                    <span className="text-gray-500 mx-1">|</span>
+                    تصميم وتطوير <span className="text-cyan-400 font-medium">كمال سعد</span>
+                  </>
+                ) : (
+                  <>
+                    © 2024 <span className="text-teal-400 font-bold">Kamal Saad</span>. All Rights Reserved.
+                    <span className="text-gray-500 mx-1">|</span>
+                    Designed & Developed by <span className="text-cyan-400 font-medium">Kamal Saad</span>
+                  </>
+                )}
+              </p>
+            </div>
             <div className="flex items-center gap-4">
               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/200px-Visa_Inc._logo.svg.png" alt="Visa" className="h-6 opacity-50" />
               <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/200px-Mastercard-logo.svg.png" alt="Mastercard" className="h-6 opacity-50" />

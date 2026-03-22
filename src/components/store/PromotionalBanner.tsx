@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ShoppingBag, Truck, Percent, Gift, CreditCard, X, ExternalLink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useStore, t } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 
@@ -68,7 +68,6 @@ export function PromotionalBanner() {
   const [currentBanner, setCurrentBanner] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dismissed, setDismissed] = useState(false);
   const { language } = useStore();
   const isArabic = language === 'ar';
 
@@ -94,25 +93,28 @@ export function PromotionalBanner() {
     fetchBanners();
   }, []);
 
-  // Auto-rotate banners
+  // Auto-rotate banners every 4 seconds
   useEffect(() => {
-    if (banners.length <= 1) return;
+    const displayBanners = banners.length > 0 ? banners : defaultBanners[isArabic ? 'ar' : 'en'];
+    
+    if (displayBanners.length <= 1) return;
+    
     const interval = setInterval(() => {
-      setCurrentBanner((prev) => (prev + 1) % banners.length);
-    }, 5000);
+      setCurrentBanner((prev) => (prev + 1) % displayBanners.length);
+    }, 4000);
+    
     return () => clearInterval(interval);
-  }, [banners.length]);
+  }, [banners.length, isArabic]);
 
   const nextBanner = () => {
-    setCurrentBanner((prev) => (prev + 1) % banners.length);
+    const displayBanners = banners.length > 0 ? banners : defaultBanners[isArabic ? 'ar' : 'en'];
+    setCurrentBanner((prev) => (prev + 1) % displayBanners.length);
   };
 
   const prevBanner = () => {
-    setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length);
+    const displayBanners = banners.length > 0 ? banners : defaultBanners[isArabic ? 'ar' : 'en'];
+    setCurrentBanner((prev) => (prev - 1 + displayBanners.length) % displayBanners.length);
   };
-
-  // Don't render if dismissed or no banners
-  if (dismissed) return null;
   
   // Show default banners if no custom banners
   const hasCustomBanners = banners.length > 0;
@@ -147,7 +149,7 @@ export function PromotionalBanner() {
           initial={{ opacity: 0, x: isArabic ? -100 : 100 }}
           animate={{ opacity: 1, x: 0 }}
           exit={{ opacity: 0, x: isArabic ? 100 : -100 }}
-          transition={{ duration: 0.6, ease: 'easeInOut' }}
+          transition={{ duration: 0.5, ease: 'easeInOut' }}
           className={`relative ${bannerImage ? '' : `bg-gradient-to-l ${gradient}`} p-6 md:p-8 lg:p-10 min-h-[200px] md:min-h-[250px] flex items-center`}
         >
           {/* Banner Image Background */}
@@ -177,7 +179,7 @@ export function PromotionalBanner() {
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
+                  transition={{ delay: 0.1 }}
                   className="inline-flex items-center gap-2 bg-yellow-400 text-gray-900 px-4 py-1.5 rounded-full text-sm font-bold mb-3"
                 >
                   <span className="animate-pulse">✨</span>
@@ -188,7 +190,7 @@ export function PromotionalBanner() {
               <motion.h2
                 initial={{ y: 20, opacity: 0 }}
                 animate={{ y: 0, opacity: 1 }}
-                transition={{ delay: 0.3 }}
+                transition={{ delay: 0.2 }}
                 className="text-2xl md:text-3xl lg:text-4xl font-bold text-white mb-4 drop-shadow-lg"
               >
                 {title}
@@ -198,7 +200,7 @@ export function PromotionalBanner() {
                 <motion.div
                   initial={{ y: 20, opacity: 0 }}
                   animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 }}
+                  transition={{ delay: 0.3 }}
                 >
                   {link ? (
                     <a href={link} target="_blank" rel="noopener noreferrer">
@@ -258,14 +260,6 @@ export function PromotionalBanner() {
         </>
       )}
 
-      {/* Close Button */}
-      <button
-        onClick={() => setDismissed(true)}
-        className="absolute top-4 right-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2 rounded-full transition-all duration-300 hover:scale-110 z-30"
-      >
-        <X className="w-4 h-4" />
-      </button>
-
       {/* Progress Bar - only show if multiple banners */}
       {displayBanners.length > 1 && (
         <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20 z-20">
@@ -273,7 +267,7 @@ export function PromotionalBanner() {
             key={currentBanner}
             initial={{ width: '0%' }}
             animate={{ width: '100%' }}
-            transition={{ duration: 5, ease: 'linear' }}
+            transition={{ duration: 4, ease: 'linear' }}
             className="h-full bg-white/80"
           />
         </div>
