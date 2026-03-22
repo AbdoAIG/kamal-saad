@@ -70,7 +70,8 @@ export default function ProductPage() {
         setProduct(data);
 
         const allProductsRes = await fetch('/api/products');
-        const allProducts = await allProductsRes.json();
+        const allProductsData = await allProductsRes.json();
+        const allProducts = allProductsData.products || allProductsData;
         const related = allProducts
           .filter((p: Product) => p.categoryId === data.categoryId && p.id !== data.id)
           .slice(0, 4);
