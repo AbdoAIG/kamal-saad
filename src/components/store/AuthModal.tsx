@@ -84,8 +84,13 @@ export function AuthModal() {
 
   const handleGoogleLogin = () => {
     setSocialLoading('google');
+    // Store current URL to return to after login
+    const callbackUrl = window.location.pathname + window.location.search;
     // For OAuth providers, we need to use redirect
-    signIn('google', { callbackUrl: '/' });
+    signIn('google', { 
+      callbackUrl: callbackUrl !== '/' ? callbackUrl : '/',
+      redirect: true 
+    });
   };
 
   const handleFacebookLogin = () => {

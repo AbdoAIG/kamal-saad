@@ -33,7 +33,7 @@ export async function POST(request: NextRequest) {
     // Paymob API Configuration
     const PAYMOB_API_KEY = process.env.PAYMOB_API_KEY;
     const PAYMOB_INTEGRATION_ID = process.env.PAYMOB_INTEGRATION_ID;
-    const PAYMOB_IFRAME_ID = process.env.PAYMOB_IFRAME_ID;
+    const PAYMOB_IFRAME_ID = process.env.PAYMOB_IFRAME_ID || '1017535'; // Default iframe ID
     const PAYMOB_HMAC_SECRET = process.env.PAYMOB_HMAC_SECRET;
 
     // Demo mode - no API key configured
@@ -142,18 +142,17 @@ export async function POST(request: NextRequest) {
     const paymentKeyData = (await paymentKeyResponse.json()) as PaymobPaymentKeyResponse;
     const paymentKey = paymentKeyData.token;
 
-    // Generate payment URL
-    const paymentUrl = PAYMOB_IFRAME_ID
-      ? `${PAYMOB_BASE_URL}/acceptance/iframes/${PAYMOB_IFRAME_ID}?payment_token=${paymentKey}`
-      : null;
+    // Generate payment URL with the correct iframe ID
+    const paymentUrl = `https://accept.paymob.com/api/acceptance/iframes/${PAYMOB_IFRAME_ID}?payment_token=${paymentKey}`;
 
-    logger.info('Paymob payment initiated', { paymobOrderId, amount, orderId });
+    logger.info('Paymob payment initiated', { paymobOrderId, amount, orderId, iframeId: PAYMOB_IFRAME_ID });
 
     return NextResponse.json({
       success: true,
       paymentKey,
       paymobOrderId,
       paymentUrl,
+      iframeId: PAYMOB_IFRAME_ID,
       message: 'Payment initiated successfully',
     });
 
