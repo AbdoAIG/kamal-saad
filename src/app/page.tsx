@@ -3,12 +3,11 @@
 import { Suspense, useEffect, useState, useCallback } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { Category, Product } from '@prisma/client';
-import { Loader2, Sparkles, Store, Package, CheckCircle2, Plus } from 'lucide-react';
+import { Loader2, Sparkles, Package, Plus } from 'lucide-react';
 import { Header } from '@/components/store/Header';
 import { Footer } from '@/components/store/Footer';
 import { CartSidebar } from '@/components/store/CartSidebar';
 import { AuthModal } from '@/components/store/AuthModal';
-import { AdminPanel } from '@/components/store/AdminPanel';
 import { ProductCard } from '@/components/store/ProductCard';
 import { PromotionalBanner } from '@/components/store/PromotionalBanner';
 import { Sidebar } from '@/components/store/Sidebar';
@@ -42,7 +41,6 @@ function HomePageContent() {
   const [products, setProducts] = useState<ProductWithCategory[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isSeeding, setIsSeeding] = useState(false);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   
   // Pagination state
@@ -179,18 +177,6 @@ function HomePageContent() {
         selectedCategory={null}
         onCategorySelect={() => {}}
       />
-      
-      {user?.role === 'admin' && (
-        <div className="fixed bottom-6 left-6 z-40">
-          <Button
-            onClick={() => setIsAdminOpen(true)}
-            className="bg-gray-800 hover:bg-gray-700 text-white rounded-full h-12 w-12 shadow-lg"
-            size="icon"
-          >
-            <Store className="h-5 w-5" />
-          </Button>
-        </div>
-      )}
       
       <main className="flex-1">
         {/* Hero Banner Slider */}
@@ -334,13 +320,6 @@ function HomePageContent() {
       <CartSidebar />
       <FavoritesSidebar />
       <AuthModal />
-      <AdminPanel
-        open={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-        products={products as any}
-        categories={categories}
-        onRefresh={fetchInitialData}
-      />
     </div>
   );
 }

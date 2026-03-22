@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { 
   ShoppingCart, Search, User, Menu, X, Heart, 
-  Sun, Moon, Languages, Flame, Package, Settings, LogOut, MapPin, MessageCircle
+  Sun, Moon, Languages, Flame, Package, Settings, LogOut, MapPin, MessageCircle, LayoutDashboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -224,6 +224,14 @@ export function Header({ onMenuClick }: HeaderProps) {
                         <span>{t('myProfile', language)}</span>
                       </Link>
                     </DropdownMenuItem>
+                    {user.role === 'admin' && (
+                      <DropdownMenuItem asChild className="cursor-pointer">
+                        <Link href="/admin" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
+                          <LayoutDashboard className="h-4 w-4" />
+                          <span>{isArabic ? 'لوحة التحكم' : 'Admin Panel'}</span>
+                        </Link>
+                      </DropdownMenuItem>
+                    )}
                     <DropdownMenuItem asChild className="cursor-pointer">
                       <Link href="/orders" className={`flex items-center gap-2 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
                         <Package className="h-4 w-4" />
