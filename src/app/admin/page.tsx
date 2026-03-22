@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useSession, signIn, signOut } from 'next-auth/react';
 import {
   Loader2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard,
@@ -136,6 +136,7 @@ export default function AdminPage() {
   // Product form
   const [isAddingProduct, setIsAddingProduct] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productSearch, setProductSearch] = useState('');
   const [formData, setFormData] = useState({
     name: '', nameAr: '', description: '', descriptionAr: '',
     price: '', discountPrice: '', stock: '', categoryId: '', featured: false, images: ''
@@ -351,6 +352,12 @@ export default function AdminPage() {
   const processingOrders = orders.filter(o => o.status === 'processing' || o.status === 'confirmed').length;
   const totalOrdersValue = orders.reduce((sum, o) => sum + o.total, 0);
   const deliveredOrders = orders.filter(o => o.status === 'delivered');
+
+  // Filtered products for search
+  const filteredProducts = products.filter(p => 
+    p.name.toLowerCase().includes(productSearch.toLowerCase()) ||
+    p.nameAr.includes(productSearch)
+  );
 
   if (status === 'loading') {
     return (
@@ -901,12 +908,23 @@ export default function AdminPage() {
                 <CardHeader className="bg-gray-50 rounded-t-xl flex flex-row items-center justify-between">
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5 text-emerald-600" />
-                    قائمة المنتجات ({products.length})
+                    قائمة المنتجات ({filteredProducts.length})
                   </CardTitle>
-                  <Button onClick={() => { resetForm(); setIsAddingProduct(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
-                    <Plus className="h-4 w-4" />
-                    إضافة منتج
-                  </Button>
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                      <Input
+                        placeholder="بحث عن منتج..."
+                        value={productSearch}
+                        onChange={(e) => setProductSearch(e.target.value)}
+                        className="pr-9 w-64 h-9"
+                      />
+                    </div>
+                    <Button onClick={() => { resetForm(); setIsAddingProduct(true); }} className="bg-emerald-600 hover:bg-emerald-700 gap-2">
+                      <Plus className="h-4 w-4" />
+                      إضافة منتج
+                    </Button>
+                  </div>
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
@@ -921,7 +939,7 @@ export default function AdminPage() {
                         </tr>
                       </thead>
                       <tbody className="divide-y">
-                        {products.map((product) => {
+                        {filteredProducts.map((product) => {
                           const images = JSON.parse(product.images || '[]');
                           return (
                             <tr key={product.id} className="hover:bg-gray-50">
@@ -979,23 +997,29 @@ export default function AdminPage() {
             <BannersManagement />
           )}
 
-          {/* Other Pages Placeholder */}
-          {['categories', 'coupons', 'customers', 'reports', 'settings'].includes(currentPage) && (
-            <Card className="shadow-lg border-0">
-              <CardContent className="py-16 text-center">
-                <div className="w-20 h-20 bg-gray-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                  {currentPage === 'categories' && <Tag className="h-10 w-10 text-gray-400" />}
-                  {currentPage === 'coupons' && <Percent className="h-10 w-10 text-gray-400" />}
-                  {currentPage === 'customers' && <Users className="h-10 w-10 text-gray-400" />}
-                  {currentPage === 'reports' && <BarChart3 className="h-10 w-10 text-gray-400" />}
-                  {currentPage === 'settings' && <Settings className="h-10 w-10 text-gray-400" />}
-                </div>
-                <h3 className="text-xl font-bold text-gray-800 mb-2">
-                  {menuItems.find(m => m.id === currentPage)?.label}
-                </h3>
-                <p className="text-gray-500">هذه الميزة قيد التطوير وستكون متاحة قريباً</p>
-              </CardContent>
-            </Card>
+          {/* Categories Page */}
+          {currentPage === 'categories' && (
+            <CategoriesManagement categories={categories} setCategories={setCategories} />
+          )}
+
+          {/* Coupons Page */}
+          {currentPage === 'coupons' && (
+            <CouponsManagement />
+          )}
+
+          {/* Customers Page */}
+          {currentPage === 'customers' && (
+            <CustomersManagement />
+          )}
+
+          {/* Reports Page */}
+          {currentPage === 'reports' && (
+            <ReportsPage orders={orders} products={products} />
+          )}
+
+          {/* Settings Page */}
+          {currentPage === 'settings' && (
+            <SettingsPage />
           )}
         </div>
       </main>
@@ -1169,6 +1193,613 @@ export default function AdminPage() {
   );
 }
 
+// Categories Management Component
+function CategoriesManagement({ categories, setCategories }: { categories: Category[], setCategories: (cats: Category[]) => void }) {
+  const [showForm, setShowForm] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [formData, setFormData] = useState({ name: '', nameAr: '', slug: '' });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const method = editingCategory ? 'PUT' : 'POST';
+      const body = editingCategory ? { id: editingCategory.id, ...formData } : formData;
+      
+      const res = await fetch('/api/categories', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        if (editingCategory) {
+          setCategories(categories.map(c => c.id === editingCategory.id ? data : c));
+        } else {
+          setCategories([...categories, data]);
+        }
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Error saving category:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
+    try {
+      await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      setCategories(categories.filter(c => c.id !== id));
+    } catch (error) {
+      console.error('Error deleting category:', error);
+    }
+  };
+
+  const handleEdit = (category: Category) => {
+    setFormData({ name: category.name, nameAr: category.nameAr, slug: (category as any).slug || '' });
+    setEditingCategory(category);
+    setShowForm(true);
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', nameAr: '', slug: '' });
+    setEditingCategory(null);
+    setShowForm(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">إدارة الأقسام</h2>
+        <Button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700">
+          <Plus className="h-4 w-4 ml-2" />
+          إضافة قسم
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="shadow-lg border-0">
+          <CardHeader className="bg-gray-50 rounded-t-xl">
+            <CardTitle>{editingCategory ? 'تعديل القسم' : 'إضافة قسم جديد'}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>الاسم بالإنجليزية</Label>
+                  <Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>الاسم بالعربية</Label>
+                  <Input value={formData.nameAr} onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })} required />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+                  {editingCategory ? 'حفظ التعديلات' : 'إضافة القسم'}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      <Card className="shadow-lg border-0">
+        <CardContent className="p-0">
+          <table className="w-full">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-600">القسم</th>
+                <th className="px-6 py-4 text-right text-sm font-semibold text-gray-600">الإجراءات</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {categories.map((category) => (
+                <tr key={category.id} className="hover:bg-gray-50">
+                  <td className="px-6 py-4">
+                    <p className="font-medium text-gray-800">{category.nameAr}</p>
+                    <p className="text-xs text-gray-500">{category.name}</p>
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex gap-1">
+                      <Button variant="ghost" size="icon" onClick={() => handleEdit(category)}>
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(category.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+// Coupons Management Component
+function CouponsManagement() {
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({
+    code: '', discountType: 'percentage', discountValue: '', minOrder: '', maxUses: '', expiresAt: '', active: true
+  });
+
+  useEffect(() => {
+    fetchCoupons();
+  }, []);
+
+  const fetchCoupons = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/coupons');
+      const data = await res.json();
+      setCoupons(data.coupons || data);
+    } catch (error) {
+      console.error('Error fetching coupons:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const res = await fetch('/api/coupons', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...formData,
+          discountValue: parseFloat(formData.discountValue),
+          minOrder: formData.minOrder ? parseFloat(formData.minOrder) : null,
+          maxUses: formData.maxUses ? parseInt(formData.maxUses) : null,
+          expiresAt: formData.expiresAt || null
+        })
+      });
+      if (res.ok) {
+        fetchCoupons();
+        setFormData({ code: '', discountType: 'percentage', discountValue: '', minOrder: '', maxUses: '', expiresAt: '', active: true });
+        setShowForm(false);
+      }
+    } catch (error) {
+      console.error('Error saving coupon:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الكوبون؟')) return;
+    try {
+      await fetch(`/api/coupons/${id}`, { method: 'DELETE' });
+      fetchCoupons();
+    } catch (error) {
+      console.error('Error deleting coupon:', error);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">إدارة الكوبونات</h2>
+        <Button onClick={() => setShowForm(!showForm)} className="bg-emerald-600 hover:bg-emerald-700">
+          <Plus className="h-4 w-4 ml-2" />
+          إضافة كوبون
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="shadow-lg border-0">
+          <CardHeader className="bg-gray-50 rounded-t-xl">
+            <CardTitle>إضافة كوبون جديد</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-2">
+                  <Label>كود الكوبون</Label>
+                  <Input value={formData.code} onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })} required placeholder="WELCOME10" />
+                </div>
+                <div className="space-y-2">
+                  <Label>نوع الخصم</Label>
+                  <Select value={formData.discountType} onValueChange={(v) => setFormData({ ...formData, discountType: v })}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="percentage">نسبة مئوية %</SelectItem>
+                      <SelectItem value="fixed">مبلغ ثابت</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>قيمة الخصم</Label>
+                  <Input type="number" value={formData.discountValue} onChange={(e) => setFormData({ ...formData, discountValue: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>الحد الأدنى للطلب</Label>
+                  <Input type="number" value={formData.minOrder} onChange={(e) => setFormData({ ...formData, minOrder: e.target.value })} placeholder="اختياري" />
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">إضافة الكوبون</Button>
+                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>إلغاء</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        </div>
+      ) : (
+        <Card className="shadow-lg border-0">
+          <CardContent className="p-0">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-right">الكود</th>
+                  <th className="px-6 py-4 text-right">الخصم</th>
+                  <th className="px-6 py-4 text-right">الحالة</th>
+                  <th className="px-6 py-4 text-right">الإجراءات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {coupons.map((coupon) => (
+                  <tr key={coupon.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 font-bold">{coupon.code}</td>
+                    <td className="px-6 py-4">
+                      {coupon.discountType === 'percentage' ? `${coupon.discountValue}%` : `${coupon.discountValue} ج.م`}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge className={coupon.active ? 'bg-green-500' : 'bg-gray-500'}>
+                        {coupon.active ? 'فعال' : 'غير فعال'}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(coupon.id)}>
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// Customers Management Component
+function CustomersManagement() {
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/admin/customers');
+      const data = await res.json();
+      setCustomers(data.customers || data);
+    } catch (error) {
+      console.error('Error fetching customers:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filteredCustomers = customers.filter((c: any) =>
+    c.name?.toLowerCase().includes(search.toLowerCase()) ||
+    c.email?.toLowerCase().includes(search.toLowerCase())
+  );
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">العملاء</h2>
+        <div className="relative">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <Input
+            placeholder="بحث عن عميل..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pr-9 w-64"
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        </div>
+      ) : (
+        <Card className="shadow-lg border-0">
+          <CardContent className="p-0">
+            <table className="w-full">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-4 text-right">العميل</th>
+                  <th className="px-6 py-4 text-right">الهاتف</th>
+                  <th className="px-6 py-4 text-right">تاريخ التسجيل</th>
+                  <th className="px-6 py-4 text-right">الطلبات</th>
+                  <th className="px-6 py-4 text-right">إجمالي المشتريات</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {filteredCustomers.map((customer: any) => (
+                  <tr key={customer.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-emerald-100 rounded-full flex items-center justify-center">
+                          <User className="h-5 w-5 text-emerald-600" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{customer.name || 'بدون اسم'}</p>
+                          <p className="text-xs text-gray-500">{customer.email}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">{customer.phone || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-500">
+                      {new Date(customer.createdAt).toLocaleDateString('ar-EG')}
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge variant="outline">{customer._count?.orders || 0} طلب</Badge>
+                    </td>
+                    <td className="px-6 py-4 font-bold text-emerald-600">
+                      {(customer.totalSpent || 0).toLocaleString()} ج.م
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
+// Reports Page Component
+function ReportsPage({ orders, products }: { orders: Order[], products: Product[] }) {
+  const deliveredOrders = orders.filter(o => o.status === 'delivered');
+  const totalRevenue = deliveredOrders.reduce((sum, o) => sum + o.total, 0);
+  const pendingOrders = orders.filter(o => o.status === 'pending').length;
+  const cancelledOrders = orders.filter(o => o.status === 'cancelled').length;
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-800">التقارير والإحصائيات</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white">
+          <CardContent className="p-6">
+            <p className="text-emerald-100 text-sm">إجمالي الإيرادات</p>
+            <p className="text-3xl font-bold mt-1">{totalRevenue.toLocaleString()} ج.م</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white">
+          <CardContent className="p-6">
+            <p className="text-blue-100 text-sm">إجمالي الطلبات</p>
+            <p className="text-3xl font-bold mt-1">{orders.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-amber-500 to-orange-600 text-white">
+          <CardContent className="p-6">
+            <p className="text-amber-100 text-sm">طلبات قيد الانتظار</p>
+            <p className="text-3xl font-bold mt-1">{pendingOrders}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-red-500 to-rose-600 text-white">
+          <CardContent className="p-6">
+            <p className="text-red-100 text-sm">طلبات ملغية</p>
+            <p className="text-3xl font-bold mt-1">{cancelledOrders}</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-emerald-600" />
+              أكثر المنتجات طلباً
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {products.slice(0, 5).map((product, index) => (
+                <div key={product.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <span className="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-sm font-bold">
+                      {index + 1}
+                    </span>
+                    <span>{product.nameAr}</span>
+                  </div>
+                  <Badge variant="outline">{product.stock} متاح</Badge>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-emerald-600" />
+              ملخص الأداء
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span>معدل التحويل</span>
+                <span className="font-bold text-emerald-600">
+                  {orders.length > 0 ? ((deliveredOrders.length / orders.length) * 100).toFixed(1) : 0}%
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>متوسط قيمة الطلب</span>
+                <span className="font-bold text-emerald-600">
+                  {orders.length > 0 ? Math.round(totalRevenue / orders.length).toLocaleString() : 0} ج.م
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span>المنتجات المتاحة</span>
+                <span className="font-bold">{products.length}</span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+}
+
+// Settings Page Component
+function SettingsPage() {
+  const [settings, setSettings] = useState({
+    storeName: 'كمال سعد',
+    storeNameEn: 'Kamal Saad',
+    phone: '01234567890',
+    email: 'info@kamalsaad.com',
+    address: 'القاهرة، مصر',
+    facebook: '',
+    instagram: '',
+    whatsapp: ''
+  });
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(settings)
+      });
+    } catch (error) {
+      console.error('Error saving settings:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-800">الإعدادات</h2>
+
+      <div className="grid lg:grid-cols-2 gap-6">
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>معلومات المتجر</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>اسم المتجر بالعربية</Label>
+              <Input 
+                value={settings.storeName} 
+                onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>اسم المتجر بالإنجليزية</Label>
+              <Input 
+                value={settings.storeNameEn} 
+                onChange={(e) => setSettings({ ...settings, storeNameEn: e.target.value })}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>معلومات الاتصال</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>رقم الهاتف</Label>
+              <Input 
+                value={settings.phone} 
+                onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>البريد الإلكتروني</Label>
+              <Input 
+                type="email"
+                value={settings.email} 
+                onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>العنوان</Label>
+              <Input 
+                value={settings.address} 
+                onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-lg">
+          <CardHeader>
+            <CardTitle>وسائل التواصل</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <Label>فيسبوك</Label>
+              <Input 
+                placeholder="https://facebook.com/..."
+                value={settings.facebook} 
+                onChange={(e) => setSettings({ ...settings, facebook: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>انستجرام</Label>
+              <Input 
+                placeholder="https://instagram.com/..."
+                value={settings.instagram} 
+                onChange={(e) => setSettings({ ...settings, instagram: e.target.value })}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>واتساب</Label>
+              <Input 
+                placeholder="https://wa.me/..."
+                value={settings.whatsapp} 
+                onChange={(e) => setSettings({ ...settings, whatsapp: e.target.value })}
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Button 
+        onClick={handleSave} 
+        disabled={saving}
+        className="bg-emerald-600 hover:bg-emerald-700"
+      >
+        {saving ? (
+          <><Loader2 className="h-4 w-4 animate-spin ml-2" /> جاري الحفظ...</>
+        ) : (
+          'حفظ الإعدادات'
+        )}
+      </Button>
+    </div>
+  );
+}
+
 // Banners Management Component
 function BannersManagement() {
   const [banners, setBanners] = useState<any[]>([]);
@@ -1283,37 +1914,17 @@ function BannersManagement() {
                   <Input value={formData.titleAr} onChange={(e) => setFormData({ ...formData, titleAr: e.target.value })} required />
                 </div>
               </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>العنوان الفرعي بالإنجليزية</Label>
-                  <Input value={formData.subtitle} onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })} />
-                </div>
-                <div className="space-y-2">
-                  <Label>العنوان الفرعي بالعربية</Label>
-                  <Input value={formData.subtitleAr} onChange={(e) => setFormData({ ...formData, subtitleAr: e.target.value })} />
-                </div>
-              </div>
               <div className="space-y-2">
                 <Label>رابط الصورة *</Label>
                 <Input value={formData.image} onChange={(e) => setFormData({ ...formData, image: e.target.value })} placeholder="https://..." required />
               </div>
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>نص الزر بالإنجليزية</Label>
-                  <Input value={formData.buttonText} onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })} />
-                </div>
-                <div className="space-y-2">
                   <Label>نص الزر بالعربية</Label>
                   <Input value={formData.buttonTextAr} onChange={(e) => setFormData({ ...formData, buttonTextAr: e.target.value })} />
                 </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>رابط عند الضغط</Label>
-                  <Input value={formData.link} onChange={(e) => setFormData({ ...formData, link: e.target.value })} placeholder="https://..." />
-                </div>
-                <div className="space-y-2">
-                  <Label>الترتيب</Label>
+                  <Label>الترتيب (1-3 = Hero, 4-6 = Middle)</Label>
                   <Input type="number" value={formData.order} onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })} />
                 </div>
               </div>
@@ -1355,7 +1966,7 @@ function BannersManagement() {
               </div>
               <CardContent className="p-4">
                 <h4 className="font-medium">{banner.titleAr}</h4>
-                <p className="text-sm text-gray-500">{banner.subtitleAr}</p>
+                <p className="text-sm text-gray-500">الترتيب: {banner.order}</p>
                 <div className="flex gap-2 mt-3">
                   <Button variant="outline" size="sm" onClick={() => handleEdit(banner)}>
                     <Edit className="h-4 w-4" />
