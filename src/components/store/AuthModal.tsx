@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { signIn } from 'next-auth/react';
 import { Mail, Lock, User, Phone, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -81,16 +82,38 @@ export function AuthModal() {
     }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setSocialLoading('google');
     console.log('[AuthModal] Starting Google OAuth flow');
     
-    // Store callback URL
     const callbackUrl = window.location.pathname + window.location.search;
     
-    // Navigate to Google signin page directly
-    // This will be handled by NextAuth
-    window.location.href = `/api/auth/google-signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
+    try {
+      // Use signIn from next-auth/react with redirect: false
+      const result = await signIn('google', {
+        callbackUrl: callbackUrl !== '/' ? callbackUrl : '/',
+        redirect: false,
+      });
+      
+      console.log('[AuthModal] signIn result:', result);
+      
+      if (result?.error) {
+        console.error('[AuthModal] signIn error:', result.error);
+        setError(isArabic ? 'فشل تسجيل الدخول' : 'Login failed');
+        setSocialLoading(null);
+      } else if (result?.url) {
+        console.log('[AuthModal] Redirecting to:', result.url);
+        window.location.href = result.url;
+      } else {
+        // No URL returned, try direct navigation
+        console.log('[AuthModal] No URL, trying direct navigation');
+        window.location.href = '/api/auth/google-signin?callbackUrl=' + encodeURIComponent(callbackUrl);
+      }
+    } catch (error) {
+      console.error('[AuthModal] Exception:', error);
+      // Fallback to direct navigation
+      window.location.href = '/api/auth/google-signin?callbackUrl=' + encodeURIComponent(callbackUrl);
+    }
   };
 
   const handleFacebookLogin = () => {
