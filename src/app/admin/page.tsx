@@ -7,7 +7,7 @@ import {
   Loader2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard,
   ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone,
   MapPin, Mail, User, Plus, Edit, Trash2, Settings, Bell, ChevronLeft,
-  BarChart3, FileText, Store, Menu, X, Home, Tag, Percent, MessageSquare
+  BarChart3, FileText, Store, Menu, X, Home, Tag, Percent, MessageSquare, Image
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -114,6 +114,7 @@ const menuItems = [
   { id: 'categories', label: 'الفئات', icon: Tag },
   { id: 'coupons', label: 'الكوبونات', icon: Percent },
   { id: 'customers', label: 'العملاء', icon: Users },
+  { id: 'banners', label: 'البنرات', icon: Image },
   { id: 'reports', label: 'التقارير', icon: BarChart3 },
   { id: 'settings', label: 'الإعدادات', icon: Settings },
 ];
@@ -973,6 +974,11 @@ export default function AdminPage() {
             </div>
           )}
 
+          {/* Banners Page */}
+          {currentPage === 'banners' && (
+            <BannersManagement />
+          )}
+
           {/* Other Pages Placeholder */}
           {['categories', 'coupons', 'customers', 'reports', 'settings'].includes(currentPage) && (
             <Card className="shadow-lg border-0">
@@ -1159,6 +1165,210 @@ export default function AdminPage() {
           )}
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+// Banners Management Component
+function BannersManagement() {
+  const [banners, setBanners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingBanner, setEditingBanner] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    title: '', titleAr: '', subtitle: '', subtitleAr: '',
+    image: '', link: '', buttonText: '', buttonTextAr: '',
+    active: true, order: 0
+  });
+
+  useEffect(() => {
+    fetchBanners();
+  }, []);
+
+  const fetchBanners = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/banners');
+      const data = await res.json();
+      if (data.success) setBanners(data.data);
+    } catch (error) {
+      console.error('Error fetching banners:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      const method = editingBanner ? 'PUT' : 'POST';
+      const body = editingBanner ? { id: editingBanner.id, ...formData } : formData;
+      
+      const res = await fetch('/api/banners', {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      
+      if (res.ok) {
+        fetchBanners();
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Error saving banner:', error);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا البانر؟')) return;
+    try {
+      await fetch(`/api/banners?id=${id}`, { method: 'DELETE' });
+      fetchBanners();
+    } catch (error) {
+      console.error('Error deleting banner:', error);
+    }
+  };
+
+  const handleEdit = (banner: any) => {
+    setFormData({
+      title: banner.title,
+      titleAr: banner.titleAr,
+      subtitle: banner.subtitle || '',
+      subtitleAr: banner.subtitleAr || '',
+      image: banner.image,
+      link: banner.link || '',
+      buttonText: banner.buttonText || '',
+      buttonTextAr: banner.buttonTextAr || '',
+      active: banner.active,
+      order: banner.order
+    });
+    setEditingBanner(banner);
+    setShowForm(true);
+  };
+
+  const resetForm = () => {
+    setFormData({
+      title: '', titleAr: '', subtitle: '', subtitleAr: '',
+      image: '', link: '', buttonText: '', buttonTextAr: '',
+      active: true, order: 0
+    });
+    setEditingBanner(null);
+    setShowForm(false);
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <h2 className="text-xl font-bold text-gray-800">إدارة البنرات الإعلانية</h2>
+        <Button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700">
+          <Plus className="h-4 w-4 ml-2" />
+          إضافة بانر
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="shadow-lg border-0">
+          <CardHeader className="bg-gray-50 rounded-t-xl">
+            <CardTitle>{editingBanner ? 'تعديل البانر' : 'إضافة بانر جديد'}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>العنوان بالإنجليزية</Label>
+                  <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+                </div>
+                <div className="space-y-2">
+                  <Label>العنوان بالعربية</Label>
+                  <Input value={formData.titleAr} onChange={(e) => setFormData({ ...formData, titleAr: e.target.value })} required />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>العنوان الفرعي بالإنجليزية</Label>
+                  <Input value={formData.subtitle} onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>العنوان الفرعي بالعربية</Label>
+                  <Input value={formData.subtitleAr} onChange={(e) => setFormData({ ...formData, subtitleAr: e.target.value })} />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>رابط الصورة *</Label>
+                <Input value={formData.image} onChange={(e) => setFormData({ ...formData, image: e.target.value })} placeholder="https://..." required />
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>نص الزر بالإنجليزية</Label>
+                  <Input value={formData.buttonText} onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })} />
+                </div>
+                <div className="space-y-2">
+                  <Label>نص الزر بالعربية</Label>
+                  <Input value={formData.buttonTextAr} onChange={(e) => setFormData({ ...formData, buttonTextAr: e.target.value })} />
+                </div>
+              </div>
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>رابط عند الضغط</Label>
+                  <Input value={formData.link} onChange={(e) => setFormData({ ...formData, link: e.target.value })} placeholder="https://..." />
+                </div>
+                <div className="space-y-2">
+                  <Label>الترتيب</Label>
+                  <Input type="number" value={formData.order} onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })} />
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" id="active" checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} className="w-4 h-4" />
+                <Label htmlFor="active">فعال</Label>
+              </div>
+              <div className="flex gap-3">
+                <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
+                  {editingBanner ? 'حفظ التعديلات' : 'إضافة البانر'}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+        </div>
+      ) : banners.length === 0 ? (
+        <Card className="shadow-lg border-0">
+          <CardContent className="py-16 text-center">
+            <Image className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-500">لا توجد بنرات</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {banners.map((banner) => (
+            <Card key={banner.id} className="overflow-hidden">
+              <div className="relative h-32">
+                <img src={banner.image} alt={banner.titleAr} className="w-full h-full object-cover" />
+                <Badge className={`absolute top-2 right-2 ${banner.active ? 'bg-green-500' : 'bg-gray-500'}`}>
+                  {banner.active ? 'فعال' : 'غير فعال'}
+                </Badge>
+              </div>
+              <CardContent className="p-4">
+                <h4 className="font-medium">{banner.titleAr}</h4>
+                <p className="text-sm text-gray-500">{banner.subtitleAr}</p>
+                <div className="flex gap-2 mt-3">
+                  <Button variant="outline" size="sm" onClick={() => handleEdit(banner)}>
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                  <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDelete(banner.id)}>
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
