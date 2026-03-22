@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ExternalLink, Truck, Shield, CreditCard, Headphones } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { useStore, t } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 
@@ -20,7 +20,7 @@ interface Banner {
   order: number;
 }
 
-// Default hero banners
+// Default hero banners - Updated with new text
 const defaultHeroBanners = {
   ar: [
     {
@@ -34,18 +34,18 @@ const defaultHeroBanners = {
     {
       id: 'hero-2',
       title: 'عروض العودة للمدارس',
-      subtitle: 'خصم يصل إلى 30% على جميع الأدوات المدرسية',
+      subtitle: 'خصم 30%',
       gradient: 'from-blue-600 via-indigo-600 to-purple-600',
-      features: ['خصومات حصرية', 'توصيل مجاني'],
-      stats: { discount: '30%', delivery: 'مجاني' }
+      features: ['خصومات حصرية', 'توصيل سريع'],
+      stats: { discount: '30%', delivery: 'خصم' }
     },
     {
       id: 'hero-3',
-      title: 'توصيل مجاني للطلبات فوق 200 جنيه',
-      subtitle: 'تسوق الآن واستمتع بأفضل العروض',
+      title: 'توصيل مجاني',
+      subtitle: 'للطلبات فوق 1000 جنيه',
       gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
       features: ['توصيل سريع', 'دفع عند الاستلام'],
-      stats: { minOrder: '200 ج.م', delivery: 'مجاني' }
+      stats: { minOrder: '1000 ج.م', delivery: 'مجاني' }
     },
   ],
   en: [
@@ -60,18 +60,18 @@ const defaultHeroBanners = {
     {
       id: 'hero-2',
       title: 'Back to School Offers',
-      subtitle: 'Up to 30% off on all school supplies',
+      subtitle: '30% Discount',
       gradient: 'from-blue-600 via-indigo-600 to-purple-600',
-      features: ['Exclusive Discounts', 'Free Delivery'],
-      stats: { discount: '30%', delivery: 'Free' }
+      features: ['Exclusive Discounts', 'Fast Delivery'],
+      stats: { discount: '30%', delivery: 'Discount' }
     },
     {
       id: 'hero-3',
-      title: 'Free Delivery on Orders Over 200 EGP',
-      subtitle: 'Shop now and enjoy the best offers',
+      title: 'Free Delivery',
+      subtitle: 'On orders over 1000 EGP',
       gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
       features: ['Fast Delivery', 'Cash on Delivery'],
-      stats: { minOrder: '200 EGP', delivery: 'Free' }
+      stats: { minOrder: '1000 EGP', delivery: 'Free' }
     },
   ]
 };
@@ -108,17 +108,17 @@ export function PromotionalBanner({ isHero = false }: HeroBannerProps) {
     fetchBanners();
   }, []);
 
-  // Auto-rotate banners
+  // Auto-rotate banners every 5 seconds
   useEffect(() => {
     const displayBanners = banners.length > 0 ? banners : defaultHeroBanners[isArabic ? 'ar' : 'en'];
     if (displayBanners.length <= 1) return;
     
     const interval = setInterval(() => {
       setCurrentBanner((prev) => (prev + 1) % displayBanners.length);
-    }, isHero ? 5000 : 4000);
+    }, 5000);
     
     return () => clearInterval(interval);
-  }, [banners.length, isArabic, isHero]);
+  }, [banners.length, isArabic]);
 
   const nextBanner = () => {
     const displayBanners = banners.length > 0 ? banners : defaultHeroBanners[isArabic ? 'ar' : 'en'];
@@ -463,7 +463,7 @@ export function PromotionalBanner({ isHero = false }: HeroBannerProps) {
             key={currentBanner}
             initial={{ width: '0%' }}
             animate={{ width: '100%' }}
-            transition={{ duration: 4, ease: 'linear' }}
+            transition={{ duration: 5, ease: 'linear' }}
             className="h-full bg-white/80"
           />
         </div>
