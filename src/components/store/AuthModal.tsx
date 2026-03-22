@@ -83,17 +83,14 @@ export function AuthModal() {
 
   const handleGoogleLogin = () => {
     setSocialLoading('google');
-    console.log('[AuthModal] Initiating Google OAuth login');
+    console.log('[AuthModal] Starting Google OAuth flow');
     
-    // Store current URL to return to after login
-    const callbackUrl = encodeURIComponent(window.location.pathname + window.location.search);
+    // Store callback URL
+    const callbackUrl = window.location.pathname + window.location.search;
     
-    // Use our custom Google signin endpoint
-    const signinUrl = `/api/auth/google-signin?callbackUrl=${callbackUrl}`;
-    console.log('[AuthModal] Redirecting to:', signinUrl);
-    
-    // Direct page navigation
-    window.location.href = signinUrl;
+    // Navigate to Google signin page directly
+    // This will be handled by NextAuth
+    window.location.href = `/api/auth/google-signin?callbackUrl=${encodeURIComponent(callbackUrl)}`;
   };
 
   const handleFacebookLogin = () => {

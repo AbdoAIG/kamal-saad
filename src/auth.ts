@@ -27,19 +27,72 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: "/",
   },
   
+  // Cookie configuration for production
+  cookies: {
+    sessionToken: {
+      name: `next-auth.session-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+    callbackUrl: {
+      name: `next-auth.callback-url`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+    csrfToken: {
+      name: `next-auth.csrf-token`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+    pkceCodeVerifier: {
+      name: `next-auth.pkce.code_verifier`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+        maxAge: 900,
+      },
+    },
+    state: {
+      name: `next-auth.state`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+        maxAge: 900,
+      },
+    },
+    nonce: {
+      name: `next-auth.nonce`,
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: true,
+      },
+    },
+  },
+  
   // Providers
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
       allowDangerousEmailAccountLinking: true,
-      authorization: {
-        params: {
-          prompt: "consent",
-          access_type: "offline",
-          scope: "openid email profile"
-        }
-      }
     }),
     Credentials({
       name: "credentials",
@@ -90,7 +143,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signIn({ user, account, profile }) {
       console.log("[AUTH] signIn callback triggered", { 
         provider: account?.provider, 
-        email: profile?.email 
+        email: profile?.email,
+        userId: user.id
       });
       
       // Handle Google OAuth
@@ -116,12 +170,21 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             console.log("[AUTH] New user created:", existingUser.id);
           } else {
             console.log("[AUTH] Existing user found:", existingUser.id);
+            
+            // Update user info from Google if needed
+            if (!existingUser.image && (profile as any).picture) {
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: { image: (profile as any).picture }
+              });
+            }
           }
 
           // Update user object with database info
           user.id = existingUser.id;
           (user as any).role = existingUser.role;
           
+          console.log("[AUTH] SignIn successful for user:", existingUser.id);
           return true;
         } catch (error) {
           console.error("[AUTH] Google sign in error:", error);
@@ -178,7 +241,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (url.startsWith("/")) return `${baseUrl}${url}`;
       
       // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
+      try {
+        if (new URL(url).origin === baseUrl) return url;
+      } catch (e) {
+        // Invalid URL, use baseUrl
+      }
       
       // Default redirect to baseUrl
       return baseUrl;
@@ -193,11 +260,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     async signOut(message) {
       console.log("[AUTH EVENT] User signed out");
     },
-    async session(message) {
-      // Session is being accessed
-    },
   },
   
-  // Enable debug mode in development
-  debug: process.env.NODE_ENV === 'development',
+  // Enable debug mode
+  debug: true,
 });
