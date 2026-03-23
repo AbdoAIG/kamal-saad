@@ -3,7 +3,7 @@
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { 
-  Store, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Youtube,
+  Phone, Mail, MapPin, Facebook, Twitter, Instagram, Youtube,
   CreditCard, Shield, Truck, Clock, Heart, MessageCircle
 } from 'lucide-react';
 import { useStore, t } from '@/store/useStore';
@@ -15,6 +15,16 @@ export function Footer() {
   const { language } = useStore();
   const { settings } = useSettings();
   const isArabic = language === 'ar';
+
+  // Famous Stationery Brands
+  const brands = [
+    { name: 'Faber-Castell', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/Faber-Castell_logo.svg/200px-Faber-Castell_logo.svg.png' },
+    { name: 'Pilot', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Pilot_logo.svg/200px-Pilot_logo.svg.png' },
+    { name: 'Pentel', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4d/Pentel_logo.svg/200px-Pentel_logo.svg.png' },
+    { name: 'Bic', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/Bic_logo.svg/200px-Bic_logo.svg.png' },
+    { name: 'Staedtler', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/Staedtler_logo.svg/200px-Staedtler_logo.svg.png' },
+    { name: 'Stabilo', logo: 'https://upload.wikimedia.org/wikipedia/commons/thumb/4/4b/Stabilo_logo.svg/200px-Stabilo_logo.svg.png' },
+  ];
 
   return (
     <footer className="bg-gray-900 text-gray-300 mt-auto" dir={isArabic ? 'rtl' : 'ltr'}>
@@ -176,6 +186,32 @@ export function Footer() {
             </ul>
           </div>
         </div>
+
+        {/* Brands Section */}
+        <div className="mt-12 pt-8 border-t border-gray-800">
+          <h4 className="text-center text-gray-400 text-sm mb-6">
+            {isArabic ? 'نوفر منتجات من أشهر العلامات التجارية العالمية' : 'We provide products from top global brands'}
+          </h4>
+          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-12">
+            {brands.map((brand, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0.5 }}
+                whileHover={{ opacity: 1, scale: 1.05 }}
+                className="h-8 md:h-10 flex items-center justify-center grayscale hover:grayscale-0 transition-all duration-300"
+              >
+                <img 
+                  src={brand.logo} 
+                  alt={brand.name} 
+                  className="h-full w-auto object-contain"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              </motion.div>
+            ))}
+          </div>
+        </div>
       </div>
 
       {/* Bottom - Copyright */}
@@ -187,22 +223,18 @@ export function Footer() {
               <p className="text-sm text-gray-400">
                 {isArabic ? (
                   <>
-                    © 2024 <span className="text-teal-400 font-bold">{settings.storeName}</span>. جميع الحقوق محفوظة. 
+                    © 2026 <span className="text-teal-400 font-bold">{settings.storeName}</span>. جميع الحقوق محفوظة. 
                     <span className="text-gray-500 mx-1">|</span>
-                    تصميم وتطوير <span className="text-cyan-400 font-medium">{settings.storeName}</span>
+                    تصميم وتطوير <span className="text-cyan-400 font-medium">AbdoAIG - عبدالرحمن إبراهيم</span>
                   </>
                 ) : (
                   <>
-                    © 2024 <span className="text-teal-400 font-bold">{settings.storeNameEn}</span>. All Rights Reserved.
+                    © 2026 <span className="text-teal-400 font-bold">{settings.storeNameEn}</span>. All Rights Reserved.
                     <span className="text-gray-500 mx-1">|</span>
-                    Designed & Developed by <span className="text-cyan-400 font-medium">{settings.storeNameEn}</span>
+                    Designed & Developed by <span className="text-cyan-400 font-medium">AbdoAIG - Abdelrahman Ibrahim</span>
                   </>
                 )}
               </p>
-            </div>
-            <div className="flex items-center gap-4">
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/5e/Visa_Inc._logo.svg/200px-Visa_Inc._logo.svg.png" alt="Visa" className="h-6 opacity-50" />
-              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mastercard-logo.svg/200px-Mastercard-logo.svg.png" alt="Mastercard" className="h-6 opacity-50" />
             </div>
           </div>
         </div>

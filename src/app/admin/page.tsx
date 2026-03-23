@@ -1109,6 +1109,17 @@ export default function AdminPage() {
         </div>
       </main>
 
+      {/* Footer */}
+      <footer className="bg-gray-900 text-white py-4" dir="rtl">
+        <div className="px-6 text-center">
+          <p className="text-sm text-gray-400">
+            © 2026 <span className="text-teal-400 font-bold">كمال سعد</span>. جميع الحقوق محفوظة. 
+            <span className="text-gray-500 mx-1">|</span>
+            تصميم وتطوير <span className="text-cyan-400 font-medium">AbdoAIG - عبدالرحمن إبراهيم</span>
+          </p>
+        </div>
+      </footer>
+
       {/* Order Details Modal */}
       <Dialog open={showOrderDetails} onOpenChange={setShowOrderDetails}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
