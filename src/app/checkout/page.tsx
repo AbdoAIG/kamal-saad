@@ -14,20 +14,8 @@ import { PaymentOptions, PaymentData } from '@/components/payment/PaymentOptions
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useStore, t } from '@/store/useStore';
+import { useStore } from '@/store/useStore';
 import { Category } from '@prisma/client';
-
-interface SavedAddress {
-  id: string;
-  label: string;
-  fullName: string;
-  phone: string;
-  governorate: string;
-  city: string;
-  address: string;
-  landmark?: string;
-  isDefault: boolean;
-}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -41,11 +29,6 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
-  
-  // Saved addresses
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
-  const [loadingAddresses, setLoadingAddresses] = useState(false);
 
   const [shippingForm, setShippingForm] = useState({
     fullName: '',
@@ -80,52 +63,6 @@ export default function CheckoutPage() {
       .catch(console.error);
   }, []);
 
-  // Fetch saved addresses for logged-in users
-  useEffect(() => {
-    if (user?.id) {
-      setLoadingAddresses(true);
-      fetch('/api/addresses')
-        .then(res => res.json())
-        .then(data => {
-          if (data.success && data.data) {
-            setSavedAddresses(data.data);
-            // Auto-select default address
-            const defaultAddress = data.data.find((addr: SavedAddress) => addr.isDefault);
-            if (defaultAddress) {
-              setSelectedAddressId(defaultAddress.id);
-              // Fill the form with default address
-              setShippingForm(prev => ({
-                ...prev,
-                fullName: defaultAddress.fullName || '',
-                phone: defaultAddress.phone || '',
-                governorate: defaultAddress.governorate || '',
-                city: defaultAddress.city || '',
-                address: defaultAddress.address || '',
-              }));
-            }
-          }
-        })
-        .catch(console.error)
-        .finally(() => setLoadingAddresses(false));
-    }
-  }, [user?.id]);
-
-  // Handle address selection
-  const handleAddressSelect = (addressId: string) => {
-    setSelectedAddressId(addressId);
-    const selected = savedAddresses.find(addr => addr.id === addressId);
-    if (selected) {
-      setShippingForm(prev => ({
-        ...prev,
-        fullName: selected.fullName || '',
-        phone: selected.phone || '',
-        governorate: selected.governorate || '',
-        city: selected.city || '',
-        address: selected.address || '',
-      }));
-    }
-  };
-
   useEffect(() => {
     if (items.length === 0 && !paymentSuccess) {
       router.push('/');
@@ -141,80 +78,59 @@ export default function CheckoutPage() {
     setIsLoading(true);
     setPaymentData(data);
     
-    // Create the order in the database
     try {
-      const orderPayload = {
-        userId: user?.id || null,
-        items: items.map(item => ({
-          productId: item.productId,
-          quantity: item.quantity,
-          price: item.product.discountPrice || item.product.price,
-        })),
-        shippingAddress: JSON.stringify({
-          fullName: shippingForm.fullName,
-          phone: shippingForm.phone,
-          email: shippingForm.email,
-          governorate: shippingForm.governorate,
-          city: shippingForm.city,
-          address: shippingForm.address,
-          notes: shippingForm.notes,
-        }),
-        phone: shippingForm.phone,
-        subtotal,
-        shippingFee,
-        total: data.method === 'cod' ? total + 15 : total,
-        paymentMethod: data.method,
-      };
-      
-      console.log('Creating order with payload:', { 
-        ...orderPayload, 
-        itemsCount: orderPayload.items.length 
-      });
-      
+      // Create order directly
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(orderPayload),
+        body: JSON.stringify({
+          userId: user?.id || null,
+          items: items.map(item => ({
+            productId: item.productId,
+            quantity: item.quantity,
+            price: item.product.discountPrice || item.product.price,
+          })),
+          shippingAddress: JSON.stringify({
+            fullName: shippingForm.fullName,
+            phone: shippingForm.phone,
+            email: shippingForm.email,
+            governorate: shippingForm.governorate,
+            city: shippingForm.city,
+            address: shippingForm.address,
+            notes: shippingForm.notes,
+          }),
+          phone: shippingForm.phone,
+          subtotal,
+          shippingFee,
+          total: data.method === 'cod' ? total + 15 : total,
+          paymentMethod: data.method,
+        }),
       });
 
       const result = await response.json();
-      
-      console.log('Order creation response:', result);
 
       if (result.success) {
         setPaymentSuccess(true);
         setStep('confirmation');
         clearCart();
       } else {
-        console.error('Order creation failed:', result.error);
         alert(isArabic 
-          ? `حدث خطأ في إنشاء الطلب: ${result.error || 'يرجى المحاولة مرة أخرى.'}` 
-          : `Error creating order: ${result.error || 'Please try again.'}`
+          ? `حدث خطأ: ${result.error || 'يرجى المحاولة مرة أخرى.'}` 
+          : `Error: ${result.error || 'Please try again.'}`
         );
       }
     } catch (error) {
-      console.error('Order creation failed:', error);
-      alert(isArabic 
-        ? `حدث خطأ في الاتصال: ${error instanceof Error ? error.message : 'يرجى المحاولة مرة أخرى.'}` 
-        : `Connection error: ${error instanceof Error ? error.message : 'Please try again.'}`
-      );
+      console.error('Order error:', error);
+      alert(isArabic ? 'حدث خطأ في الاتصال' : 'Connection error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePaymentError = (error: string) => {
-    console.error('Payment error:', error);
-  };
-
   if (items.length === 0 && !paymentSuccess) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="text-center p-8"
-        >
+        <div className="text-center p-8">
           <ShoppingBag className="h-24 w-24 text-gray-300 mx-auto mb-6" />
           <h2 className="text-2xl font-bold text-gray-700 mb-4">
             {isArabic ? 'سلة التسوق فارغة' : 'Your cart is empty'}
@@ -222,7 +138,7 @@ export default function CheckoutPage() {
           <Button onClick={() => router.push('/')}>
             {isArabic ? 'تسوق الآن' : 'Shop Now'}
           </Button>
-        </motion.div>
+        </div>
       </div>
     );
   }
@@ -291,61 +207,6 @@ export default function CheckoutPage() {
                         {isArabic ? 'عنوان الشحن' : 'Shipping Address'}
                       </h2>
                     </div>
-
-                    {/* Saved Addresses for logged-in users */}
-                    {user && savedAddresses.length > 0 && (
-                      <div className="mb-6">
-                        <Label className="mb-3 block">{isArabic ? 'العناوين المحفوظة' : 'Saved Addresses'}</Label>
-                        <div className="grid gap-3">
-                          {savedAddresses.map((addr) => (
-                            <div
-                              key={addr.id}
-                              onClick={() => handleAddressSelect(addr.id)}
-                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
-                                selectedAddressId === addr.id
-                                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
-                                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'
-                              }`}
-                            >
-                              <div className="flex items-start justify-between">
-                                <div>
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-medium text-gray-900 dark:text-white">{addr.fullName}</span>
-                                    {addr.isDefault && (
-                                      <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">
-                                        {isArabic ? 'الافتراضي' : 'Default'}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{addr.phone}</p>
-                                  <p className="text-sm text-gray-500 mt-1">
-                                    {addr.governorate} - {addr.city} - {addr.address}
-                                  </p>
-                                </div>
-                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
-                                  selectedAddressId === addr.id
-                                    ? 'border-teal-500 bg-teal-500'
-                                    : 'border-gray-300'
-                                }`}>
-                                  {selectedAddressId === addr.id && (
-                                    <Check className="h-3 w-3 text-white" />
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="mt-3 text-sm text-gray-500">
-                          {isArabic ? 'أو أدخل عنوان جديد:' : 'Or enter a new address:'}
-                        </div>
-                      </div>
-                    )}
-
-                    {loadingAddresses && (
-                      <div className="flex items-center justify-center py-4">
-                        <Loader2 className="h-6 w-6 animate-spin text-teal-500" />
-                      </div>
-                    )}
 
                     <form onSubmit={handleShippingSubmit} className="space-y-4">
                       <div className="grid sm:grid-cols-2 gap-4">
@@ -459,7 +320,7 @@ export default function CheckoutPage() {
                     <PaymentOptions
                       total={total}
                       onPaymentSuccess={handlePaymentSuccess}
-                      onPaymentError={handlePaymentError}
+                      onPaymentError={(error) => console.error('Payment error:', error)}
                     />
 
                     <Button
@@ -492,15 +353,6 @@ export default function CheckoutPage() {
                     <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
                       {isArabic ? 'تم تأكيد طلبك بنجاح!' : 'Order Confirmed!'}
                     </h2>
-
-                    {paymentData?.method === 'fawry' && paymentData.referenceNumber && (
-                      <div className="bg-orange-50 dark:bg-orange-900/20 rounded-xl p-4 mb-6">
-                        <p className="text-orange-800 dark:text-orange-200 mb-2">
-                          {isArabic ? 'رقم مرجع فوري:' : 'Fawry Reference Number:'}
-                        </p>
-                        <p className="text-2xl font-bold text-orange-600">{paymentData.referenceNumber}</p>
-                      </div>
-                    )}
 
                     {paymentData?.method === 'valu' && paymentData.installmentPlan && (
                       <div className="bg-purple-50 dark:bg-purple-900/20 rounded-xl p-4 mb-6">

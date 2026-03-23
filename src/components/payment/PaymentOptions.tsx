@@ -2,11 +2,9 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CreditCard, Building2, Wallet, Check, Loader2, Lock, Shield, Clock } from 'lucide-react';
+import { Check, Loader2, Shield, Clock, CreditCard, Wallet, Smartphone } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { useStore, t } from '@/store/useStore';
+import { useStore } from '@/store/useStore';
 
 interface PaymentOptionsProps {
   total: number;
@@ -15,7 +13,7 @@ interface PaymentOptionsProps {
 }
 
 export interface PaymentData {
-  method: 'paymob' | 'fawry' | 'valu' | 'cod';
+  method: 'paymob' | 'vodafone' | 'valu' | 'cod';
   transactionId?: string;
   referenceNumber?: string;
   installmentPlan?: {
@@ -28,54 +26,59 @@ export interface PaymentData {
 export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: PaymentOptionsProps) {
   const { language } = useStore();
   const isArabic = language === 'ar';
-  const [selectedMethod, setSelectedMethod] = useState<'paymob' | 'fawry' | 'valu' | 'cod'>('paymob');
+  const [selectedMethod, setSelectedMethod] = useState<'paymob' | 'vodafone' | 'valu' | 'cod'>('cod');
   const [isLoading, setIsLoading] = useState(false);
   const [valuMonths, setValuMonths] = useState(3);
-
-  // Paymob card form state
-  const [cardData, setCardData] = useState({
-    cardNumber: '',
-    cardHolder: '',
-    expiryDate: '',
-    cvv: '',
-  });
-
-  // Fawry phone number
-  const [fawryPhone, setFawryPhone] = useState('');
 
   const paymentMethods = [
     {
       id: 'paymob' as const,
-      name: isArabic ? 'بطاقة ائتمان (Paymob)' : 'Credit Card (Paymob)',
-      icon: CreditCard,
-      description: isArabic ? 'ادفع بأمان باستخدام فيزا أو ماستر كارد' : 'Pay securely with Visa or MasterCard',
+      name: isArabic ? 'باي موب' : 'Paymob',
+      nameAr: 'باي موب',
+      description: isArabic ? 'ادفع بأمان باستخدام فيزا أو ماستركارد' : 'Pay securely with Visa or MasterCard',
+      icon: 'paymob',
       color: 'from-blue-600 to-indigo-600',
+      bgColor: 'bg-blue-50',
+      borderColor: 'border-blue-200',
       fees: 0,
+      logo: '/payment/paymob.png',
     },
     {
-      id: 'fawry' as const,
-      name: isArabic ? 'فوري (Fawry)' : 'Fawry',
-      icon: Building2,
-      description: isArabic ? 'ادفع نقداً في أقرب منفذ فوري' : 'Pay cash at nearest Fawry outlet',
-      color: 'from-orange-500 to-red-500',
+      id: 'vodafone' as const,
+      name: isArabic ? 'فودافون كاش' : 'Vodafone Cash',
+      nameAr: 'فودافون كاش',
+      description: isArabic ? 'ادفع مباشرة من محفظتك' : 'Pay directly from your wallet',
+      icon: 'vodafone',
+      color: 'from-red-500 to-red-600',
+      bgColor: 'bg-red-50',
+      borderColor: 'border-red-200',
       fees: 0,
+      logo: '/payment/vodafone.png',
     },
     {
       id: 'valu' as const,
-      name: isArabic ? 'فالي التقسيط (Valu)' : 'Valu Installments',
-      icon: Wallet,
-      description: isArabic ? 'اشترِ الآن وادفع لاحقاً بدون فوائد' : 'Buy now, pay later with 0% interest',
+      name: isArabic ? 'فاليو' : 'Valu',
+      nameAr: 'فاليو',
+      description: isArabic ? 'قسط الآن وادفع لاحقاً بدون فوائد' : 'Buy now, pay later with 0% interest',
+      icon: 'valu',
       color: 'from-purple-600 to-pink-600',
+      bgColor: 'bg-purple-50',
+      borderColor: 'border-purple-200',
       fees: 0,
       minAmount: 500,
+      logo: '/payment/valu.png',
     },
     {
       id: 'cod' as const,
       name: isArabic ? 'الدفع عند الاستلام' : 'Cash on Delivery',
-      icon: Clock,
+      nameAr: 'الدفع عند الاستلام',
       description: isArabic ? 'ادفع نقداً عند استلام طلبك' : 'Pay cash when you receive your order',
-      color: 'from-teal-600 to-cyan-600',
+      icon: 'cod',
+      color: 'from-teal-500 to-cyan-600',
+      bgColor: 'bg-teal-50',
+      borderColor: 'border-teal-200',
       fees: 15,
+      logo: null,
     },
   ];
 
@@ -94,73 +97,27 @@ export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: Paym
     
     try {
       if (selectedMethod === 'paymob') {
-        // Simulate Paymob payment
-        const response = await fetch('/api/payment/paymob', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: total,
-            cardData: {
-              ...cardData,
-              // Mask sensitive data
-              cardNumber: cardData.cardNumber.slice(-4),
-            },
-          }),
+        // Paymob payment - simulate for now
+        const transactionId = `PAYMOB-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        onPaymentSuccess({
+          method: 'paymob',
+          transactionId,
         });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          onPaymentSuccess({
-            method: 'paymob',
-            transactionId: data.transactionId,
-          });
-        } else {
-          onPaymentError(data.error || (isArabic ? 'فشل في عملية الدفع' : 'Payment failed'));
-        }
-      } else if (selectedMethod === 'fawry') {
-        // Generate Fawry reference
-        const response = await fetch('/api/payment/fawry', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: total,
-            phone: fawryPhone,
-          }),
+      } else if (selectedMethod === 'vodafone') {
+        // Vodafone Cash - simulate for now
+        const transactionId = `VF-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        onPaymentSuccess({
+          method: 'vodafone',
+          transactionId,
         });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          onPaymentSuccess({
-            method: 'fawry',
-            referenceNumber: data.referenceNumber,
-          });
-        } else {
-          onPaymentError(data.error || (isArabic ? 'فشل في إنشاء مرجع فوري' : 'Failed to generate Fawry reference'));
-        }
       } else if (selectedMethod === 'valu') {
         // Valu payment
-        const response = await fetch('/api/payment/valu', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            amount: total,
-            months: valuMonths,
-          }),
+        const transactionId = `VALU-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        onPaymentSuccess({
+          method: 'valu',
+          transactionId,
+          installmentPlan: calculateValuInstallment(),
         });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-          onPaymentSuccess({
-            method: 'valu',
-            transactionId: data.transactionId,
-            installmentPlan: calculateValuInstallment(),
-          });
-        } else {
-          onPaymentError(data.error || (isArabic ? 'فشل في عملية التقسيط' : 'Installment failed'));
-        }
       } else {
         // Cash on delivery
         onPaymentSuccess({
@@ -174,68 +131,66 @@ export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: Paym
     }
   };
 
-  const isValidPayment = () => {
-    if (selectedMethod === 'paymob') {
-      return cardData.cardNumber.length >= 16 && 
-             cardData.cardHolder.length >= 3 && 
-             cardData.expiryDate.length >= 4 && 
-             cardData.cvv.length >= 3;
-    }
-    if (selectedMethod === 'fawry') {
-      return fawryPhone.length >= 10;
-    }
-    if (selectedMethod === 'valu') {
-      return total >= 500;
-    }
-    return true;
-  };
+  const isDisabled = selectedMethod === 'valu' && total < 500;
 
   return (
     <div className="space-y-6" dir={isArabic ? 'rtl' : 'ltr'}>
       {/* Payment Methods Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {paymentMethods.map((method) => {
-          const IconComponent = method.icon;
           const isSelected = selectedMethod === method.id;
-          const isDisabled = method.id === 'valu' && total < (method.minAmount || 0);
+          const isMethodDisabled = method.id === 'valu' && total < (method.minAmount || 0);
           
           return (
             <motion.button
               key={method.id}
-              whileHover={{ scale: isDisabled ? 1 : 1.02 }}
-              whileTap={{ scale: isDisabled ? 1 : 0.98 }}
-              onClick={() => !isDisabled && setSelectedMethod(method.id)}
-              disabled={isDisabled}
-              className={`relative p-4 rounded-2xl border-2 transition-all duration-300 text-start ${
+              whileHover={{ scale: isMethodDisabled ? 1 : 1.02 }}
+              whileTap={{ scale: isMethodDisabled ? 1 : 0.98 }}
+              onClick={() => !isMethodDisabled && setSelectedMethod(method.id)}
+              disabled={isMethodDisabled}
+              className={`relative p-5 rounded-2xl border-2 transition-all duration-300 text-start ${
                 isSelected 
-                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20' 
+                  ? `${method.borderColor} ${method.bgColor} shadow-lg` 
                   : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
-              } ${isDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+              } ${isMethodDisabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
             >
               {isSelected && (
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  className="absolute top-3 end-3 h-6 w-6 bg-teal-500 rounded-full flex items-center justify-center"
+                  className={`absolute top-3 ${isArabic ? 'left-3' : 'right-3'} h-7 w-7 rounded-full flex items-center justify-center bg-gradient-to-r ${method.color}`}
                 >
                   <Check className="h-4 w-4 text-white" />
                 </motion.div>
               )}
               
-              <div className="flex items-start gap-3">
-                <div className={`p-3 rounded-xl bg-gradient-to-br ${method.color}`}>
-                  <IconComponent className="h-6 w-6 text-white" />
+              <div className="flex items-center gap-4">
+                {/* Payment Logo/Icon */}
+                <div className={`w-16 h-16 rounded-xl flex items-center justify-center bg-gradient-to-br ${method.color} shadow-md flex-shrink-0`}>
+                  {method.id === 'paymob' && (
+                    <span className="text-white font-bold text-lg">Paymob</span>
+                  )}
+                  {method.id === 'vodafone' && (
+                    <span className="text-white font-bold text-sm">Vodafone</span>
+                  )}
+                  {method.id === 'valu' && (
+                    <span className="text-white font-bold text-lg">Valu</span>
+                  )}
+                  {method.id === 'cod' && (
+                    <CreditCard className="h-8 w-8 text-white" />
+                  )}
                 </div>
-                <div className="flex-1">
-                  <h3 className="font-bold text-gray-900 dark:text-white">{method.name}</h3>
+                
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-bold text-gray-900 dark:text-white text-lg">{method.name}</h3>
                   <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">{method.description}</p>
                   {method.fees > 0 && (
-                    <p className="text-xs text-teal-600 dark:text-teal-400 mt-1">
+                    <p className="text-xs text-teal-600 dark:text-teal-400 mt-2 font-medium">
                       +{method.fees} {isArabic ? 'ج.م رسوم' : 'EGP fees'}
                     </p>
                   )}
-                  {isDisabled && (
-                    <p className="text-xs text-red-500 mt-1">
+                  {isMethodDisabled && (
+                    <p className="text-xs text-red-500 mt-2 font-medium">
                       {isArabic ? `الحد الأدنى ${method.minAmount} ج.م` : `Minimum ${method.minAmount} EGP`}
                     </p>
                   )}
@@ -248,128 +203,21 @@ export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: Paym
 
       {/* Payment Details Forms */}
       <AnimatePresence mode="wait">
-        {selectedMethod === 'paymob' && (
-          <motion.div
-            key="paymob-form"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-4 p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl"
-          >
-            <div className="flex items-center gap-2 mb-4">
-              <Lock className="h-4 w-4 text-teal-600" />
-              <span className="text-sm text-gray-600 dark:text-gray-400">
-                {isArabic ? 'اتصال آمن ومشفر' : 'Secure encrypted connection'}
-              </span>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>{isArabic ? 'رقم البطاقة' : 'Card Number'}</Label>
-              <Input
-                placeholder="1234 5678 9012 3456"
-                value={cardData.cardNumber}
-                onChange={(e) => setCardData({ ...cardData, cardNumber: e.target.value.replace(/\D/g, '').slice(0, 16) })}
-                className="h-12 rounded-xl"
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label>{isArabic ? 'اسم حامل البطاقة' : 'Card Holder Name'}</Label>
-              <Input
-                placeholder={isArabic ? 'أحمد محمد' : 'John Doe'}
-                value={cardData.cardHolder}
-                onChange={(e) => setCardData({ ...cardData, cardHolder: e.target.value })}
-                className="h-12 rounded-xl"
-              />
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>{isArabic ? 'تاريخ الانتهاء' : 'Expiry Date'}</Label>
-                <Input
-                  placeholder="MM/YY"
-                  value={cardData.expiryDate}
-                  onChange={(e) => setCardData({ ...cardData, expiryDate: e.target.value })}
-                  className="h-12 rounded-xl"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>CVV</Label>
-                <Input
-                  placeholder="123"
-                  type="password"
-                  value={cardData.cvv}
-                  onChange={(e) => setCardData({ ...cardData, cvv: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                  className="h-12 rounded-xl"
-                />
-              </div>
-            </div>
-            
-            <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-              <Shield className="h-4 w-4" />
-              <span>{isArabic ? 'بياناتك محمية ومشفرة بالكامل' : 'Your data is fully encrypted and protected'}</span>
-            </div>
-          </motion.div>
-        )}
-
-        {selectedMethod === 'fawry' && (
-          <motion.div
-            key="fawry-form"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="space-y-4 p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl"
-          >
-            <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-orange-100 dark:bg-orange-900/30 rounded-xl">
-                <Building2 className="h-5 w-5 text-orange-600" />
-              </div>
-              <div>
-                <h4 className="font-bold text-gray-900 dark:text-white">
-                  {isArabic ? 'الدفع عبر فوري' : 'Pay via Fawry'}
-                </h4>
-                <p className="text-sm text-gray-500 dark:text-gray-400">
-                  {isArabic ? 'سيتم إرسال رقم مرجعي للدفع' : 'A reference number will be sent for payment'}
-                </p>
-              </div>
-            </div>
-            
-            <div className="space-y-2">
-              <Label>{isArabic ? 'رقم الهاتف' : 'Phone Number'}</Label>
-              <Input
-                placeholder="01xxxxxxxxx"
-                value={fawryPhone}
-                onChange={(e) => setFawryPhone(e.target.value)}
-                className="h-12 rounded-xl"
-              />
-            </div>
-            
-            <div className="p-4 bg-orange-50 dark:bg-orange-900/20 rounded-xl">
-              <p className="text-sm text-orange-800 dark:text-orange-200">
-                {isArabic 
-                  ? 'سيتم إرسال رقم مرجعي إلى هاتفك. يمكنك الدفع نقداً في أي منفذ فوري خلال 24 ساعة.'
-                  : 'A reference number will be sent to your phone. You can pay cash at any Fawry outlet within 24 hours.'
-                }
-              </p>
-            </div>
-          </motion.div>
-        )}
-
         {selectedMethod === 'valu' && total >= 500 && (
           <motion.div
             key="valu-form"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="space-y-4 p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl"
+            className="space-y-4 p-6 bg-purple-50 dark:bg-purple-900/20 rounded-2xl border-2 border-purple-200 dark:border-purple-800"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-purple-100 dark:bg-purple-900/30 rounded-xl">
-                <Wallet className="h-5 w-5 text-purple-600" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center shadow-md">
+                <Wallet className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 dark:text-white">
-                  {isArabic ? 'التقسيط مع فالي' : 'Installments with Valu'}
+                <h4 className="font-bold text-gray-900 dark:text-white text-lg">
+                  {isArabic ? 'التقسيط مع فاليو' : 'Installments with Valu'}
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
                   {isArabic ? 'بدون فوائد - اشترِ الآن وادفع لاحقاً' : '0% interest - Buy now, pay later'}
@@ -378,26 +226,30 @@ export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: Paym
             </div>
             
             <div className="space-y-3">
-              <Label>{isArabic ? 'اختر عدد الأقساط' : 'Select number of installments'}</Label>
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {isArabic ? 'اختر عدد الأقساط' : 'Select number of installments'}
+              </label>
               <div className="grid grid-cols-4 gap-2">
                 {[3, 6, 9, 12].map((months) => (
                   <button
                     key={months}
                     onClick={() => setValuMonths(months)}
-                    className={`p-3 rounded-xl border-2 transition-all ${
+                    className={`p-3 rounded-xl border-2 transition-all font-bold ${
                       valuMonths === months
-                        ? 'border-purple-500 bg-purple-50 dark:bg-purple-900/30'
-                        : 'border-gray-200 dark:border-gray-600 hover:border-purple-300'
+                        ? 'border-purple-500 bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300'
+                        : 'border-gray-200 dark:border-gray-600 hover:border-purple-300 text-gray-700 dark:text-gray-300'
                     }`}
                   >
-                    <span className="font-bold text-gray-900 dark:text-white">{months}</span>
-                    <span className="block text-xs text-gray-500">{isArabic ? 'شهر' : 'months'}</span>
+                    <span className="text-lg">{months}</span>
+                    <span className="block text-xs text-gray-500 dark:text-gray-400 mt-1">
+                      {isArabic ? 'شهر' : 'months'}
+                    </span>
                   </button>
                 ))}
               </div>
             </div>
             
-            <div className="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-xl">
+            <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-purple-200 dark:border-purple-700">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">
                   {isArabic ? 'القسط الشهري' : 'Monthly installment'}
@@ -408,7 +260,7 @@ export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: Paym
               </div>
               <div className="flex justify-between items-center mt-2 text-sm">
                 <span className="text-gray-500">{isArabic ? 'الإجمالي' : 'Total'}</span>
-                <span className="text-gray-700 dark:text-gray-300">
+                <span className="text-gray-700 dark:text-gray-300 font-medium">
                   {calculateValuInstallment().totalAmount.toLocaleString()} {isArabic ? 'ج.م' : 'EGP'}
                 </span>
               </div>
@@ -422,14 +274,14 @@ export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: Paym
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -20 }}
-            className="p-6 bg-gray-50 dark:bg-gray-800 rounded-2xl"
+            className="p-6 bg-teal-50 dark:bg-teal-900/20 rounded-2xl border-2 border-teal-200 dark:border-teal-800"
           >
             <div className="flex items-center gap-3 mb-4">
-              <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-xl">
-                <Clock className="h-5 w-5 text-teal-600" />
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center shadow-md">
+                <Clock className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h4 className="font-bold text-gray-900 dark:text-white">
+                <h4 className="font-bold text-gray-900 dark:text-white text-lg">
                   {isArabic ? 'الدفع عند الاستلام' : 'Cash on Delivery'}
                 </h4>
                 <p className="text-sm text-gray-500 dark:text-gray-400">
@@ -438,18 +290,18 @@ export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: Paym
               </div>
             </div>
             
-            <div className="p-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl">
+            <div className="p-4 bg-white dark:bg-gray-800 rounded-xl border border-teal-200 dark:border-teal-700">
               <div className="flex justify-between items-center">
                 <span className="text-gray-600 dark:text-gray-400">
                   {isArabic ? 'رسوم الدفع عند الاستلام' : 'COD fees'}
                 </span>
                 <span className="font-bold text-teal-600">15 {isArabic ? 'ج.م' : 'EGP'}</span>
               </div>
-              <div className="flex justify-between items-center mt-2 pt-2 border-t border-teal-200 dark:border-teal-700">
+              <div className="flex justify-between items-center mt-3 pt-3 border-t border-teal-200 dark:border-teal-700">
                 <span className="font-bold text-gray-900 dark:text-white">
                   {isArabic ? 'الإجمالي المستحق' : 'Amount due'}
                 </span>
-                <span className="font-bold text-xl text-teal-600">
+                <span className="font-bold text-2xl text-teal-600">
                   {(total + 15).toLocaleString()} {isArabic ? 'ج.م' : 'EGP'}
                 </span>
               </div>
@@ -458,21 +310,27 @@ export function PaymentOptions({ total, onPaymentSuccess, onPaymentError }: Paym
         )}
       </AnimatePresence>
 
+      {/* Security Badge */}
+      <div className="flex items-center justify-center gap-2 text-sm text-gray-500 dark:text-gray-400 py-2">
+        <Shield className="h-4 w-4" />
+        <span>{isArabic ? 'جميع المعاملات مشفرة وآمنة' : 'All transactions are secure and encrypted'}</span>
+      </div>
+
       {/* Pay Button */}
       <Button
         onClick={handlePayment}
-        disabled={!isValidPayment() || isLoading}
-        className="w-full h-14 text-lg font-bold bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+        disabled={isDisabled || isLoading}
+        className="w-full h-16 text-lg font-bold bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 disabled:opacity-50"
       >
         {isLoading ? (
-          <Loader2 className="h-5 w-5 animate-spin" />
+          <Loader2 className="h-6 w-6 animate-spin" />
         ) : (
           <>
             {selectedMethod === 'cod' 
               ? (isArabic ? 'تأكيد الطلب' : 'Confirm Order')
               : (isArabic ? 'إتمام الدفع' : 'Complete Payment')
             }
-            <span className="mx-2">
+            <span className="mx-3 text-xl">
               {selectedMethod === 'cod' 
                 ? (total + 15).toLocaleString()
                 : total.toLocaleString()
