@@ -135,7 +135,6 @@ model Order {
   shippingAddress  String?     @db.Text
   phone            String?
   paymentMethod    String?     @default("cod")
-  paymentStatus    String?     @default("pending")
   paymentReference String?
   notes            String?     @db.Text
   couponId         String?
