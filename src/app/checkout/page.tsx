@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ShoppingBag, MapPin, CreditCard, Check, Loader2 } from 'lucide-react';
+import { ArrowRight, ShoppingBag, MapPin, CreditCard, Check, Loader2, MapPinned } from 'lucide-react';
 import { Header } from '@/components/store/Header';
 import { Footer } from '@/components/store/Footer';
 import { CartSidebar } from '@/components/store/CartSidebar';
@@ -17,6 +17,18 @@ import { Label } from '@/components/ui/label';
 import { useStore } from '@/store/useStore';
 import { Category } from '@prisma/client';
 
+interface SavedAddress {
+  id: string;
+  label: string;
+  fullName: string;
+  phone: string;
+  governorate: string;
+  city: string;
+  address: string;
+  landmark: string | null;
+  isDefault: boolean;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, language, user, clearCart } = useStore();
@@ -29,6 +41,9 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null);
+  const [isLoadingAddress, setIsLoadingAddress] = useState(false);
 
   const [shippingForm, setShippingForm] = useState({
     fullName: '',
@@ -62,6 +77,50 @@ export default function CheckoutPage() {
       .then(data => setCategories(data))
       .catch(console.error);
   }, []);
+
+  // Load saved addresses if user is logged in
+  useEffect(() => {
+    if (user?.id) {
+      setIsLoadingAddress(true);
+      fetch('/api/addresses')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data && data.data.length > 0) {
+            setSavedAddresses(data.data);
+            // Auto-select the default address
+            const defaultAddress = data.data.find((a: SavedAddress) => a.isDefault) || data.data[0];
+            if (defaultAddress) {
+              setSelectedAddressId(defaultAddress.id);
+              setShippingForm(prev => ({
+                ...prev,
+                fullName: defaultAddress.fullName,
+                phone: defaultAddress.phone,
+                governorate: defaultAddress.governorate,
+                city: defaultAddress.city,
+                address: defaultAddress.address,
+              }));
+            }
+          }
+        })
+        .catch(console.error)
+        .finally(() => setIsLoadingAddress(false));
+    }
+  }, [user?.id]);
+
+  const handleAddressSelect = (addressId: string) => {
+    const address = savedAddresses.find(a => a.id === addressId);
+    if (address) {
+      setSelectedAddressId(address.id);
+      setShippingForm(prev => ({
+        ...prev,
+        fullName: address.fullName,
+        phone: address.phone,
+        governorate: address.governorate,
+        city: address.city,
+        address: address.address,
+      }));
+    }
+  };
 
   useEffect(() => {
     if (items.length === 0 && !paymentSuccess) {
@@ -207,6 +266,65 @@ export default function CheckoutPage() {
                         {isArabic ? 'عنوان الشحن' : 'Shipping Address'}
                       </h2>
                     </div>
+
+                    {/* Saved Addresses */}
+                    {savedAddresses.length > 0 && (
+                      <div className="mb-6">
+                        <Label className="text-gray-700 dark:text-gray-300 mb-3 block">
+                          {isArabic ? 'اختر عنوان محفوظ' : 'Select a saved address'}
+                        </Label>
+                        <div className="grid gap-3">
+                          {savedAddresses.map((addr) => (
+                            <button
+                              key={addr.id}
+                              type="button"
+                              onClick={() => handleAddressSelect(addr.id)}
+                              className={`p-4 rounded-xl border-2 text-start transition-all ${
+                                selectedAddressId === addr.id
+                                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                                  : 'border-gray-200 dark:border-gray-700 hover:border-teal-300'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-3">
+                                  <MapPinned className={`h-5 w-5 ${selectedAddressId === addr.id ? 'text-teal-600' : 'text-gray-400'}`} />
+                                  <div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-gray-900 dark:text-white">{addr.label}</span>
+                                      {addr.isDefault && (
+                                        <span className="text-xs bg-teal-100 text-teal-700 dark:bg-teal-900/30 dark:text-teal-400 px-2 py-0.5 rounded-full">
+                                          {isArabic ? 'افتراضي' : 'Default'}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                      {addr.fullName} • {addr.phone}
+                                    </p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                                      {addr.governorate}, {addr.city} - {addr.address}
+                                    </p>
+                                  </div>
+                                </div>
+                                {selectedAddressId === addr.id && (
+                                  <Check className="h-5 w-5 text-teal-600" />
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                        <div className="my-4 flex items-center">
+                          <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+                          <span className="px-4 text-sm text-gray-500">{isArabic ? 'أو أدخل عنوان جديد' : 'Or enter a new address'}</span>
+                          <div className="flex-1 border-t border-gray-200 dark:border-gray-700"></div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isLoadingAddress && (
+                      <div className="flex items-center justify-center py-8">
+                        <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
+                      </div>
+                    )}
 
                     <form onSubmit={handleShippingSubmit} className="space-y-4">
                       <div className="grid sm:grid-cols-2 gap-4">
