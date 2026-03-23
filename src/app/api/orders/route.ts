@@ -234,12 +234,25 @@ export async function POST(request: NextRequest) {
       data: order
     });
   } catch (error: unknown) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    console.error('=== ORDER CREATE ERROR ===');
+    console.error('Error:', errorMessage);
+    console.error('Stack:', errorStack);
+    console.error('=========================');
+    
     logger.error('Order create error', { 
-      error: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
+      error: errorMessage,
+      stack: errorStack
     });
+    
     return NextResponse.json(
-      { success: false, error: 'Failed to create order. Please try again.' },
+      { 
+        success: false, 
+        error: errorMessage || 'Failed to create order. Please try again.',
+        details: process.env.NODE_ENV === 'development' ? errorStack : undefined
+      },
       { status: 500 }
     );
   }

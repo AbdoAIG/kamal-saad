@@ -63,9 +63,14 @@ export class NotificationService {
    */
   static async createForAdmins(params: CreateAdminNotificationParams) {
     try {
-      // Get all admin users
+      // Get all admin users (both admin and super_admin roles)
       const admins = await db.user.findMany({
-        where: { role: 'admin' },
+        where: { 
+          OR: [
+            { role: 'admin' },
+            { role: 'super_admin' }
+          ]
+        },
         select: { id: true },
       });
 
