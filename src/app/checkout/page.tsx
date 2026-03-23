@@ -17,6 +17,18 @@ import { Label } from '@/components/ui/label';
 import { useStore, t } from '@/store/useStore';
 import { Category } from '@prisma/client';
 
+interface SavedAddress {
+  id: string;
+  label: string;
+  fullName: string;
+  phone: string;
+  governorate: string;
+  city: string;
+  address: string;
+  landmark?: string;
+  isDefault: boolean;
+}
+
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, language, user, clearCart } = useStore();
@@ -29,6 +41,11 @@ export default function CheckoutPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentSuccess, setPaymentSuccess] = useState(false);
   const [paymentData, setPaymentData] = useState<PaymentData | null>(null);
+  
+  // Saved addresses
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('');
+  const [loadingAddresses, setLoadingAddresses] = useState(false);
 
   const [shippingForm, setShippingForm] = useState({
     fullName: '',
@@ -62,6 +79,52 @@ export default function CheckoutPage() {
       .then(data => setCategories(data))
       .catch(console.error);
   }, []);
+
+  // Fetch saved addresses for logged-in users
+  useEffect(() => {
+    if (user?.id) {
+      setLoadingAddresses(true);
+      fetch('/api/addresses')
+        .then(res => res.json())
+        .then(data => {
+          if (data.success && data.data) {
+            setSavedAddresses(data.data);
+            // Auto-select default address
+            const defaultAddress = data.data.find((addr: SavedAddress) => addr.isDefault);
+            if (defaultAddress) {
+              setSelectedAddressId(defaultAddress.id);
+              // Fill the form with default address
+              setShippingForm(prev => ({
+                ...prev,
+                fullName: defaultAddress.fullName || '',
+                phone: defaultAddress.phone || '',
+                governorate: defaultAddress.governorate || '',
+                city: defaultAddress.city || '',
+                address: defaultAddress.address || '',
+              }));
+            }
+          }
+        })
+        .catch(console.error)
+        .finally(() => setLoadingAddresses(false));
+    }
+  }, [user?.id]);
+
+  // Handle address selection
+  const handleAddressSelect = (addressId: string) => {
+    setSelectedAddressId(addressId);
+    const selected = savedAddresses.find(addr => addr.id === addressId);
+    if (selected) {
+      setShippingForm(prev => ({
+        ...prev,
+        fullName: selected.fullName || '',
+        phone: selected.phone || '',
+        governorate: selected.governorate || '',
+        city: selected.city || '',
+        address: selected.address || '',
+      }));
+    }
+  };
 
   useEffect(() => {
     if (items.length === 0 && !paymentSuccess) {
@@ -213,6 +276,61 @@ export default function CheckoutPage() {
                         {isArabic ? 'عنوان الشحن' : 'Shipping Address'}
                       </h2>
                     </div>
+
+                    {/* Saved Addresses for logged-in users */}
+                    {user && savedAddresses.length > 0 && (
+                      <div className="mb-6">
+                        <Label className="mb-3 block">{isArabic ? 'العناوين المحفوظة' : 'Saved Addresses'}</Label>
+                        <div className="grid gap-3">
+                          {savedAddresses.map((addr) => (
+                            <div
+                              key={addr.id}
+                              onClick={() => handleAddressSelect(addr.id)}
+                              className={`p-4 rounded-xl border-2 cursor-pointer transition-all ${
+                                selectedAddressId === addr.id
+                                  ? 'border-teal-500 bg-teal-50 dark:bg-teal-900/20'
+                                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-medium text-gray-900 dark:text-white">{addr.fullName}</span>
+                                    {addr.isDefault && (
+                                      <span className="text-xs bg-teal-100 text-teal-700 px-2 py-0.5 rounded-full">
+                                        {isArabic ? 'الافتراضي' : 'Default'}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">{addr.phone}</p>
+                                  <p className="text-sm text-gray-500 mt-1">
+                                    {addr.governorate} - {addr.city} - {addr.address}
+                                  </p>
+                                </div>
+                                <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${
+                                  selectedAddressId === addr.id
+                                    ? 'border-teal-500 bg-teal-500'
+                                    : 'border-gray-300'
+                                }`}>
+                                  {selectedAddressId === addr.id && (
+                                    <Check className="h-3 w-3 text-white" />
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="mt-3 text-sm text-gray-500">
+                          {isArabic ? 'أو أدخل عنوان جديد:' : 'Or enter a new address:'}
+                        </div>
+                      </div>
+                    )}
+
+                    {loadingAddresses && (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-6 w-6 animate-spin text-teal-500" />
+                      </div>
+                    )}
 
                     <form onSubmit={handleShippingSubmit} className="space-y-4">
                       <div className="grid sm:grid-cols-2 gap-4">

@@ -2022,25 +2022,93 @@ function SettingsPage() {
     whatsapp: ''
   });
   const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  // Fetch settings on mount
+  useEffect(() => {
+    fetchSettings();
+  }, []);
+
+  const fetchSettings = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/settings');
+      const data = await res.json();
+      
+      if (data.success && data.settings) {
+        setSettings(prev => ({
+          ...prev,
+          storeName: data.settings.storeName || prev.storeName,
+          storeNameEn: data.settings.storeNameEn || prev.storeNameEn,
+          phone: data.settings.phone || prev.phone,
+          email: data.settings.email || prev.email,
+          address: data.settings.address || prev.address,
+          facebook: data.settings.facebook || '',
+          instagram: data.settings.instagram || '',
+          whatsapp: data.settings.whatsapp || '',
+        }));
+      }
+    } catch (error) {
+      console.error('Error fetching settings:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSave = async () => {
     setSaving(true);
+    setMessage(null);
     try {
-      await fetch('/api/settings', {
+      const res = await fetch('/api/settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(settings)
+        body: JSON.stringify({
+          settings: [
+            { key: 'storeName', value: settings.storeName, group: 'store' },
+            { key: 'storeNameEn', value: settings.storeNameEn, group: 'store' },
+            { key: 'phone', value: settings.phone, group: 'contact' },
+            { key: 'email', value: settings.email, group: 'contact' },
+            { key: 'address', value: settings.address, group: 'contact' },
+            { key: 'facebook', value: settings.facebook, group: 'social' },
+            { key: 'instagram', value: settings.instagram, group: 'social' },
+            { key: 'whatsapp', value: settings.whatsapp, group: 'social' },
+          ]
+        })
       });
+      
+      const data = await res.json();
+      
+      if (data.success) {
+        setMessage({ type: 'success', text: 'تم حفظ الإعدادات بنجاح' });
+      } else {
+        setMessage({ type: 'error', text: 'حدث خطأ أثناء الحفظ' });
+      }
     } catch (error) {
       console.error('Error saving settings:', error);
+      setMessage({ type: 'error', text: 'حدث خطأ في الاتصال' });
     } finally {
       setSaving(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800">الإعدادات</h2>
+
+      {message && (
+        <div className={`p-4 rounded-xl ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {message.text}
+        </div>
+      )}
 
       <div className="grid lg:grid-cols-2 gap-6">
         <Card className="shadow-lg">
