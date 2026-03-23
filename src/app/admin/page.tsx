@@ -151,8 +151,9 @@ export default function AdminPage() {
   const [showOrderDetails, setShowOrderDetails] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
 
-  // Check if user is admin
-  const isAdmin = user?.role === 'admin';
+  // Check if user is admin or super_admin
+  const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
+  const isSuperAdmin = user?.role === 'super_admin';
 
   // Fetch data when admin is logged in
   useEffect(() => {
