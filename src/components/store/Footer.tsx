@@ -4,14 +4,16 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { 
   Store, Phone, Mail, MapPin, Facebook, Twitter, Instagram, Youtube,
-  CreditCard, Shield, Truck, Clock, Heart
+  CreditCard, Shield, Truck, Clock, Heart, MessageCircle
 } from 'lucide-react';
 import { useStore, t } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useSettings } from '@/hooks/useSettings';
 
 export function Footer() {
   const { language } = useStore();
+  const { settings } = useSettings();
   const isArabic = language === 'ar';
 
   return (
@@ -55,7 +57,7 @@ export function Footer() {
                 />
               </div>
               <div className={isArabic ? 'text-right' : 'text-left'}>
-                <span className="text-2xl font-bold text-white">{t('siteName', language)}</span>
+                <span className="text-2xl font-bold text-white">{isArabic ? settings.storeName : settings.storeNameEn}</span>
                 <p className="text-xs text-gray-400">{t('siteSlogan', language)}</p>
               </div>
             </div>
@@ -83,14 +85,15 @@ export function Footer() {
             {/* Social */}
             <div className={`flex gap-3 ${isArabic ? 'justify-start' : 'justify-start'}`}>
               {[
-                { icon: Facebook, href: '#' },
-                { icon: Twitter, href: '#' },
-                { icon: Instagram, href: '#' },
-                { icon: Youtube, href: '#' },
-              ].map((social, idx) => (
+                { icon: Facebook, href: settings.facebook || '#' },
+                { icon: Instagram, href: settings.instagram || '#' },
+                { icon: MessageCircle, href: settings.whatsapp || '#' },
+              ].filter(social => social.href && social.href !== '#').map((social, idx) => (
                 <motion.a
                   key={idx}
                   href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   whileHover={{ scale: 1.1, y: -2 }}
                   className="h-10 w-10 bg-gray-800 hover:bg-gradient-to-l hover:from-teal-500 hover:to-cyan-500 rounded-xl flex items-center justify-center transition-colors"
                 >
@@ -149,7 +152,7 @@ export function Footer() {
                 </div>
                 <div className={isArabic ? 'text-right' : 'text-left'}>
                   <p className="text-xs text-gray-500">{t('callUs', language)}</p>
-                  <p className="font-medium text-white">+20 100 123 4567</p>
+                  <p className="font-medium text-white">{settings.phone}</p>
                 </div>
               </li>
               <li className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
@@ -158,7 +161,7 @@ export function Footer() {
                 </div>
                 <div className={isArabic ? 'text-right' : 'text-left'}>
                   <p className="text-xs text-gray-500">{isArabic ? 'البريد الإلكتروني' : 'Email'}</p>
-                  <p className="font-medium text-white">info@kamalsaad.com</p>
+                  <p className="font-medium text-white">{settings.email}</p>
                 </div>
               </li>
               <li className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse justify-start' : ''}`}>
@@ -167,7 +170,7 @@ export function Footer() {
                 </div>
                 <div className={isArabic ? 'text-right' : 'text-left'}>
                   <p className="text-xs text-gray-500">{isArabic ? 'العنوان' : 'Address'}</p>
-                  <p className="font-medium text-white">{isArabic ? 'القاهرة، مصر' : 'Cairo, Egypt'}</p>
+                  <p className="font-medium text-white">{settings.address}</p>
                 </div>
               </li>
             </ul>
@@ -184,15 +187,15 @@ export function Footer() {
               <p className="text-sm text-gray-400">
                 {isArabic ? (
                   <>
-                    © 2024 <span className="text-teal-400 font-bold">كمال سعد</span>. جميع الحقوق محفوظة. 
+                    © 2024 <span className="text-teal-400 font-bold">{settings.storeName}</span>. جميع الحقوق محفوظة. 
                     <span className="text-gray-500 mx-1">|</span>
-                    تصميم وتطوير <span className="text-cyan-400 font-medium">كمال سعد</span>
+                    تصميم وتطوير <span className="text-cyan-400 font-medium">{settings.storeName}</span>
                   </>
                 ) : (
                   <>
-                    © 2024 <span className="text-teal-400 font-bold">Kamal Saad</span>. All Rights Reserved.
+                    © 2024 <span className="text-teal-400 font-bold">{settings.storeNameEn}</span>. All Rights Reserved.
                     <span className="text-gray-500 mx-1">|</span>
-                    Designed & Developed by <span className="text-cyan-400 font-medium">Kamal Saad</span>
+                    Designed & Developed by <span className="text-cyan-400 font-medium">{settings.storeNameEn}</span>
                   </>
                 )}
               </p>

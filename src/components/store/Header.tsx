@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useStore, t } from '@/store/useStore';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useSettings } from '@/hooks/useSettings';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,6 +47,8 @@ export function Header({ onMenuClick }: HeaderProps) {
     items, toggleCart, toggleAuthModal, user, searchQuery, setSearchQuery,
     theme, toggleTheme, language, toggleLanguage, favorites, logout
   } = useStore();
+  
+  const { settings } = useSettings();
 
   const isArabic = language === 'ar';
   const favoritesCount = favorites.length;
@@ -98,10 +101,10 @@ export function Header({ onMenuClick }: HeaderProps) {
               <div className="hidden sm:block">
                 <div className="flex flex-col">
                   <span className="text-lg lg:text-xl font-bold text-blue-900 dark:text-blue-400">
-                    KMS
+                    {isArabic ? settings.storeName : settings.storeNameEn}
                   </span>
                   <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {isArabic ? 'كمال محمد سعد' : 'Kamal Mohamed Saad'}
+                    {t('siteSlogan', language)}
                   </span>
                 </div>
               </div>

@@ -60,15 +60,51 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { userId, items, shippingAddress, phone, subtotal, shippingFee, total, paymentMethod } = body;
     
+    logger.info('Order creation request received', { 
+      userId, 
+      itemsCount: items?.length,
+      paymentMethod 
+    });
+    
     if (!items || items.length === 0) {
+      logger.error('Order creation failed: No items');
       return NextResponse.json(
         { success: false, error: 'No items in order' },
         { status: 400 }
       );
     }
     
+    // Validate all product IDs exist
+    const productIds = items.map((item: { productId: string }) => item.productId);
+    const existingProducts = await db.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, price: true, discountPrice: true, stock: true, name: true }
+    });
+    
+    if (existingProducts.length !== productIds.length) {
+      const missingIds = productIds.filter((id: string) => !existingProducts.find(p => p.id === id));
+      logger.error('Order creation failed: Products not found', { missingIds });
+      return NextResponse.json(
+        { success: false, error: 'Some products are no longer available' },
+        { status: 400 }
+      );
+    }
+    
     // Get or create guest user if no userId provided
     let orderUserId = userId;
+    
+    // Check if the userId is a valid existing user
+    if (orderUserId && !orderUserId.startsWith('guest-')) {
+      const existingUser = await db.user.findUnique({
+        where: { id: orderUserId },
+        select: { id: true }
+      });
+      
+      if (!existingUser) {
+        logger.warn('User ID provided but not found in database, creating guest', { userId });
+        orderUserId = null;
+      }
+    }
     
     if (!orderUserId || orderUserId.startsWith('guest-')) {
       // Create a guest user
@@ -80,18 +116,14 @@ export async function POST(request: NextRequest) {
         }
       });
       orderUserId = guestUser.id;
+      logger.info('Created guest user for order', { guestUserId: orderUserId });
     }
     
     // Calculate total if not provided
     let calculatedTotal = total;
+    const productMap = Object.fromEntries(existingProducts.map(p => [p.id, p]));
+    
     if (!calculatedTotal) {
-      const productIds = items.map((item: { productId: string }) => item.productId);
-      const products = await db.product.findMany({
-        where: { id: { in: productIds } }
-      });
-      
-      const productMap = Object.fromEntries(products.map(p => [p.id, p]));
-      
       calculatedTotal = 0;
       items.forEach((item: { productId: string; quantity: number; price?: number }) => {
         const product = productMap[item.productId];
@@ -104,8 +136,14 @@ export async function POST(request: NextRequest) {
     const orderItems = items.map((item: { productId: string; quantity: number; price?: number }) => ({
       productId: item.productId,
       quantity: item.quantity,
-      price: item.price || 0
+      price: item.price || productMap[item.productId]?.price || 0
     }));
+    
+    logger.info('Creating order', { 
+      userId: orderUserId, 
+      total: calculatedTotal, 
+      itemsCount: orderItems.length 
+    });
     
     // Create order
     const order = await db.order.create({
@@ -130,15 +168,25 @@ export async function POST(request: NextRequest) {
       }
     });
     
+    logger.info('Order created successfully', { orderId: order.id });
+    
     // Update sales count and stock for products
     for (const item of items) {
-      await db.product.update({
-        where: { id: item.productId },
-        data: {
-          salesCount: { increment: item.quantity },
-          stock: { decrement: item.quantity }
-        }
-      });
+      try {
+        await db.product.update({
+          where: { id: item.productId },
+          data: {
+            salesCount: { increment: item.quantity },
+            stock: { decrement: item.quantity }
+          }
+        });
+      } catch (updateError) {
+        logger.error('Failed to update product stock', { 
+          productId: item.productId, 
+          error: String(updateError) 
+        });
+        // Don't fail the order for stock update issues
+      }
     }
     
     // Clear cart if user is logged in
@@ -151,6 +199,7 @@ export async function POST(request: NextRequest) {
         await db.cartItem.deleteMany({
           where: { cartId: cart.id }
         });
+        logger.info('Cart cleared for user', { userId: orderUserId });
       }
     } catch {
       // Ignore cart clear errors for guest users
@@ -185,7 +234,10 @@ export async function POST(request: NextRequest) {
       data: order
     });
   } catch (error: unknown) {
-    console.error('Order create error:', error);
+    logger.error('Order create error', { 
+      error: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
     return NextResponse.json(
       { success: false, error: 'Failed to create order. Please try again.' },
       { status: 500 }

@@ -143,34 +143,43 @@ export default function CheckoutPage() {
     
     // Create the order in the database
     try {
+      const orderPayload = {
+        userId: user?.id || null,
+        items: items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.product.discountPrice || item.product.price,
+        })),
+        shippingAddress: JSON.stringify({
+          fullName: shippingForm.fullName,
+          phone: shippingForm.phone,
+          email: shippingForm.email,
+          governorate: shippingForm.governorate,
+          city: shippingForm.city,
+          address: shippingForm.address,
+          notes: shippingForm.notes,
+        }),
+        phone: shippingForm.phone,
+        subtotal,
+        shippingFee,
+        total: data.method === 'cod' ? total + 15 : total,
+        paymentMethod: data.method,
+      };
+      
+      console.log('Creating order with payload:', { 
+        ...orderPayload, 
+        itemsCount: orderPayload.items.length 
+      });
+      
       const response = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id || 'guest-' + Date.now(),
-          items: items.map(item => ({
-            productId: item.productId,
-            quantity: item.quantity,
-            price: item.product.discountPrice || item.product.price,
-          })),
-          shippingAddress: JSON.stringify({
-            fullName: shippingForm.fullName,
-            phone: shippingForm.phone,
-            email: shippingForm.email,
-            governorate: shippingForm.governorate,
-            city: shippingForm.city,
-            address: shippingForm.address,
-            notes: shippingForm.notes,
-          }),
-          phone: shippingForm.phone,
-          subtotal,
-          shippingFee,
-          total: data.method === 'cod' ? total + 15 : total,
-          paymentMethod: data.method,
-        }),
+        body: JSON.stringify(orderPayload),
       });
 
       const result = await response.json();
+      
+      console.log('Order creation response:', result);
 
       if (result.success) {
         setPaymentSuccess(true);
@@ -178,11 +187,17 @@ export default function CheckoutPage() {
         clearCart();
       } else {
         console.error('Order creation failed:', result.error);
-        alert(isArabic ? 'حدث خطأ في إنشاء الطلب. يرجى المحاولة مرة أخرى.' : 'Error creating order. Please try again.');
+        alert(isArabic 
+          ? `حدث خطأ في إنشاء الطلب: ${result.error || 'يرجى المحاولة مرة أخرى.'}` 
+          : `Error creating order: ${result.error || 'Please try again.'}`
+        );
       }
     } catch (error) {
       console.error('Order creation failed:', error);
-      alert(isArabic ? 'حدث خطأ في الاتصال. يرجى المحاولة مرة أخرى.' : 'Connection error. Please try again.');
+      alert(isArabic 
+        ? `حدث خطأ في الاتصال: ${error instanceof Error ? error.message : 'يرجى المحاولة مرة أخرى.'}` 
+        : `Connection error: ${error instanceof Error ? error.message : 'Please try again.'}`
+      );
     } finally {
       setIsLoading(false);
     }
