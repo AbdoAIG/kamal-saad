@@ -1,52 +1,40 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET - Get all orders for admin
+// GET - Get all orders for admin using raw SQL
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const search = searchParams.get('search');
 
-    const where: any = {};
-
+    // Build the query
+    let whereClause = '';
+    const params: any[] = [];
+    
     if (status && status !== 'all') {
-      where.status = status;
+      whereClause = 'WHERE o.status = $1';
+      params.push(status);
     }
 
-    const orders = await db.order.findMany({
-      where,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            image: true,
-          }
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                nameAr: true,
-                images: true,
-                price: true,
-              }
-            }
-          }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+    // Use raw SQL to fetch orders
+    const orders = await db.$queryRawUnsafe(
+      `SELECT 
+        o.id, o."userId", o.status, o.total, o.discount, 
+        o."shippingAddress", o.phone, o."paymentMethod", 
+        o.notes, o."pointsUsed", o."pointsEarned", 
+        o."createdAt", o."updatedAt",
+        u.id as "userId", u.name as "userName", u.email as "userEmail", 
+        u.phone as "userPhone", u.image as "userImage"
+      FROM "Order" o
+      LEFT JOIN "User" u ON o."userId" = u.id
+      ${whereClause}
+      ORDER BY o."createdAt" DESC`,
+      ...params
+    ) as any[];
 
-    // Process orders and parse data
-    const processedOrders = orders.map(order => {
+    // Process orders
+    const processedOrders = await Promise.all(orders.map(async (order) => {
       let shippingInfo = null;
 
       // Try to parse shipping address as JSON
@@ -54,31 +42,54 @@ export async function GET(request: NextRequest) {
         try {
           shippingInfo = JSON.parse(order.shippingAddress);
         } catch {
-          // Old format - plain text address
           shippingInfo = {
             raw: order.shippingAddress,
             governorate: '',
             city: '',
             address: order.shippingAddress,
-            fullName: order.user?.name || '',
+            fullName: order.userName || '',
             phone: order.phone || '',
           };
         }
       }
 
+      // Fetch order items
+      const items = await db.$queryRaw`
+        SELECT 
+          oi.id, oi."orderId", oi."productId", oi.quantity, oi.price,
+          p.id as "productId", p.name, p."nameAr", p.images, p.price as "productPrice"
+        FROM "OrderItem" oi
+        JOIN "Product" p ON oi."productId" = p.id
+        WHERE oi."orderId" = ${order.id}
+      ` as any[];
+
       return {
         ...order,
+        user: {
+          id: order.userId,
+          name: order.userName,
+          email: order.userEmail,
+          phone: order.userPhone,
+          image: order.userImage,
+        },
         shippingInfo,
         paymentMethod: order.paymentMethod || 'cod',
-        items: order.items.map(item => ({
-          ...item,
+        items: items.map(item => ({
+          id: item.id,
+          orderId: item.orderId,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
           product: {
-            ...item.product,
-            images: JSON.parse(item.product.images || '[]')
+            id: item.productId,
+            name: item.name,
+            nameAr: item.nameAr,
+            images: JSON.parse(item.images || '[]'),
+            price: item.productPrice,
           }
         }))
       };
-    });
+    }));
 
     // Filter by search if provided
     let filteredOrders = processedOrders;

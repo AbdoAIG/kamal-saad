@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { NotificationService } from '@/lib/notification-service';
 import { logger } from '@/lib/logger';
 
-// GET - Get orders for user
+// GET - Get orders for user using raw SQL
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -16,34 +16,54 @@ export async function GET(request: NextRequest) {
       });
     }
     
-    const orders = await db.order.findMany({
-      where: { userId },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: { category: true }
-            }
+    // Use raw SQL to fetch orders
+    const orders = await db.$queryRaw`
+      SELECT 
+        o.id, o."userId", o.status, o.total, o.discount, 
+        o."shippingAddress", o.phone, o."paymentMethod", 
+        o.notes, o."pointsUsed", o."pointsEarned", 
+        o."createdAt", o."updatedAt"
+      FROM "Order" o
+      WHERE o."userId" = ${userId}
+      ORDER BY o."createdAt" DESC
+    ` as any[];
+    
+    // Fetch order items for each order
+    const ordersWithItems = await Promise.all(orders.map(async (order) => {
+      const items = await db.$queryRaw`
+        SELECT 
+          oi.id, oi."orderId", oi."productId", oi.quantity, oi.price,
+          p.id as "productId", p.name, p."nameAr", p.price as "productPrice",
+          p."discountPrice", p.images, p."categoryId"
+        FROM "OrderItem" oi
+        JOIN "Product" p ON oi."productId" = p.id
+        WHERE oi."orderId" = ${order.id}
+      ` as any[];
+      
+      return {
+        ...order,
+        items: items.map(item => ({
+          id: item.id,
+          orderId: item.orderId,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
+          product: {
+            id: item.productId,
+            name: item.name,
+            nameAr: item.nameAr,
+            price: item.productPrice,
+            discountPrice: item.discountPrice,
+            images: JSON.parse(item.images || '[]'),
+            categoryId: item.categoryId,
           }
-        }
-      },
-      orderBy: {
-        createdAt: 'desc'
-      }
-    });
+        }))
+      };
+    }));
     
     return NextResponse.json({
       success: true,
-      data: orders.map(order => ({
-        ...order,
-        items: order.items.map(item => ({
-          ...item,
-          product: {
-            ...item.product,
-            images: JSON.parse(item.product.images)
-          }
-        }))
-      }))
+      data: ordersWithItems
     });
   } catch (error) {
     console.error('Orders fetch error:', error);
@@ -54,7 +74,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create new order using raw SQL to bypass Prisma Client cache issues
+// POST - Create new order using raw SQL
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -74,12 +94,11 @@ export async function POST(request: NextRequest) {
       );
     }
     
-    // Validate all product IDs exist
+    // Validate all product IDs exist using raw SQL
     const productIds = items.map((item: { productId: string }) => item.productId);
-    const existingProducts = await db.product.findMany({
-      where: { id: { in: productIds } },
-      select: { id: true, price: true, discountPrice: true, stock: true, name: true }
-    });
+    const existingProducts = await db.$queryRaw`
+      SELECT id, price, "discountPrice", stock, name FROM "Product" WHERE id = ANY(${productIds}::text[])
+    ` as any[];
     
     if (existingProducts.length !== productIds.length) {
       const missingIds = productIds.filter((id: string) => !existingProducts.find(p => p.id === id));
@@ -95,12 +114,11 @@ export async function POST(request: NextRequest) {
     
     // Check if the userId is a valid existing user
     if (orderUserId && !orderUserId.startsWith('guest-')) {
-      const existingUser = await db.user.findUnique({
-        where: { id: orderUserId },
-        select: { id: true }
-      });
+      const existingUser = await db.$queryRaw`
+        SELECT id FROM "User" WHERE id = ${orderUserId}
+      ` as any[];
       
-      if (!existingUser) {
+      if (existingUser.length === 0) {
         logger.warn('User ID provided but not found in database, creating guest', { userId });
         orderUserId = null;
       }
@@ -108,30 +126,24 @@ export async function POST(request: NextRequest) {
     
     if (!orderUserId || orderUserId.startsWith('guest-')) {
       // Create a guest user using raw SQL
-      const guestResult = await db.$executeRaw`
+      const guestEmail = `guest-${Date.now()}@guest.com`;
+      await db.$executeRaw`
         INSERT INTO "User" (id, email, name, role, "isActive", "loyaltyPoints", "createdAt", "updatedAt")
-        VALUES (gen_random_uuid(), ${`guest-${Date.now()}@guest.com`}, 'Guest User', 'customer', true, 0, NOW(), NOW())
-        RETURNING id
+        VALUES (gen_random_uuid(), ${guestEmail}, 'Guest User', 'customer', true, 0, NOW(), NOW())
       `;
       
       // Get the created guest user
-      const guestUser = await db.user.findFirst({
-        where: { email: `guest-${Date.now()}@guest.com` },
-        select: { id: true }
-      });
+      const guestUser = await db.$queryRaw`
+        SELECT id FROM "User" WHERE email = ${guestEmail}
+      ` as any[];
       
-      if (!guestUser) {
-        // Fallback: create using Prisma
-        const newGuest = await db.user.create({
-          data: {
-            email: `guest-${Date.now()}@guest.com`,
-            name: 'Guest User',
-            role: 'customer'
-          }
-        });
-        orderUserId = newGuest.id;
+      if (guestUser.length > 0) {
+        orderUserId = guestUser[0].id;
       } else {
-        orderUserId = guestUser.id;
+        return NextResponse.json(
+          { success: false, error: 'Failed to create guest user' },
+          { status: 500 }
+        );
       }
       logger.info('Created guest user for order', { guestUserId: orderUserId });
     }
@@ -152,7 +164,7 @@ export async function POST(request: NextRequest) {
     // Generate order ID
     const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    // Create order using raw SQL to bypass any Prisma Client cache issues
+    // Create order using raw SQL - only columns that exist
     await db.$executeRaw`
       INSERT INTO "Order" (id, "userId", status, total, discount, "shippingAddress", phone, "paymentMethod", notes, "pointsUsed", "pointsEarned", "createdAt", "updatedAt")
       VALUES (
@@ -185,16 +197,16 @@ export async function POST(request: NextRequest) {
     
     logger.info('Order created successfully using raw SQL', { orderId });
     
-    // Update sales count and stock for products
+    // Update sales count and stock for products using raw SQL
     for (const item of items) {
       try {
-        await db.product.update({
-          where: { id: item.productId },
-          data: {
-            salesCount: { increment: item.quantity },
-            stock: { decrement: item.quantity }
-          }
-        });
+        await db.$executeRaw`
+          UPDATE "Product" 
+          SET "salesCount" = "salesCount" + ${item.quantity},
+              stock = stock - ${item.quantity},
+              "updatedAt" = NOW()
+          WHERE id = ${item.productId}
+        `;
       } catch (updateError) {
         logger.error('Failed to update product stock', { 
           productId: item.productId, 
@@ -203,40 +215,67 @@ export async function POST(request: NextRequest) {
       }
     }
     
-    // Clear cart if user is logged in
+    // Clear cart using raw SQL
     try {
-      const cart = await db.cart.findUnique({
-        where: { userId: orderUserId }
-      });
-      
-      if (cart) {
-        await db.cartItem.deleteMany({
-          where: { cartId: cart.id }
-        });
-        logger.info('Cart cleared for user', { userId: orderUserId });
-      }
+      await db.$executeRaw`
+        DELETE FROM "CartItem" 
+        WHERE "cartId" IN (
+          SELECT id FROM "Cart" WHERE "userId" = ${orderUserId}
+        )
+      `;
+      logger.info('Cart cleared for user', { userId: orderUserId });
     } catch {
       // Ignore cart clear errors for guest users
     }
     
-    // Fetch the created order
-    const order = await db.order.findUnique({
-      where: { id: orderId },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
+    // Fetch the created order using raw SQL
+    const createdOrder = await db.$queryRaw`
+      SELECT 
+        id, "userId", status, total, discount, 
+        "shippingAddress", phone, "paymentMethod", 
+        notes, "pointsUsed", "pointsEarned", 
+        "createdAt", "updatedAt"
+      FROM "Order" WHERE id = ${orderId}
+    ` as any[];
+    
+    // Fetch order items
+    const orderItems = await db.$queryRaw`
+      SELECT 
+        oi.id, oi."orderId", oi."productId", oi.quantity, oi.price,
+        p.id as "productId", p.name, p."nameAr", p.price as "productPrice",
+        p."discountPrice", p.images, p."categoryId"
+      FROM "OrderItem" oi
+      JOIN "Product" p ON oi."productId" = p.id
+      WHERE oi."orderId" = ${orderId}
+    ` as any[];
+    
+    const order = {
+      ...createdOrder[0],
+      items: orderItems.map(item => ({
+        id: item.id,
+        orderId: item.orderId,
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
+        product: {
+          id: item.productId,
+          name: item.name,
+          nameAr: item.nameAr,
+          price: item.productPrice,
+          discountPrice: item.discountPrice,
+          images: item.images,
+          categoryId: item.categoryId,
         }
-      }
-    });
+      }))
+    };
     
     // Send notifications
     try {
-      const orderUser = await db.user.findUnique({
-        where: { id: orderUserId },
-        select: { name: true, email: true },
-      });
+      const orderUserResult = await db.$queryRaw`
+        SELECT name, email FROM "User" WHERE id = ${orderUserId}
+      ` as any[];
+      
+      const orderUser = orderUserResult[0];
       
       await NotificationService.notifyOrderCreated(orderUserId, orderId, calculatedTotal);
       

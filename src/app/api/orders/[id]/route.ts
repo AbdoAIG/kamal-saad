@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET - Get a single order by ID
+// GET - Get a single order by ID using raw SQL
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -18,39 +18,73 @@ export async function GET(
       );
     }
     
-    const order = await db.order.findFirst({
-      where: { 
-        id,
-        userId 
-      },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: { category: true }
-            }
-          }
-        },
-        coupon: true
-      }
-    });
-    
-    if (!order) {
+    // Fetch order using raw SQL
+    const orders = await db.$queryRaw`
+      SELECT 
+        id, "userId", status, total, discount, 
+        "shippingAddress", phone, "paymentMethod", 
+        notes, "pointsUsed", "pointsEarned", 
+        "createdAt", "updatedAt", "couponId"
+      FROM "Order" 
+      WHERE id = ${id} AND "userId" = ${userId}
+    ` as any[];
+
+    if (orders.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
       );
     }
-    
+
+    const order = orders[0];
+
+    // Fetch order items
+    const items = await db.$queryRaw`
+      SELECT 
+        oi.id, oi."orderId", oi."productId", oi.quantity, oi.price,
+        p.id as "productId", p.name, p."nameAr", p.images, 
+        p.price as "productPrice", p."discountPrice", p."categoryId",
+        c.id as "categoryId", c.name as "categoryName", c."nameAr" as "categoryNameAr"
+      FROM "OrderItem" oi
+      JOIN "Product" p ON oi."productId" = p.id
+      JOIN "Category" c ON p."categoryId" = c.id
+      WHERE oi."orderId" = ${id}
+    ` as any[];
+
+    // Fetch coupon if exists
+    let coupon = null;
+    if (order.couponId) {
+      const coupons = await db.$queryRaw`
+        SELECT id, code, type, value, "minOrder", "maxDiscount"
+        FROM "Coupon" WHERE id = ${order.couponId}
+      ` as any[];
+      coupon = coupons[0] || null;
+    }
+
     return NextResponse.json({
       success: true,
       data: {
         ...order,
-        items: order.items.map(item => ({
-          ...item,
+        coupon,
+        items: items.map(item => ({
+          id: item.id,
+          orderId: item.orderId,
+          productId: item.productId,
+          quantity: item.quantity,
+          price: item.price,
           product: {
-            ...item.product,
-            images: JSON.parse(item.product.images)
+            id: item.productId,
+            name: item.name,
+            nameAr: item.nameAr,
+            images: JSON.parse(item.images || '[]'),
+            price: item.productPrice,
+            discountPrice: item.discountPrice,
+            categoryId: item.categoryId,
+            category: {
+              id: item.categoryId,
+              name: item.categoryName,
+              nameAr: item.categoryNameAr,
+            }
           }
         }))
       }

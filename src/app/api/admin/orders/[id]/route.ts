@@ -1,7 +1,7 @@
 import { db } from '@/lib/db';
 import { NextRequest, NextResponse } from 'next/server';
 
-// GET - Get single order details
+// GET - Get single order details using raw SQL
 export async function GET(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -9,43 +9,28 @@ export async function GET(
   try {
     const { id } = await params;
 
-    const order = await db.order.findUnique({
-      where: { id },
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-            phone: true,
-            image: true,
-            addresses: true,
-          }
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                id: true,
-                name: true,
-                nameAr: true,
-                images: true,
-                price: true,
-                discountPrice: true,
-              }
-            }
-          }
-        },
-        coupon: true,
-      }
-    });
+    // Fetch order using raw SQL
+    const orders = await db.$queryRaw`
+      SELECT 
+        o.id, o."userId", o.status, o.total, o.discount, 
+        o."shippingAddress", o.phone, o."paymentMethod", 
+        o.notes, o."pointsUsed", o."pointsEarned", 
+        o."createdAt", o."updatedAt",
+        u.id as "userId", u.name as "userName", u.email as "userEmail", 
+        u.phone as "userPhone", u.image as "userImage"
+      FROM "Order" o
+      LEFT JOIN "User" u ON o."userId" = u.id
+      WHERE o.id = ${id}
+    ` as any[];
 
-    if (!order) {
+    if (orders.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Order not found' },
         { status: 404 }
       );
     }
+
+    const order = orders[0];
 
     // Parse shipping address
     let shippingInfo = null;
@@ -53,28 +38,52 @@ export async function GET(
       try {
         shippingInfo = JSON.parse(order.shippingAddress);
       } catch {
-        // Old format - plain text address
         shippingInfo = {
           raw: order.shippingAddress,
           governorate: '',
           city: '',
           address: order.shippingAddress,
-          fullName: order.user?.name || '',
+          fullName: order.userName || '',
           phone: order.phone || '',
         };
       }
     }
 
-    // Parse product images
+    // Fetch order items
+    const items = await db.$queryRaw`
+      SELECT 
+        oi.id, oi."orderId", oi."productId", oi.quantity, oi.price,
+        p.id as "productId", p.name, p."nameAr", p.images, 
+        p.price as "productPrice", p."discountPrice"
+      FROM "OrderItem" oi
+      JOIN "Product" p ON oi."productId" = p.id
+      WHERE oi."orderId" = ${id}
+    ` as any[];
+
     const processedOrder = {
       ...order,
+      user: {
+        id: order.userId,
+        name: order.userName,
+        email: order.userEmail,
+        phone: order.userPhone,
+        image: order.userImage,
+      },
       shippingInfo,
       paymentMethod: order.paymentMethod || 'cod',
-      items: order.items.map(item => ({
-        ...item,
+      items: items.map(item => ({
+        id: item.id,
+        orderId: item.orderId,
+        productId: item.productId,
+        quantity: item.quantity,
+        price: item.price,
         product: {
-          ...item.product,
-          images: JSON.parse(item.product.images || '[]')
+          id: item.productId,
+          name: item.name,
+          nameAr: item.nameAr,
+          images: JSON.parse(item.images || '[]'),
+          price: item.productPrice,
+          discountPrice: item.discountPrice,
         }
       }))
     };
@@ -92,7 +101,7 @@ export async function GET(
   }
 }
 
-// PUT - Update order status
+// PUT - Update order status using raw SQL
 export async function PUT(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -110,35 +119,42 @@ export async function PUT(
       );
     }
 
-    const updateData: any = {};
-    if (status) updateData.status = status;
+    // Update order using raw SQL
+    if (status) {
+      await db.$executeRaw`
+        UPDATE "Order" 
+        SET status = ${status}, "updatedAt" = NOW()
+        WHERE id = ${id}
+      `;
+    }
 
-    const order = await db.order.update({
-      where: { id },
-      data: updateData,
-      include: {
-        user: {
-          select: {
-            id: true,
-            name: true,
-            email: true,
-          }
-        },
-        items: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                nameAr: true,
-              }
-            }
-          }
-        }
-      }
-    });
+    // Fetch the updated order
+    const orders = await db.$queryRaw`
+      SELECT 
+        o.id, o."userId", o.status, o.total, o.discount, 
+        o."shippingAddress", o.phone, o."paymentMethod", 
+        o.notes, o."pointsUsed", o."pointsEarned", 
+        o."createdAt", o."updatedAt",
+        u.id as "userId", u.name as "userName", u.email as "userEmail"
+      FROM "Order" o
+      LEFT JOIN "User" u ON o."userId" = u.id
+      WHERE o.id = ${id}
+    ` as any[];
+
+    const order = orders[0];
+
+    // Fetch order items
+    const items = await db.$queryRaw`
+      SELECT 
+        oi.id, oi."orderId", oi."productId", oi.quantity, oi.price,
+        p.name, p."nameAr"
+      FROM "OrderItem" oi
+      JOIN "Product" p ON oi."productId" = p.id
+      WHERE oi."orderId" = ${id}
+    ` as any[];
 
     // Create notification for user
-    if (status) {
+    if (status && order) {
       const statusMessages: Record<string, { ar: string; en: string }> = {
         confirmed: { ar: 'تم تأكيد طلبك', en: 'Your order has been confirmed' },
         processing: { ar: 'جاري تجهيز طلبك', en: 'Your order is being processed' },
@@ -148,24 +164,36 @@ export async function PUT(
       };
 
       const msg = statusMessages[status];
-      if (msg && order.user) {
-        await db.notification.create({
-          data: {
-            userId: order.user.id,
-            type: 'order_update',
-            title: `تحديث الطلب #${order.id.slice(-8)}`,
-            titleAr: `تحديث الطلب #${order.id.slice(-8)}`,
-            message: msg.en,
-            messageAr: msg.ar,
-            data: JSON.stringify({ orderId: order.id, status }),
-          }
-        });
+      if (msg) {
+        await db.$executeRaw`
+          INSERT INTO "Notification" (id, "userId", type, title, "titleAr", message, "messageAr", data, "isRead", "createdAt")
+          VALUES (
+            gen_random_uuid(),
+            ${order.userId},
+            'order_update',
+            ${`تحديث الطلب #${order.id.slice(-8)}`},
+            ${`تحديث الطلب #${order.id.slice(-8)}`},
+            ${msg.en},
+            ${msg.ar},
+            ${JSON.stringify({ orderId: order.id, status })},
+            false,
+            NOW()
+          )
+        `;
       }
     }
 
     return NextResponse.json({
       success: true,
-      data: order
+      data: {
+        ...order,
+        user: {
+          id: order.userId,
+          name: order.userName,
+          email: order.userEmail,
+        },
+        items
+      }
     });
   } catch (error) {
     console.error('Order update error:', error);
