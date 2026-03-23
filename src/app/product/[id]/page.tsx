@@ -7,6 +7,7 @@ import {
   Star, ShoppingCart, Heart, Share2, Minus, Plus, Truck, Shield, 
   RotateCcw, Check, ChevronRight, ChevronLeft, Package, Clock, Phone, Zap, Bell
 } from 'lucide-react';
+import { ProductImageGallery } from '@/components/store/ProductImageGallery';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
@@ -41,7 +42,6 @@ export default function ProductPage() {
   const [relatedProducts, setRelatedProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(0);
   const [isFavoriteLocal, setIsFavoriteLocal] = useState(false);
   const [addedToCart, setAddedToCart] = useState(false);
   const [isStockNotified, setIsStockNotified] = useState(false);
@@ -171,7 +171,7 @@ export default function ProductPage() {
   }
 
   const images = JSON.parse(product.images || '[]');
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  const hasDiscount = Boolean(product.discountPrice && product.discountPrice < product.price);
   const discountPercent = hasDiscount
     ? Math.round(((product.price - (product.discountPrice || 0)) / product.price) * 100)
     : 0;
@@ -201,82 +201,16 @@ export default function ProductPage() {
 
           {/* Product Details */}
           <div className={`grid lg:grid-cols-2 gap-8 lg:gap-12 ${isArabic ? '' : 'lg:grid-flow-col-dense'}`}>
-            {/* Images Section */}
-            <motion.div
-              initial={{ opacity: 0, x: isArabic ? 20 : -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              className={`space-y-4 ${isArabic ? '' : 'lg:col-start-2'}`}
-            >
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-white dark:bg-gray-800 shadow-lg">
-                <AnimatePresence mode="wait">
-                  <motion.img
-                    key={selectedImage}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    src={images[selectedImage] || 'https://via.placeholder.com/500'}
-                    alt={productName}
-                    className="w-full h-full object-cover"
-                  />
-                </AnimatePresence>
-
-                {hasDiscount && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    className={`absolute top-4 bg-gradient-to-l from-red-500 to-rose-500 text-white px-4 py-2 rounded-full font-bold shadow-lg text-sm ${isArabic ? 'right-4' : 'left-4'}`}
-                  >
-                    {t('discount', language)} {discountPercent}%
-                  </motion.div>
-                )}
-
-                {product.featured && (
-                  <motion.div
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className={`absolute top-4 bg-gradient-to-l from-amber-400 to-orange-400 text-white px-4 py-2 rounded-full font-bold shadow-lg text-sm ${isArabic ? 'left-4' : 'right-4'}`}
-                  >
-                    ⭐ {t('featured', language)}
-                  </motion.div>
-                )}
-
-                {images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setSelectedImage((prev) => (prev > 0 ? prev - 1 : images.length - 1))}
-                      className={`absolute top-1/2 -translate-y-1/2 h-10 w-10 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 rounded-full shadow-lg flex items-center justify-center transition-colors ${isArabic ? 'left-4' : 'right-4'}`}
-                    >
-                      {isArabic ? <ChevronLeft className="h-5 w-5" /> : <ChevronRight className="h-5 w-5" />}
-                    </button>
-                    <button
-                      onClick={() => setSelectedImage((prev) => (prev < images.length - 1 ? prev + 1 : 0))}
-                      className={`absolute top-1/2 -translate-y-1/2 h-10 w-10 bg-white/90 dark:bg-gray-800/90 hover:bg-white dark:hover:bg-gray-800 rounded-full shadow-lg flex items-center justify-center transition-colors ${isArabic ? 'right-4' : 'left-4'}`}
-                    >
-                      {isArabic ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {images.length > 1 && (
-                <div className={`flex gap-3 overflow-x-auto pb-2 ${isArabic ? 'justify-start' : 'justify-start'}`}>
-                  {images.map((img: string, idx: number) => (
-                    <button
-                      key={idx}
-                      onClick={() => setSelectedImage(idx)}
-                      className={`flex-shrink-0 w-20 h-20 rounded-xl overflow-hidden border-2 transition-all duration-300 ${
-                        selectedImage === idx
-                          ? 'border-teal-500 shadow-lg ring-2 ring-teal-200 dark:ring-teal-800'
-                          : 'border-transparent hover:border-gray-300 dark:hover:border-gray-600'
-                      }`}
-                    >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </motion.div>
+            {/* Images Section - Enhanced Gallery */}
+            <ProductImageGallery
+              images={images.length > 0 ? images : ['https://via.placeholder.com/500']}
+              productName={productName}
+              isArabic={isArabic}
+              hasDiscount={hasDiscount}
+              discountPercent={discountPercent}
+              featured={!!product.featured}
+              language={language}
+            />
 
             {/* Details Section */}
             <motion.div
