@@ -54,7 +54,7 @@ export async function GET(request: NextRequest) {
   }
 }
 
-// POST - Create new order
+// POST - Create new order using raw SQL to bypass Prisma Client cache issues
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -107,15 +107,32 @@ export async function POST(request: NextRequest) {
     }
     
     if (!orderUserId || orderUserId.startsWith('guest-')) {
-      // Create a guest user
-      const guestUser = await db.user.create({
-        data: {
-          email: `guest-${Date.now()}@guest.com`,
-          name: 'Guest User',
-          role: 'customer'
-        }
+      // Create a guest user using raw SQL
+      const guestResult = await db.$executeRaw`
+        INSERT INTO "User" (id, email, name, role, "isActive", "loyaltyPoints", "createdAt", "updatedAt")
+        VALUES (gen_random_uuid(), ${`guest-${Date.now()}@guest.com`}, 'Guest User', 'customer', true, 0, NOW(), NOW())
+        RETURNING id
+      `;
+      
+      // Get the created guest user
+      const guestUser = await db.user.findFirst({
+        where: { email: `guest-${Date.now()}@guest.com` },
+        select: { id: true }
       });
-      orderUserId = guestUser.id;
+      
+      if (!guestUser) {
+        // Fallback: create using Prisma
+        const newGuest = await db.user.create({
+          data: {
+            email: `guest-${Date.now()}@guest.com`,
+            name: 'Guest User',
+            role: 'customer'
+          }
+        });
+        orderUserId = newGuest.id;
+      } else {
+        orderUserId = guestUser.id;
+      }
       logger.info('Created guest user for order', { guestUserId: orderUserId });
     }
     
@@ -132,43 +149,41 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    // Prepare order items
-    const orderItems = items.map((item: { productId: string; quantity: number; price?: number }) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-      price: item.price || productMap[item.productId]?.price || 0
-    }));
+    // Generate order ID
+    const orderId = `order_${Date.now()}_${Math.random().toString(36).substring(7)}`;
     
-    logger.info('Creating order', { 
-      userId: orderUserId, 
-      total: calculatedTotal, 
-      itemsCount: orderItems.length 
-    });
+    // Create order using raw SQL to bypass any Prisma Client cache issues
+    await db.$executeRaw`
+      INSERT INTO "Order" (id, "userId", status, total, discount, "shippingAddress", phone, "paymentMethod", notes, "pointsUsed", "pointsEarned", "createdAt", "updatedAt")
+      VALUES (
+        ${orderId},
+        ${orderUserId},
+        'pending',
+        ${calculatedTotal},
+        ${subtotal ? subtotal - calculatedTotal + (shippingFee || 0) : 0},
+        ${shippingAddress || null},
+        ${phone || null},
+        ${paymentMethod || 'cod'},
+        null,
+        0,
+        0,
+        NOW(),
+        NOW()
+      )
+    `;
     
-    // Create order
-    const order = await db.order.create({
-      data: {
-        userId: orderUserId,
-        status: 'pending',
-        total: calculatedTotal,
-        discount: subtotal ? subtotal - calculatedTotal + (shippingFee || 0) : 0,
-        shippingAddress,
-        phone,
-        paymentMethod: paymentMethod || 'cod',
-        items: {
-          create: orderItems
-        }
-      },
-      include: {
-        items: {
-          include: {
-            product: true
-          }
-        }
-      }
-    });
+    // Create order items using raw SQL
+    for (const item of items) {
+      const itemPrice = item.price || productMap[item.productId]?.price || 0;
+      const itemId = `item_${Date.now()}_${Math.random().toString(36).substring(7)}`;
+      
+      await db.$executeRaw`
+        INSERT INTO "OrderItem" (id, "orderId", "productId", quantity, price)
+        VALUES (${itemId}, ${orderId}, ${item.productId}, ${item.quantity}, ${itemPrice})
+      `;
+    }
     
-    logger.info('Order created successfully', { orderId: order.id });
+    logger.info('Order created successfully using raw SQL', { orderId });
     
     // Update sales count and stock for products
     for (const item of items) {
@@ -185,7 +200,6 @@ export async function POST(request: NextRequest) {
           productId: item.productId, 
           error: String(updateError) 
         });
-        // Don't fail the order for stock update issues
       }
     }
     
@@ -205,27 +219,35 @@ export async function POST(request: NextRequest) {
       // Ignore cart clear errors for guest users
     }
     
+    // Fetch the created order
+    const order = await db.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            product: true
+          }
+        }
+      }
+    });
+    
     // Send notifications
     try {
-      // Get user info for notification
       const orderUser = await db.user.findUnique({
         where: { id: orderUserId },
         select: { name: true, email: true },
       });
       
-      // Notify customer
-      await NotificationService.notifyOrderCreated(orderUserId, order.id, calculatedTotal);
+      await NotificationService.notifyOrderCreated(orderUserId, orderId, calculatedTotal);
       
-      // Notify admins
       await NotificationService.notifyAdminsNewOrder(
-        order.id,
+        orderId,
         calculatedTotal,
         orderUser?.name || orderUser?.email || 'Guest Customer'
       );
       
-      logger.info('Order notifications sent', { orderId: order.id, userId: orderUserId });
+      logger.info('Order notifications sent', { orderId, userId: orderUserId });
     } catch (notificationError) {
-      // Don't fail the order if notification fails
       logger.error('Failed to send order notifications', { error: String(notificationError) });
     }
     
