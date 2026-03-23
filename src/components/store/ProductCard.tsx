@@ -233,18 +233,19 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             <div className="flex gap-2">
               <Button
                 size="sm"
-                className="flex-1 h-9 bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-xl text-xs font-bold shadow-sm"
+                className="flex-1 h-10 bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-xl text-xs font-bold shadow-sm"
                 onClick={handleAddToCart}
               >
-                <ShoppingCart className="h-3.5 w-3.5 mr-1" />
+                <ShoppingCart className="h-4 w-4 mr-1" />
                 {t('addToCart', language)}
               </Button>
               <Button
                 size="sm"
-                className="h-9 px-3 bg-gradient-to-l from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-sm"
+                className="flex-1 h-10 bg-gradient-to-l from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white rounded-xl text-xs font-bold shadow-sm"
                 onClick={handleBuyNow}
               >
-                <Zap className="h-3.5 w-3.5" />
+                <Zap className="h-4 w-4 mr-1" />
+                {isArabic ? 'اشتري الآن' : 'Buy Now'}
               </Button>
             </div>
           </div>

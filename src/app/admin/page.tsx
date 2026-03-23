@@ -113,7 +113,6 @@ const menuItems = [
   { id: 'orders', label: 'الطلبات', icon: ClipboardList },
   { id: 'products', label: 'المنتجات', icon: Package },
   { id: 'categories', label: 'الفئات', icon: Tag },
-  { id: 'coupons', label: 'الكوبونات', icon: Percent },
   { id: 'customers', label: 'العملاء', icon: Users },
   { id: 'banners', label: 'البنرات', icon: Image },
   { id: 'reports', label: 'التقارير', icon: BarChart3 },
@@ -401,11 +400,26 @@ export default function AdminPage() {
   // Add loading state check
   const [isLoadingUser, setIsLoadingUser] = useState(true);
 
+  // Check session on mount and restore user from server
   useEffect(() => {
-    // Short timeout to let store hydrate from localStorage
-    const timer = setTimeout(() => setIsLoadingUser(false), 100);
-    return () => clearTimeout(timer);
-  }, []);
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/auth/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.user && (data.user.role === 'admin' || data.user.role === 'super_admin')) {
+            setUser(data.user);
+            setUserId(data.user.id);
+          }
+        }
+      } catch (error) {
+        console.error('Session check failed:', error);
+      } finally {
+        setIsLoadingUser(false);
+      }
+    };
+    checkSession();
+  }, [setUser, setUserId]);
 
   // Stats
   const totalProducts = products.length;
@@ -494,9 +508,10 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-100 flex" dir="rtl">
-      {/* Sidebar */}
-      <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-all duration-300 flex flex-col shadow-xl relative`}>
+    <div className="min-h-screen bg-gray-100 flex flex-col" dir="rtl">
+      <div className="flex flex-1">
+        {/* Sidebar */}
+        <aside className={`${sidebarOpen ? 'w-64' : 'w-20'} bg-gradient-to-b from-gray-900 to-gray-800 text-white transition-all duration-300 flex flex-col shadow-xl relative`}>
         {/* Logo */}
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center gap-3">
@@ -1087,11 +1102,6 @@ export default function AdminPage() {
             <CategoriesManagement categories={categories} setCategories={setCategories} />
           )}
 
-          {/* Coupons Page */}
-          {currentPage === 'coupons' && (
-            <CouponsManagement />
-          )}
-
           {/* Customers Page */}
           {currentPage === 'customers' && (
             <CustomersManagement />
@@ -1108,6 +1118,7 @@ export default function AdminPage() {
           )}
         </div>
       </main>
+      </div>{/* End of flex container for sidebar and main */}
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-4" dir="rtl">
