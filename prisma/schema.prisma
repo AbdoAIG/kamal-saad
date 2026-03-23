@@ -1,6 +1,7 @@
-// Schema version: 3.0 - Clean schema without paymentStatus
+// Schema version: 4.0 - Force regenerate
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
@@ -135,7 +136,7 @@ model Order {
   discount         Float       @default(0)
   shippingAddress  String?     @db.Text
   phone            String?
-  paymentMethod    String?     @default("cod")
+  paymentMethod    String      @default("cod")
   paymentReference String?
   notes            String?     @db.Text
   couponId         String?
@@ -332,17 +333,17 @@ model SiteSetting {
 }
 
 model Banner {
-  id          String   @id @default(cuid())
-  title       String
-  titleAr     String
-  subtitle    String?
-  subtitleAr  String?
-  image       String
-  link        String?
-  buttonText  String?
+  id           String   @id @default(cuid())
+  title        String
+  titleAr      String
+  subtitle     String?
+  subtitleAr   String?
+  image        String
+  link         String?
+  buttonText   String?
   buttonTextAr String?
-  active      Boolean  @default(true)
-  order       Int      @default(0)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  active       Boolean  @default(true)
+  order        Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
