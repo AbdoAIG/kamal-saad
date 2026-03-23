@@ -63,7 +63,6 @@ export async function POST(request: NextRequest) {
         await db.order.update({
           where: { id: orderRecord.id },
           data: {
-            paymentStatus: 'paid',
             paymentReference: String(transactionId),
             status: orderRecord.status === 'pending' ? 'confirmed' : orderRecord.status,
             updatedAt: new Date(),
@@ -89,7 +88,6 @@ export async function POST(request: NextRequest) {
         await db.order.update({
           where: { id: orderRecord.id },
           data: {
-            paymentStatus: 'failed',
             paymentReference: String(transactionId),
             updatedAt: new Date(),
           },

@@ -69,7 +69,6 @@ export async function POST(request: NextRequest) {
       await db.order.update({
         where: { id: orderRecord.id },
         data: {
-          paymentStatus: 'paid',
           paymentReference: fawryRefNumber,
           status: orderRecord.status === 'pending' ? 'confirmed' : orderRecord.status,
           updatedAt: new Date(),
@@ -98,7 +97,6 @@ export async function POST(request: NextRequest) {
       await db.order.update({
         where: { id: orderRecord.id },
         data: {
-          paymentStatus: 'failed',
           status: 'cancelled',
           updatedAt: new Date(),
         },
@@ -109,7 +107,6 @@ export async function POST(request: NextRequest) {
       await db.order.update({
         where: { id: orderRecord.id },
         data: {
-          paymentStatus: 'refunded',
           status: 'cancelled',
           updatedAt: new Date(),
         },
