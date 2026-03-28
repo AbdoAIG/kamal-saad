@@ -333,9 +333,12 @@ export default function AdminPage() {
       const data = await res.json();
       if (data.success) {
         fetchTrash(trashPage);
+      } else {
+        alert(data.error || 'فشل في حذف المنتج نهائياً');
       }
     } catch (error) {
       console.error('Error permanently deleting product:', error);
+      alert('حدث خطأ أثناء حذف المنتج');
     }
   };
 
@@ -1684,6 +1687,9 @@ function CategoriesManagement({ categories, setCategories }: { categories: Categ
   const [showForm, setShowForm] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
   const [formData, setFormData] = useState({ name: '', nameAr: '', slug: '' });
+  const [deletingCategory, setDeletingCategory] = useState<Category | null>(null);
+  const [reassignCategoryId, setReassignCategoryId] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1713,19 +1719,62 @@ function CategoriesManagement({ categories, setCategories }: { categories: Categ
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
+    // First try to delete - the API will tell us if there are active products
     try {
-      const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      const res = await fetch(`/api/categories/${id}`, { 
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' }
+      });
       const data = await res.json();
       
       if (res.ok && data.success) {
         setCategories(categories.filter(c => c.id !== id));
+        return;
+      }
+
+      // If the category has active products, show reassign dialog
+      if (data.hasProducts) {
+        setDeletingCategory(categories.find(c => c.id === id) || null);
+        setReassignCategoryId('');
+        return;
+      }
+
+      alert(data.error || 'حدث خطأ أثناء حذف القسم');
+    } catch (error) {
+      console.error('Error deleting category:', error);
+      alert('حدث خطأ أثناء حذف القسم');
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingCategory) return;
+    
+    if (!reassignCategoryId) {
+      alert('يرجى اختيار فئة بديلة لنقل المنتجات إليها');
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await fetch(`/api/categories/${deletingCategory.id}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reassignToCategoryId: reassignCategoryId })
+      });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setCategories(categories.filter(c => c.id !== deletingCategory.id));
+        setDeletingCategory(null);
+        setReassignCategoryId('');
       } else {
         alert(data.error || 'حدث خطأ أثناء حذف القسم');
       }
     } catch (error) {
       console.error('Error deleting category:', error);
       alert('حدث خطأ أثناء حذف القسم');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -1811,6 +1860,61 @@ function CategoriesManagement({ categories, setCategories }: { categories: Categ
           </table>
         </CardContent>
       </Card>
+
+      {/* Category Delete Reassign Dialog */}
+      <Dialog open={!!deletingCategory} onOpenChange={(open) => { if (!open) setDeletingCategory(null); }}>
+        <DialogContent className="max-w-md" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <AlertCircle className="h-5 w-5 text-amber-500" />
+              تأكيد حذف الفئة
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <p className="text-gray-600 text-sm">
+              الفئة <span className="font-bold text-gray-800">"{deletingCategory?.nameAr}"</span> تحتوي على منتجات نشطة.
+            </p>
+            <p className="text-gray-600 text-sm">
+              يرجى اختيار فئة بديلة لنقل المنتجات إليها قبل الحذف:
+            </p>
+            <Select value={reassignCategoryId} onValueChange={setReassignCategoryId}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر الفئة البديلة..." />
+              </SelectTrigger>
+              <SelectContent>
+                {categories
+                  .filter(c => c.id !== deletingCategory?.id)
+                  .map(cat => (
+                    <SelectItem key={cat.id} value={cat.id}>
+                      {cat.nameAr} ({cat.name})
+                    </SelectItem>
+                  ))
+                }
+              </SelectContent>
+            </Select>
+            <div className="flex gap-3 pt-2">
+              <Button
+                onClick={handleConfirmDelete}
+                disabled={deleting || !reassignCategoryId}
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white"
+              >
+                {deleting ? (
+                  <><Loader2 className="h-4 w-4 animate-spin ml-2" /> جاري الحذف...</>
+                ) : (
+                  'تأكيد الحذف ونقل المنتجات'
+                )}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setDeletingCategory(null)}
+                className="flex-1"
+              >
+                إلغاء
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

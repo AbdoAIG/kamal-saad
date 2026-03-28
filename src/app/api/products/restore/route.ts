@@ -100,8 +100,36 @@ export async function DELETE(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Permanently delete
-    await db.product.delete({ where: { id } });
+    // Permanently delete with a transaction to handle FK constraints
+    // OrderItem has a FK reference that blocks direct deletion
+    // We need to remove the OrderItem references first (keeping the order intact)
+    await db.$transaction(async (tx) => {
+      // Delete all stock notifications for this product
+      await tx.stockNotification.deleteMany({ where: { productId: id } });
+      
+      // Delete all reviews for this product
+      await tx.review.deleteMany({ where: { productId: id } });
+      
+      // Delete all variant-related records
+      await tx.productVariantSKUValue.deleteMany({
+        where: { sku: { productId: id } }
+      });
+      await tx.productVariantSKU.deleteMany({ where: { productId: id } });
+      await tx.variantOption.deleteMany({
+        where: { variant: { productId: id } }
+      });
+      await tx.productVariant.deleteMany({ where: { productId: id } });
+      
+      // Delete all order items that reference this product
+      // (This is safe because the product is already soft-deleted and the orders
+      // still keep their other items and totals intact)
+      await tx.orderItem.deleteMany({ where: { productId: id } });
+      
+      // CartItem will cascade automatically due to onDelete: Cascade in schema
+      
+      // Finally delete the product
+      await tx.product.delete({ where: { id } });
+    });
 
     return NextResponse.json({
       success: true,
@@ -111,7 +139,7 @@ export async function DELETE(request: NextRequest) {
     console.error('Error permanently deleting product:', error);
     return NextResponse.json({ 
       success: false,
-      error: 'Failed to permanently delete product' 
+      error: 'فشل في حذف المنتج نهائياً. تأكد من عدم وجود طلبات معلقة مرتبطة بالمنتج.' 
     }, { status: 500 });
   }
 }
