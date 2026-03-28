@@ -1715,10 +1715,17 @@ function CategoriesManagement({ categories, setCategories }: { categories: Categ
   const handleDelete = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا القسم؟')) return;
     try {
-      await fetch(`/api/categories/${id}`, { method: 'DELETE' });
-      setCategories(categories.filter(c => c.id !== id));
+      const res = await fetch(`/api/categories/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      
+      if (res.ok && data.success) {
+        setCategories(categories.filter(c => c.id !== id));
+      } else {
+        alert(data.error || 'حدث خطأ أثناء حذف القسم');
+      }
     } catch (error) {
       console.error('Error deleting category:', error);
+      alert('حدث خطأ أثناء حذف القسم');
     }
   };
 
