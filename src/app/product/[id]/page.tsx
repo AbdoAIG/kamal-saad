@@ -328,16 +328,26 @@ export default function ProductPage() {
       <main className="flex-1">
         <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6">
           {/* Breadcrumb */}
-          <nav className={`hidden sm:flex items-center gap-2 text-sm mb-6 text-gray-600 dark:text-gray-400 ${isArabic ? 'flex-row-reverse' : ''}`}>
-            <Link href="/" className="hover:text-teal-600 transition-colors">
-              {isArabic ? 'الرئيسية' : 'Home'}
+          <nav className="flex items-center gap-1.5 text-sm mb-4 sm:mb-6 text-gray-500 dark:text-gray-400 overflow-x-auto pb-1 scrollbar-hide">
+            <Link href="/" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors whitespace-nowrap flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+              </svg>
+              <span>{isArabic ? 'الرئيسية' : 'Home'}</span>
             </Link>
-            <ChevronRight className={`h-4 w-4 ${isArabic ? 'rotate-180' : ''}`} />
-            <Link href="/" className="hover:text-teal-600 transition-colors">
-              {categoryName || (isArabic ? 'المنتجات' : 'Products')}
-            </Link>
-            <ChevronRight className={`h-4 w-4 ${isArabic ? 'rotate-180' : ''}`} />
-            <span className="text-gray-900 dark:text-white font-medium truncate max-w-[200px]">{productName}</span>
+            <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-gray-300 dark:text-gray-600 ${isArabic ? 'rotate-180' : ''}`} />
+            {product.category && (
+              <>
+                <Link
+                  href={`/?category=${product.category.id}#products`}
+                  className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors whitespace-nowrap"
+                >
+                  {categoryName}
+                </Link>
+                <ChevronRight className={`h-3.5 w-3.5 shrink-0 text-gray-300 dark:text-gray-600 ${isArabic ? 'rotate-180' : ''}`} />
+              </>
+            )}
+            <span className="text-gray-800 dark:text-gray-200 font-medium truncate max-w-[180px] sm:max-w-[300px]">{productName}</span>
           </nav>
 
           {/* Product Details - Mobile First Design */}
