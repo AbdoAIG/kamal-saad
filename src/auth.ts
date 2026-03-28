@@ -100,12 +100,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 data: { emailVerified: new Date() }
               });
             }
-            // Set user data for token
-            user.id = existingUser.id;
-            (user as any).role = existingUser.role;
           } else {
             // Create new user
-            const newUser = await prisma.user.create({
+            existingUser = await prisma.user.create({
               data: {
                 email: profile.email,
                 name: profile.name || profile.email.split('@')[0],
@@ -114,11 +111,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 emailVerified: new Date(),
               }
             });
-            user.id = newUser.id;
-            (user as any).role = newUser.role;
           }
 
-          return true;
+          // Return user object with DB info so jwt callback receives it
+          return {
+            id: existingUser.id,
+            email: existingUser.email,
+            name: existingUser.name,
+            image: existingUser.image,
+            role: existingUser.role,
+          };
         } catch (error) {
           console.error('[Auth] Error in Google sign in:', error);
           return false;
@@ -128,24 +130,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return true;
     },
 
-    async jwt({ token, user, account }) {
-      // On initial sign in, add user info to token
+    async jwt({ token, user, account, trigger, session }) {
+      // Initial sign in - user is available from the signIn callback return value
       if (user) {
         token.id = user.id;
+        token.email = user.email;
         token.role = (user as any).role;
+        token.picture = user.image;
+      }
 
-        // For Google OAuth without database lookup in signIn callback
-        if (account?.provider === 'google' && !token.role) {
-          const dbUser = await prisma.user.findUnique({
-            where: { email: user.email! },
-            select: { id: true, role: true }
-          });
-          if (dbUser) {
-            token.id = dbUser.id;
-            token.role = dbUser.role;
-          }
+      // For Google login, fetch from DB to ensure we have latest data
+      if (account?.provider === 'google' && token.email && !token.id) {
+        const dbUser = await prisma.user.findUnique({
+          where: { email: token.email as string },
+          select: { id: true, role: true }
+        });
+        if (dbUser) {
+          token.id = dbUser.id;
+          token.role = dbUser.role;
         }
       }
+
+      // Handle session update (for client-side session sync)
+      if (trigger === "update" && session) {
+        token.id = (session.user as any)?.id || token.id;
+      }
+
       return token;
     },
 
