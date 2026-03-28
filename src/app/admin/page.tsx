@@ -2636,12 +2636,14 @@ function SettingsPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label>واتساب</Label>
+              <Label>واتساب (رقم الهاتف)</Label>
               <Input 
-                placeholder="https://wa.me/..."
+                placeholder="201234567890"
+                dir="ltr"
                 value={settings.whatsapp} 
                 onChange={(e) => setSettings({ ...settings, whatsapp: e.target.value })}
               />
+              <p className="text-xs text-gray-400">أدخل رقم الهاتف مع الكود الدولي بدون + (مثال: 201234567890)</p>
             </div>
           </CardContent>
         </Card>

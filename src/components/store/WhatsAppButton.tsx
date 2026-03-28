@@ -2,18 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { MessageCircle, X } from 'lucide-react';
+import { useSettings } from '@/hooks/useSettings';
 
-interface WhatsAppButtonProps {
-  phoneNumber?: string;
-  message?: string;
-}
-
-export default function WhatsAppButton({
-  phoneNumber = "+201234567890", // Replace with actual phone number
-  message = "مرحباً، أريد الاستفسار عن منتجاتكم"
-}: WhatsAppButtonProps) {
+export default function WhatsAppButton() {
   const [isVisible, setIsVisible] = useState(false);
   const [showTooltip, setShowTooltip] = useState(false);
+  const { settings, loading } = useSettings();
+
+  const message = "مرحباً، أريد الاستفسار عن منتجاتكم";
 
   // Show button after scrolling down a bit
   useEffect(() => {
@@ -42,9 +38,14 @@ export default function WhatsAppButton({
   };
 
   const handleClick = () => {
-    // Format phone number (remove + and spaces)
-    const formattedPhone = phoneNumber.replace(/[+\s]/g, '');
+    // Get phone from settings or use fallback
+    const phone = settings.whatsapp || settings.phone || '+201234567890';
     
+    // Format phone number (remove +, spaces, and any non-numeric except leading country code)
+    const formattedPhone = phone.replace(/[^\d]/g, '');
+    
+    if (!formattedPhone) return;
+
     // Create WhatsApp URL
     const whatsappUrl = `https://wa.me/${formattedPhone}?text=${encodeURIComponent(message)}`;
     
@@ -56,6 +57,11 @@ export default function WhatsAppButton({
       handleCloseTooltip();
     }
   };
+
+  // Don't render if no WhatsApp number configured
+  if (!loading && !settings.whatsapp && !settings.phone) {
+    return null;
+  }
 
   return (
     <>
