@@ -2582,11 +2582,14 @@ function PartnersManagement() {
     try {
       const res = await fetch('/api/partners/seed', { method: 'POST' });
       const data = await res.json();
-      if (data.success) {
+      if (data.success && data.data) {
         setPartners(data.data);
+      } else {
+        alert(data.error || 'حدث خطأ أثناء استيراد الشركاء');
       }
     } catch (error) {
       console.error('Error seeding partners:', error);
+      alert('حدث خطأ في الاتصال بالخادم');
     }
   };
 

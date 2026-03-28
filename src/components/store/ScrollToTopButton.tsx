@@ -19,15 +19,33 @@ export function ScrollToTopButton() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  if (!isVisible) return null;
-
   return (
     <button
       onClick={scrollToTop}
-      className="fixed bottom-6 right-6 z-50 w-12 h-12 bg-gray-800 hover:bg-gray-900 dark:bg-gray-200 dark:hover:bg-gray-300 text-white dark:text-gray-900 rounded-full shadow-lg hover:shadow-xl flex items-center justify-center transition-all duration-300 ease-out hover:scale-110 active:scale-95"
+      className={`
+        fixed bottom-6 left-1/2 -translate-x-1/2 z-50
+        flex items-center gap-2
+        px-5 py-2.5
+        bg-gray-900/90 hover:bg-gray-900
+        dark:bg-white/90 dark:hover:bg-white
+        text-white dark:text-gray-900
+        backdrop-blur-md
+        rounded-full
+        shadow-lg shadow-gray-900/20 dark:shadow-black/20
+        border border-gray-700/50 dark:border-gray-300/50
+        transition-all duration-300 ease-out
+        hover:shadow-xl hover:shadow-gray-900/30 dark:hover:shadow-black/30
+        hover:-translate-y-0.5
+        active:translate-y-0
+        ${isVisible
+          ? 'opacity-100 translate-y-0 pointer-events-auto'
+          : 'opacity-0 translate-y-4 pointer-events-none'
+        }
+      `}
       aria-label="الرجوع إلى أعلى الصفحة"
     >
-      <ArrowUp className="w-5 h-5" />
+      <span className="text-xs font-medium tracking-wide">أعلى الصفحة</span>
+      <ArrowUp className="w-4 h-4" />
     </button>
   );
 }
