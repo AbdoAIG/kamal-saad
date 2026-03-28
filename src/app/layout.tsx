@@ -3,7 +3,6 @@ import { Noto_Sans_Arabic, Inter } from "next/font/google";
 import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/components/auth/AuthProvider";
-import { SessionSync } from "@/components/auth/SessionSync";
 import ErrorBoundary from "@/components/ErrorBoundary";
 
 const notoSansArabic = Noto_Sans_Arabic({
@@ -82,7 +81,6 @@ export default function RootLayout({
       >
         <ErrorBoundary>
           <AuthProvider>
-            <SessionSync />
             {children}
           </AuthProvider>
         </ErrorBoundary>

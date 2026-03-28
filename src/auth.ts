@@ -1,7 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
@@ -15,32 +14,28 @@ class UnverifiedEmailError extends AuthError {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
-  // Use Prisma adapter for database
-  adapter: PrismaAdapter(prisma),
-  
   // Secret for signing cookies
   secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
-  
+
   // Trust the host in production
   trustHost: true,
-  
-  // Use JWT sessions (simpler for OAuth)
+
+  // Use JWT sessions
   session: {
     strategy: "jwt",
   },
-  
+
   // Custom pages
   pages: {
     signIn: "/",
     error: "/",
   },
-  
+
   // Providers
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
-      // Allow linking existing accounts by email
       allowDangerousEmailAccountLinking: true,
     }),
     Credentials({
@@ -71,7 +66,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           return null;
         }
 
-        // Check if email is verified
         if (!user.emailVerified) {
           throw new UnverifiedEmailError("يرجى التحقق من بريدك الإلكتروني أولاً");
         }
@@ -86,62 +80,75 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       },
     }),
   ],
-  
+
   // Callbacks
   callbacks: {
     async signIn({ user, account, profile }) {
-      // For Google OAuth - auto-verify email and ensure user has correct role
+      // For Google OAuth
       if (account?.provider === 'google' && profile?.email) {
-        // Check if user exists
-        const existingUser = await prisma.user.findUnique({
-          where: { email: profile.email }
-        });
-        
-        if (existingUser) {
-          // User exists - auto-verify email if not already verified
-          if (!existingUser.emailVerified) {
-            await prisma.user.update({
-              where: { id: existingUser.id },
-              data: { emailVerified: new Date() }
+        try {
+          // Check if user exists
+          let existingUser = await prisma.user.findUnique({
+            where: { email: profile.email }
+          });
+
+          if (existingUser) {
+            // Update email verification if needed
+            if (!existingUser.emailVerified) {
+              await prisma.user.update({
+                where: { id: existingUser.id },
+                data: { emailVerified: new Date() }
+              });
+            }
+            // Set user data for token
+            user.id = existingUser.id;
+            (user as any).role = existingUser.role;
+          } else {
+            // Create new user
+            const newUser = await prisma.user.create({
+              data: {
+                email: profile.email,
+                name: profile.name || profile.email.split('@')[0],
+                image: (profile as any).picture,
+                role: 'customer',
+                emailVerified: new Date(),
+              }
             });
+            user.id = newUser.id;
+            (user as any).role = newUser.role;
           }
+
           return true;
+        } catch (error) {
+          console.error('[Auth] Error in Google sign in:', error);
+          return false;
         }
-        
-        // New user - PrismaAdapter will create them
-        // We'll set their role to 'customer' and mark email as verified in the events
-        return true;
       }
-      
+
       return true;
     },
-    
+
     async jwt({ token, user, account }) {
       // On initial sign in, add user info to token
       if (user) {
         token.id = user.id;
-        
-        // For Google OAuth, fetch role from database
-        if (account?.provider === 'google') {
+        token.role = (user as any).role;
+
+        // For Google OAuth without database lookup in signIn callback
+        if (account?.provider === 'google' && !token.role) {
           const dbUser = await prisma.user.findUnique({
             where: { email: user.email! },
             select: { id: true, role: true }
           });
-          
           if (dbUser) {
             token.id = dbUser.id;
             token.role = dbUser.role;
-          } else {
-            // New user - default to customer
-            token.role = 'customer';
           }
-        } else {
-          token.role = (user as any).role;
         }
       }
       return token;
     },
-    
+
     async session({ session, token }) {
       // Add token info to session
       if (session.user) {
@@ -151,23 +158,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       return session;
     },
   },
-  
-  // Events - set default role for new users
-  events: {
-    async createUser({ user }) {
-      // Set default role and mark email as verified for OAuth users
-      if (user.email) {
-        await prisma.user.update({
-          where: { id: user.id },
-          data: { 
-            role: 'customer',
-            emailVerified: new Date() // Auto-verify for OAuth users
-          }
-        });
-      }
-    },
-  },
-  
-  // Debug in development
+
+  // Debug mode only in development
   debug: process.env.NODE_ENV === "development",
 });
