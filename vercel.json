@@ -1,0 +1,5 @@
+{
+  "buildCommand": "rm -rf node_modules/.prisma && prisma generate && next build",
+  "installCommand": "npm install",
+  "framework": "nextjs"
+}

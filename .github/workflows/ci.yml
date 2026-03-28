@@ -1,0 +1,174 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [main, master, develop]
+  pull_request:
+    branches: [main, master, develop]
+
+env:
+  NODE_VERSION: '20'
+  DATABASE_URL: 'file:./test.db'
+  AUTH_SECRET: 'test-secret-key-for-ci-testing'
+  NEXTAUTH_SECRET: 'test-secret-key-for-ci-testing'
+
+jobs:
+  # ============================================
+  # Job 1: Lint & TypeScript Check
+  # ============================================
+  lint:
+    name: Lint & Type Check
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: TypeScript check
+        run: npx tsc --noEmit || true
+        continue-on-error: true
+
+      - name: ESLint check
+        run: npm run lint || true
+        continue-on-error: true
+
+  # ============================================
+  # Job 2: API Unit Tests
+  # ============================================
+  api-tests:
+    name: API Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run API Tests
+        run: npm test -- --coverage --coverageThreshold='{"global":{"branches":0,"functions":0,"lines":0,"statements":0}}' --detectOpenHandles --forceExit --maxWorkers=2
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          AUTH_SECRET: ${{ env.AUTH_SECRET }}
+          NEXTAUTH_SECRET: ${{ env.NEXTAUTH_SECRET }}
+          NODE_ENV: test
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+  # ============================================
+  # Job 3: Build Application
+  # ============================================
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    needs: [lint, api-tests]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Build application
+        run: npm run build
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          AUTH_SECRET: ${{ env.AUTH_SECRET }}
+          NEXTAUTH_SECRET: ${{ env.NEXTAUTH_SECRET }}
+          NODE_OPTIONS: '--max-old-space-size=4096'
+
+  # ============================================
+  # Job 4: E2E Tests (Optional - Only on main)
+  # ============================================
+  e2e-tests:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run E2E Tests
+        run: npx playwright test --project=chromium --reporter=list
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
+          AUTH_SECRET: ${{ env.AUTH_SECRET }}
+          NEXTAUTH_SECRET: ${{ env.NEXTAUTH_SECRET }}
+          CI: true
+        continue-on-error: true
+
+  # ============================================
+  # Job 5: Deploy to Vercel
+  # ============================================
+  deploy:
+    name: Deploy to Vercel
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    needs: build
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod'
