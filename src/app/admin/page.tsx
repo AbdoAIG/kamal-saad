@@ -2566,13 +2566,27 @@ function PartnersManagement() {
   const fetchPartners = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/partners');
+      const res = await fetch('/api/partners', {
+        headers: { 'x-admin-request': 'true' },
+      });
       const data = await res.json();
       if (data.success) setPartners(data.data);
     } catch (error) {
       console.error('Error fetching partners:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSeedDefaults = async () => {
+    try {
+      const res = await fetch('/api/partners/seed', { method: 'POST' });
+      const data = await res.json();
+      if (data.success) {
+        setPartners(data.data);
+      }
+    } catch (error) {
+      console.error('Error seeding partners:', error);
     }
   };
 
@@ -2772,7 +2786,11 @@ function PartnersManagement() {
         <Card className="shadow-lg border-0">
           <CardContent className="py-16 text-center">
             <Handshake className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-500">لا يوجد شركاء حتى الآن</p>
+            <p className="text-gray-500 mb-4">لا يوجد شركاء حتى الآن</p>
+            <Button onClick={handleSeedDefaults} variant="outline" className="border-emerald-600 text-emerald-600 hover:bg-emerald-50">
+              <Plus className="h-4 w-4 ml-2" />
+              استيراد الشركاء الافتراضيين
+            </Button>
           </CardContent>
         </Card>
       ) : (

@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth-utils';
+import type { NextRequest } from 'next/server';
 
-// GET - Fetch all partners (public - used by storefront)
-export async function GET() {
+// GET - Fetch partners (public: active only; admin: all)
+export async function GET(request: NextRequest) {
   try {
+    const isAdmin = request.headers.get('x-admin-request') === 'true';
+
     const partners = await db.partner.findMany({
-      where: { active: true },
+      where: isAdmin ? {} : { active: true },
       orderBy: { order: 'asc' },
     });
 

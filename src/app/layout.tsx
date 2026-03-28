@@ -6,6 +6,7 @@ import { AuthProvider } from "@/components/auth/AuthProvider";
 import { SessionSync } from "@/components/auth/SessionSync";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import WhatsAppButton from "@/components/store/WhatsAppButton";
+import { ScrollToTopButton } from "@/components/store/ScrollToTopButton";
 
 const notoSansArabic = Noto_Sans_Arabic({
   variable: "--font-arabic",
@@ -87,6 +88,8 @@ export default function RootLayout({
             {children}
             {/* WhatsApp Contact Button */}
             <WhatsAppButton />
+            {/* Scroll to Top */}
+            <ScrollToTopButton />
           </AuthProvider>
         </ErrorBoundary>
         <Toaster />

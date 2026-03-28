@@ -121,11 +121,6 @@ export function PartnersMarquee() {
           }
         }
 
-        /* Pause on hover */
-        .marquee-track:hover {
-          animation-play-state: paused;
-        }
-
         /* Respect reduced motion preference */
         @media (prefers-reduced-motion: reduce) {
           .marquee-track {
