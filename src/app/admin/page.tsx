@@ -2609,12 +2609,17 @@ function PartnersManagement() {
         body: JSON.stringify(body),
       });
 
-      if (res.ok) {
+      const data = await res.json();
+
+      if (res.ok && data.success) {
         fetchPartners();
         resetForm();
+      } else {
+        alert(data.error || `فشل في الحفظ (${res.status})`);
       }
     } catch (error) {
       console.error('Error saving partner:', error);
+      alert('حدث خطأ في الاتصال بالخادم');
     } finally {
       setSaving(false);
     }
@@ -2623,10 +2628,16 @@ function PartnersManagement() {
   const handleDelete = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا الشريك؟')) return;
     try {
-      await fetch(`/api/partners/${id}`, { method: 'DELETE' });
-      fetchPartners();
+      const res = await fetch(`/api/partners/${id}`, { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        fetchPartners();
+      } else {
+        alert(data.error || 'فشل في حذف الشريك');
+      }
     } catch (error) {
       console.error('Error deleting partner:', error);
+      alert('حدث خطأ في الاتصال بالخادم');
     }
   };
 
