@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { db } from '@/lib/db'
 import { cookies } from 'next/headers'
+import { auth } from '@/auth'
 import {
   Resource,
   Action,
@@ -36,22 +37,70 @@ export type AuthResult =
 
 /**
  * Get the current authenticated user from session
+ * Checks both custom session cookie and NextAuth session
  */
 export async function getAuthUser(request?: NextRequest): Promise<AuthUser | null> {
   try {
-    // Try to get session from cookie
+    // Method 1: Try custom session cookie (credentials login)
     const cookieStore = await cookies()
     const sessionToken = cookieStore.get('session')?.value
 
-    if (!sessionToken) {
-      return null
+    if (sessionToken) {
+      // Find session and user
+      const session = await db.session.findUnique({
+        where: { sessionToken },
+        include: {
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              role: true,
+              isActive: true,
+              roleId: true,
+              roleData: {
+                include: {
+                  permissions: {
+                    select: {
+                      resource: true,
+                      action: true,
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      })
+
+      if (session && session.user) {
+        // Check if session expired
+        if (new Date(session.expires) < new Date()) {
+          try { await db.session.delete({ where: { id: session.id } }) } catch {}
+          return null
+        }
+
+        return {
+          id: session.user.id,
+          email: session.user.email,
+          name: session.user.name,
+          role: session.user.role,
+          isActive: session.user.isActive,
+          roleId: session.user.roleId,
+          permissions: session.user.roleData?.permissions || [],
+        }
+      }
+
+      // Invalid session - clean up
+      try { await db.session.deleteMany({ where: { sessionToken } }) } catch {}
     }
 
-    // Find session and user
-    const session = await db.session.findUnique({
-      where: { sessionToken },
-      include: {
-        user: {
+    // Method 2: Try NextAuth session (Google OAuth, etc.)
+    try {
+      const nextAuthSession = await auth()
+      if (nextAuthSession?.user?.email) {
+        const dbUser = await db.user.findUnique({
+          where: { email: nextAuthSession.user.email },
           select: {
             id: true,
             email: true,
@@ -70,47 +119,25 @@ export async function getAuthUser(request?: NextRequest): Promise<AuthUser | nul
               },
             },
           },
-        },
-      },
-    })
-
-    if (!session || !session.user) {
-      // Invalid session - try to clean up
-      try {
-        await db.session.deleteMany({
-          where: { sessionToken },
         })
-      } catch (e) {
-        // Ignore
+
+        if (dbUser) {
+          return {
+            id: dbUser.id,
+            email: dbUser.email,
+            name: dbUser.name,
+            role: dbUser.role,
+            isActive: dbUser.isActive,
+            roleId: dbUser.roleId,
+            permissions: dbUser.roleData?.permissions || [],
+          }
+        }
       }
-      return null
+    } catch {
+      // NextAuth auth() call may fail in some edge cases
     }
 
-    // Check if session expired
-    if (new Date(session.expires) < new Date()) {
-      // Session expired - clean up
-      try {
-        await db.session.delete({
-          where: { id: session.id },
-        })
-      } catch (e) {
-        // Ignore
-      }
-      return null
-    }
-
-    // Build user object with permissions
-    const user: AuthUser = {
-      id: session.user.id,
-      email: session.user.email,
-      name: session.user.name,
-      role: session.user.role,
-      isActive: session.user.isActive,
-      roleId: session.user.roleId,
-      permissions: session.user.roleData?.permissions || [],
-    }
-
-    return user
+    return null
   } catch (error) {
     console.error('Auth error:', error)
     return null
