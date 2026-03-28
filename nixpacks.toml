@@ -1,10 +1,21 @@
+# ============================================
+# Nixpacks Configuration for Coolify
+# Maktabati E-commerce - Next.js 16 + Prisma
+# ============================================
+
 [phases.setup]
 
 [phases.install]
-cmd = "npm install"
+cmd = "npm ci"
 
 [phases.build]
-cmd = "npm run build"
+cmd = """
+prisma generate && \
+next build
+"""
 
 [start]
 cmd = "npm run start"
+
+[variables]
+NODE_ENV = "production"

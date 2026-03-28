@@ -292,6 +292,8 @@ model User {
   reviews            Review[]
   sessions           Session[]
   stockNotifications StockNotification[]
+  chatConversations  ChatConversation[]  @relation("UserChats")
+  assignedChats      ChatConversation[]  @relation("AssignedChats")
 }
 
 model Role {
@@ -419,4 +421,83 @@ model ProductVariantSKUValue {
   option    VariantOption      @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([skuId, variantId])
+}
+
+// ============================================
+// Live Chat System
+// ============================================
+
+// Chat conversation between customer and support
+model ChatConversation {
+  id           String        @id @default(cuid())
+  userId       String?       // Null for guest users
+  guestName    String?       // For guest users
+  guestEmail   String?       // For guest users
+  guestPhone   String?       // For guest users
+  subject      String?
+  status       String        @default("waiting") // waiting, active, resolved, closed
+  priority     String        @default("normal")  // low, normal, high, urgent
+  assignedTo   String?       // Admin/Support user ID
+  lastMessage  String?       @db.Text
+  lastMessageAt DateTime?
+  unreadCount  Int           @default(0)
+  rating       Int?          // 1-5 customer satisfaction rating
+  ratingComment String?      @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  user         User?         @relation("UserChats", fields: [userId], references: [id], onDelete: SetNull)
+  assignee     User?         @relation("AssignedChats", fields: [assignedTo], references: [id], onDelete: SetNull)
+  messages     ChatMessage[]
+
+  @@index([status])
+  @@index([assignedTo])
+  @@index([userId])
+}
+
+// Individual chat message
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversationId String
+  senderId       String?          // Null for guest users
+  senderType     String           // customer, admin, bot
+  senderName     String?
+  content        String           @db.Text
+  type           String           @default("text") // text, image, file, system
+  attachmentUrl  String?
+  attachmentName String?
+  isRead         Boolean          @default(false)
+  readAt         DateTime?
+  createdAt      DateTime         @default(now())
+  conversation   ChatConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@index([senderId])
+}
+
+// Chatbot quick replies / FAQ
+model ChatQuickReply {
+  id        String   @id @default(cuid())
+  title     String
+  titleAr   String
+  content   String   @db.Text
+  contentAr String?  @db.Text
+  keywords  String?  @db.Text // Comma-separated keywords for matching
+  order     Int      @default(0)
+  isActive  Boolean  @default(true)
+  category  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Support agent availability
+model ChatAgentStatus {
+  id           String   @id @default(cuid())
+  userId       String   @unique
+  isOnline     Boolean  @default(false)
+  isAvailable  Boolean  @default(true)
+  lastSeenAt   DateTime?
+  maxChats     Int      @default(5)
+  activeChats  Int      @default(0)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }

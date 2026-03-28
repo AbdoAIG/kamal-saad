@@ -6,6 +6,9 @@ const nextConfig: NextConfig = {
     ignoreBuildErrors: true,
   },
   reactStrictMode: false,
+
+  // Enable standalone output for Docker deployment
+  output: 'standalone',
   
   // Security Headers
   async headers() {

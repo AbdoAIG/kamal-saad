@@ -1,0 +1,118 @@
+# ============================================
+# Docker Compose for Maktabati E-commerce
+# Production deployment on Hetzner
+# ============================================
+
+services:
+  # ============================================
+  # Next.js Application
+  # ============================================
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: maktabati-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=${DATABASE_URL}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
+      - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
+      - PAYMOB_API_KEY=${PAYMOB_API_KEY}
+      - PAYMOB_CARD_INTEGRATION_ID=${PAYMOB_CARD_INTEGRATION_ID}
+      - PAYMOB_WALLET_INTEGRATION_ID=${PAYMOB_WALLET_INTEGRATION_ID}
+      - PAYMOB_KIOSK_INTEGRATION_ID=${PAYMOB_KIOSK_INTEGRATION_ID}
+      - PAYMOB_IFRAME_ID=${PAYMOB_IFRAME_ID}
+      - PAYMOB_HMAC_SECRET=${PAYMOB_HMAC_SECRET}
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+    networks:
+      - maktabati-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # PostgreSQL Database (Optional - for local DB)
+  # Use Neon for cloud database instead
+  # ============================================
+  # db:
+  #   image: postgres:16-alpine
+  #   container_name: maktabati-db
+  #   restart: unless-stopped
+  #   environment:
+  #     - POSTGRES_USER=maktabati
+  #     - POSTGRES_PASSWORD=${DB_PASSWORD}
+  #     - POSTGRES_DB=maktabati
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   networks:
+  #     - maktabati-network
+  #   healthcheck:
+  #     test: ["CMD-SHELL", "pg_isready -U maktabati"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
+
+  # ============================================
+  # Redis Cache (Optional - for caching)
+  # ============================================
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: maktabati-redis
+  #   restart: unless-stopped
+  #   volumes:
+  #     - redis_data:/data
+  #   networks:
+  #     - maktabati-network
+
+  # ============================================
+  # Nginx Reverse Proxy
+  # ============================================
+  nginx:
+    image: nginx:alpine
+    container_name: maktabati-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./certbot/conf:/etc/letsencrypt:ro
+      - ./certbot/www:/var/www/certbot:ro
+    depends_on:
+      - app
+    networks:
+      - maktabati-network
+
+  # ============================================
+  # Certbot for SSL Certificates (Let's Encrypt)
+  # ============================================
+  certbot:
+    image: certbot/certbot
+    container_name: maktabati-certbot
+    volumes:
+      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/www:/var/www/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    networks:
+      - maktabati-network
+
+networks:
+  maktabati-network:
+    driver: bridge
+
+# volumes:
+#   postgres_data:
+#   redis_data:
