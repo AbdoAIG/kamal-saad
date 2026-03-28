@@ -7,7 +7,7 @@ import {
   Loader2, Package, Users, ShoppingCart, TrendingUp, LogOut, LayoutDashboard,
   ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone,
   MapPin, Mail, User, Plus, Edit, Trash2, Settings, Bell, ChevronLeft,
-  BarChart3, FileText, Store, Menu, X, Home, Tag, MessageSquare, Image, AlertCircle,
+  BarChart3, FileText, Store, Menu, X, Home, Tag, Image, AlertCircle,
   Archive, RotateCcw, Shield
 } from 'lucide-react';
 import { ReportsDashboard } from '@/components/admin/ReportsDashboard';
@@ -16,7 +16,6 @@ import { ProductVariantManager } from '@/components/admin/ProductVariantManager'
 import { LowStockAlerts } from '@/components/admin/LowStockAlerts';
 import { ProductImportExport } from '@/components/admin/ProductImportExport';
 import { RolesManagement } from '@/components/admin/RolesManagement';
-import ChatManagement from '@/components/admin/ChatManagement';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -124,7 +123,6 @@ const menuItems = [
   { id: 'trash', label: 'سلة المهملات', icon: Archive },
   { id: 'categories', label: 'الفئات', icon: Tag },
   { id: 'customers', label: 'العملاء', icon: Users },
-  { id: 'chat', label: 'المحادثات', icon: MessageSquare },
   { id: 'banners', label: 'البنرات', icon: Image },
   { id: 'reports', label: 'التقارير', icon: BarChart3 },
   { id: 'roles', label: 'الأدوار والصلاحيات', icon: Shield, superAdminOnly: true },
@@ -1481,11 +1479,6 @@ export default function AdminPage() {
           {/* Customers Page */}
           {currentPage === 'customers' && (
             <CustomersManagement />
-          )}
-
-          {/* Chat Page */}
-          {currentPage === 'chat' && (
-            <ChatManagement />
           )}
 
           {/* Reports Page */}

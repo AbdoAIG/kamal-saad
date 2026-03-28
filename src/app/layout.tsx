@@ -4,7 +4,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 import { AuthProvider } from "@/components/auth/AuthProvider";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import ChatWidget from "@/components/store/ChatWidget";
+import WhatsAppButton from "@/components/store/WhatsAppButton";
 
 const notoSansArabic = Noto_Sans_Arabic({
   variable: "--font-arabic",
@@ -83,8 +83,8 @@ export default function RootLayout({
         <ErrorBoundary>
           <AuthProvider>
             {children}
-            {/* Chat Widget - Only show on non-admin pages */}
-            <ChatWidget />
+            {/* WhatsApp Contact Button */}
+            <WhatsAppButton />
           </AuthProvider>
         </ErrorBoundary>
         <Toaster />
