@@ -8,7 +8,7 @@ import {
   ClipboardList, Eye, Truck, CheckCircle, XCircle, Clock, Search, Phone,
   MapPin, Mail, User, Plus, Edit, Trash2, Settings, Bell, ChevronLeft,
   BarChart3, FileText, Store, Menu, X, Home, Tag, Image, AlertCircle,
-  Archive, RotateCcw, Shield
+  Archive, RotateCcw, Shield, Handshake
 } from 'lucide-react';
 import { ReportsDashboard } from '@/components/admin/ReportsDashboard';
 import { ImageUploader } from '@/components/admin/ImageUploader';
@@ -124,6 +124,7 @@ const menuItems = [
   { id: 'categories', label: 'الفئات', icon: Tag },
   { id: 'customers', label: 'العملاء', icon: Users },
   { id: 'banners', label: 'البنرات', icon: Image },
+  { id: 'partners', label: 'شركاء النجاح', icon: Handshake },
   { id: 'reports', label: 'التقارير', icon: BarChart3 },
   { id: 'roles', label: 'الأدوار والصلاحيات', icon: Shield, superAdminOnly: true },
   { id: 'settings', label: 'الإعدادات', icon: Settings },
@@ -1484,6 +1485,11 @@ export default function AdminPage() {
             <CustomersManagement />
           )}
 
+          {/* Partners Page */}
+          {currentPage === 'partners' && (
+            <PartnersManagement />
+          )}
+
           {/* Reports Page */}
           {currentPage === 'reports' && (
             <ReportsDashboard orders={orders} products={products} />
@@ -2542,6 +2548,287 @@ function ReportsPage({ orders, products }: { orders: Order[], products: Product[
   );
 }
 
+// Partners Management Component
+function PartnersManagement() {
+  const [partners, setPartners] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editingPartner, setEditingPartner] = useState<any>(null);
+  const [formData, setFormData] = useState({
+    name: '', nameAr: '', logo: '', url: '', order: 0, active: true
+  });
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetchPartners();
+  }, []);
+
+  const fetchPartners = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/partners');
+      const data = await res.json();
+      if (data.success) setPartners(data.data);
+    } catch (error) {
+      console.error('Error fetching partners:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name || !formData.logo) return;
+
+    setSaving(true);
+    try {
+      const method = editingPartner ? 'PUT' : 'POST';
+      const url = editingPartner ? `/api/partners/${editingPartner.id}` : '/api/partners';
+      const body = editingPartner ? { ...formData } : formData;
+
+      const res = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+
+      if (res.ok) {
+        fetchPartners();
+        resetForm();
+      }
+    } catch (error) {
+      console.error('Error saving partner:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الشريك؟')) return;
+    try {
+      await fetch(`/api/partners/${id}`, { method: 'DELETE' });
+      fetchPartners();
+    } catch (error) {
+      console.error('Error deleting partner:', error);
+    }
+  };
+
+  const handleEdit = (partner: any) => {
+    setFormData({
+      name: partner.name,
+      nameAr: partner.nameAr || '',
+      logo: partner.logo,
+      url: partner.url || '',
+      order: partner.order || 0,
+      active: partner.active,
+    });
+    setEditingPartner(partner);
+    setShowForm(true);
+  };
+
+  const resetForm = () => {
+    setFormData({ name: '', nameAr: '', logo: '', url: '', order: 0, active: true });
+    setEditingPartner(null);
+    setShowForm(false);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-gray-800">شركاء النجاح</h2>
+          <p className="text-sm text-gray-500 mt-1">إدارة شعارات شركاء النجاح الظاهرة في الشريط المتحرك</p>
+        </div>
+        <Button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700">
+          <Plus className="h-4 w-4 ml-2" />
+          إضافة شريك
+        </Button>
+      </div>
+
+      {showForm && (
+        <Card className="shadow-lg border-0">
+          <CardHeader className="bg-gray-50 rounded-t-xl">
+            <CardTitle>{editingPartner ? 'تعديل الشريك' : 'إضافة شريك جديد'}</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>الاسم بالإنجليزية *</Label>
+                  <Input
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="Faber-Castell"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الاسم بالعربية</Label>
+                  <Input
+                    value={formData.nameAr}
+                    onChange={(e) => setFormData({ ...formData, nameAr: e.target.value })}
+                    placeholder="فابر كاستل"
+                    dir="rtl"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label>رابط الشعار *</Label>
+                <div className="bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-4">
+                  <ImageUploader
+                    images={formData.logo ? [formData.logo] : []}
+                    onImagesChange={(images) => setFormData({ ...formData, logo: images[0] || '' })}
+                    maxImages={1}
+                    folder="kamal-saad-partners"
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>رابط الموقع (اختياري)</Label>
+                  <Input
+                    value={formData.url}
+                    onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                    placeholder="https://example.com"
+                    dir="ltr"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>الترتيب</Label>
+                  <Input
+                    type="number"
+                    value={formData.order}
+                    onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="partner-active"
+                  checked={formData.active}
+                  onChange={(e) => setFormData({ ...formData, active: e.target.checked })}
+                  className="w-4 h-4 rounded"
+                />
+                <Label htmlFor="partner-active">فعال</Label>
+              </div>
+
+              <div className="flex gap-3">
+                <Button type="submit" disabled={saving} className="bg-emerald-600 hover:bg-emerald-700">
+                  {saving ? (
+                    <><Loader2 className="h-4 w-4 animate-spin ml-2" /> جاري الحفظ...</>
+                  ) : (
+                    editingPartner ? 'حفظ التعديلات' : 'إضافة الشريك'
+                  )}
+                </Button>
+                <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Preview */}
+      {partners.length > 0 && (
+        <Card className="shadow-lg border-0">
+          <CardHeader>
+            <CardTitle className="text-base">معاينة الشريط المتحرك</CardTitle>
+          </CardHeader>
+          <CardContent className="p-4">
+            <div className="overflow-hidden rounded-xl bg-gray-50 py-4">
+              <div className="flex gap-8 items-center animate-marquee-preview">
+                {[...partners, ...partners].map((partner, i) => (
+                  <div
+                    key={`${partner.id}-${i}`}
+                    className="flex-shrink-0 w-28 h-16 bg-white rounded-lg shadow-sm border border-gray-100 flex items-center justify-center p-2"
+                  >
+                    <img
+                      src={partner.logo}
+                      alt={partner.name}
+                      className="max-w-full max-h-full object-contain"
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Partners List */}
+      {partners.length === 0 ? (
+        <Card className="shadow-lg border-0">
+          <CardContent className="py-16 text-center">
+            <Handshake className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+            <p className="text-gray-500">لا يوجد شركاء حتى الآن</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="shadow-lg border-0">
+          <CardContent className="p-0">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b bg-gray-50">
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-600">الشعار</th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-600">الاسم</th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-600">الترتيب</th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-600">الحالة</th>
+                  <th className="text-right px-6 py-3 text-sm font-medium text-gray-600">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {partners.map((partner) => (
+                  <tr key={partner.id} className="border-b hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="w-16 h-10 bg-gray-50 rounded-lg flex items-center justify-center p-1">
+                        <img src={partner.logo} alt={partner.name} className="max-w-full max-h-full object-contain" />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="font-medium text-gray-800">{partner.nameAr || partner.name}</p>
+                      <p className="text-xs text-gray-500">{partner.name}</p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-gray-600">{partner.order}</span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <Badge className={partner.active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}>
+                        {partner.active ? 'فعال' : 'غير فعال'}
+                      </Badge>
+                    </td>
+                    <td className="px-6 py-4">
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="icon" onClick={() => handleEdit(partner)}>
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button variant="ghost" size="icon" className="text-red-500" onClick={() => handleDelete(partner.id)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+}
+
 // Settings Page Component
 function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -2552,7 +2839,6 @@ function SettingsPage() {
     address: 'القاهرة، مصر',
     facebook: '',
     instagram: '',
-    whatsapp: '',
     twitter: '',
     youtube: ''
   });
@@ -2581,7 +2867,6 @@ function SettingsPage() {
           address: data.settings.address || prev.address,
           facebook: data.settings.facebook || '',
           instagram: data.settings.instagram || '',
-          whatsapp: data.settings.whatsapp || '',
           twitter: data.settings.twitter || '',
           youtube: data.settings.youtube || '',
         }));
@@ -2609,7 +2894,6 @@ function SettingsPage() {
             { key: 'address', value: settings.address, group: 'contact' },
             { key: 'facebook', value: settings.facebook, group: 'social' },
             { key: 'instagram', value: settings.instagram, group: 'social' },
-            { key: 'whatsapp', value: settings.whatsapp, group: 'social' },
             { key: 'twitter', value: settings.twitter, group: 'social' },
             { key: 'youtube', value: settings.youtube, group: 'social' },
           ]
@@ -2739,16 +3023,7 @@ function SettingsPage() {
                 onChange={(e) => setSettings({ ...settings, youtube: e.target.value })}
               />
             </div>
-            <div className="space-y-2">
-              <Label>واتساب (رقم الهاتف)</Label>
-              <Input 
-                placeholder="201234567890"
-                dir="ltr"
-                value={settings.whatsapp} 
-                onChange={(e) => setSettings({ ...settings, whatsapp: e.target.value })}
-              />
-              <p className="text-xs text-gray-400">أدخل رقم الهاتف مع الكود الدولي بدون + (مثال: 201234567890)</p>
-            </div>
+
           </CardContent>
         </Card>
       </div>
