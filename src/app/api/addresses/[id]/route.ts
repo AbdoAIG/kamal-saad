@@ -1,5 +1,5 @@
 import { db } from '@/lib/db';
-import { auth } from '@/auth';
+import { getAuthUser } from '@/lib/auth-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 // Helper function to verify address ownership
@@ -25,9 +25,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    const authUser = await getAuthUser();
     
-    if (!session?.user?.id) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -35,7 +35,7 @@ export async function GET(
     }
 
     const { id } = await params;
-    const result = await verifyAddressOwnership(id, session.user.id);
+    const result = await verifyAddressOwnership(id, authUser.id);
     
     if ('error' in result) {
       return NextResponse.json(
@@ -63,9 +63,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    const authUser = await getAuthUser();
     
-    if (!session?.user?.id) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -73,7 +73,7 @@ export async function PUT(
     }
 
     const { id } = await params;
-    const result = await verifyAddressOwnership(id, session.user.id);
+    const result = await verifyAddressOwnership(id, authUser.id);
     
     if ('error' in result) {
       return NextResponse.json(
@@ -89,7 +89,7 @@ export async function PUT(
     if (isDefault) {
       await db.address.updateMany({
         where: { 
-          userId: session.user.id,
+          userId: authUser.id,
           isDefault: true,
           id: { not: id }
         },
@@ -131,9 +131,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth();
+    const authUser = await getAuthUser();
     
-    if (!session?.user?.id) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -141,7 +141,7 @@ export async function DELETE(
     }
 
     const { id } = await params;
-    const result = await verifyAddressOwnership(id, session.user.id);
+    const result = await verifyAddressOwnership(id, authUser.id);
     
     if ('error' in result) {
       return NextResponse.json(
@@ -161,7 +161,7 @@ export async function DELETE(
     // If deleted address was default, set another address as default
     if (wasDefault) {
       const remainingAddress = await db.address.findFirst({
-        where: { userId: session.user.id },
+        where: { userId: authUser.id },
         orderBy: { createdAt: 'desc' }
       });
 

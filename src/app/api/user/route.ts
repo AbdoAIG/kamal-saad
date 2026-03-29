@@ -1,13 +1,13 @@
 import { db } from '@/lib/db';
 import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthUser } from '@/lib/auth-utils';
 
 // GET - Get current user profile
 export async function GET() {
   try {
-    const session = await auth();
+    const authUser = await getAuthUser();
     
-    if (!session?.user?.id) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -15,7 +15,7 @@ export async function GET() {
     }
 
     const user = await db.user.findUnique({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       include: {
         addresses: {
           orderBy: { isDefault: 'desc' }
@@ -56,9 +56,9 @@ export async function GET() {
 // PUT - Update user profile
 export async function PUT(request: Request) {
   try {
-    const session = await auth();
+    const authUser = await getAuthUser();
     
-    if (!session?.user?.id) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -69,7 +69,7 @@ export async function PUT(request: Request) {
     const { name, phone, image } = body;
 
     const user = await db.user.update({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       data: {
         name,
         phone,

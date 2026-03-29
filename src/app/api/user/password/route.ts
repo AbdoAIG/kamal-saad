@@ -1,14 +1,14 @@
 import { db } from '@/lib/db';
-import { auth } from '@/auth';
+import { getAuthUser } from '@/lib/auth-utils';
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 
 // POST - Change user password
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const authUser = await getAuthUser();
     
-    if (!session?.user?.id) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     // Get user with password
     const user = await db.user.findUnique({
-      where: { id: session.user.id }
+      where: { id: authUser.id }
     });
 
     if (!user) {
@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
 
     // Update password
     await db.user.update({
-      where: { id: session.user.id },
+      where: { id: authUser.id },
       data: { password: hashedPassword }
     });
 

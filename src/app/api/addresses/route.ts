@@ -1,13 +1,13 @@
 import { db } from '@/lib/db';
-import { auth } from '@/auth';
+import { getAuthUser } from '@/lib/auth-utils';
 import { NextRequest, NextResponse } from 'next/server';
 
 // GET - Fetch all addresses for authenticated user
 export async function GET() {
   try {
-    const session = await auth();
+    const authUser = await getAuthUser();
     
-    if (!session?.user?.id) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -15,7 +15,7 @@ export async function GET() {
     }
 
     const addresses = await db.address.findMany({
-      where: { userId: session.user.id },
+      where: { userId: authUser.id },
       orderBy: [
         { isDefault: 'desc' },
         { createdAt: 'desc' }
@@ -38,9 +38,9 @@ export async function GET() {
 // POST - Create new address
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
+    const authUser = await getAuthUser();
     
-    if (!session?.user?.id) {
+    if (!authUser) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized' },
         { status: 401 }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     if (isDefault) {
       await db.address.updateMany({
         where: { 
-          userId: session.user.id,
+          userId: authUser.id,
           isDefault: true 
         },
         data: { isDefault: false }
@@ -71,12 +71,12 @@ export async function POST(request: NextRequest) {
 
     // Check if this is the user's first address - make it default automatically
     const existingAddressCount = await db.address.count({
-      where: { userId: session.user.id }
+      where: { userId: authUser.id }
     });
 
     const newAddress = await db.address.create({
       data: {
-        userId: session.user.id,
+        userId: authUser.id,
         label,
         fullName,
         phone,
