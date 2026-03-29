@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 
-// GET - Fetch all active banners
+// GET - Fetch all active banners ordered by section then order
 export async function GET() {
   try {
     const banners = await db.banner.findMany({
       where: { active: true },
-      orderBy: { order: 'asc' }
+      orderBy: [{ section: 'asc' }, { order: 'asc' }]
     });
     
     return NextResponse.json({ 
@@ -26,7 +26,11 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, titleAr, subtitle, subtitleAr, image, link, buttonText, buttonTextAr, type, active, order } = body;
+    const { title, titleAr, subtitle, subtitleAr, image, link, buttonText, buttonTextAr, buttonStyle, section, size, active, order } = body;
+    
+    if (!title || !titleAr || !image) {
+      return NextResponse.json({ success: false, error: 'title, titleAr, and image are required' }, { status: 400 });
+    }
     
     const banner = await db.banner.create({
       data: {
@@ -38,22 +42,18 @@ export async function POST(request: Request) {
         link,
         buttonText,
         buttonTextAr,
-        type: type || 'hero',
+        buttonStyle: buttonStyle || 'white',
+        section: section || 'hero',
+        size: size || 'full',
         active: active !== undefined ? active : true,
         order: order || 0
       }
     });
     
-    return NextResponse.json({ 
-      success: true, 
-      data: banner 
-    });
+    return NextResponse.json({ success: true, data: banner });
   } catch (error) {
     console.error('Error creating banner:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to create banner' 
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to create banner' }, { status: 500 });
   }
 }
 
@@ -61,35 +61,24 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, title, titleAr, subtitle, subtitleAr, image, link, buttonText, buttonTextAr, type, active, order } = body;
+    const { id, title, titleAr, subtitle, subtitleAr, image, link, buttonText, buttonTextAr, buttonStyle, section, size, active, order } = body;
+    
+    if (!id) {
+      return NextResponse.json({ success: false, error: 'Banner ID is required' }, { status: 400 });
+    }
     
     const banner = await db.banner.update({
       where: { id },
       data: {
-        title,
-        titleAr,
-        subtitle,
-        subtitleAr,
-        image,
-        link,
-        buttonText,
-        buttonTextAr,
-        type,
-        active,
-        order
+        title, titleAr, subtitle, subtitleAr, image, link,
+        buttonText, buttonTextAr, buttonStyle, section, size, active, order
       }
     });
     
-    return NextResponse.json({ 
-      success: true, 
-      data: banner 
-    });
+    return NextResponse.json({ success: true, data: banner });
   } catch (error) {
     console.error('Error updating banner:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to update banner' 
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to update banner' }, { status: 500 });
   }
 }
 
@@ -100,25 +89,14 @@ export async function DELETE(request: Request) {
     const id = searchParams.get('id');
     
     if (!id) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Banner ID is required' 
-      }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Banner ID is required' }, { status: 400 });
     }
     
-    await db.banner.delete({
-      where: { id }
-    });
+    await db.banner.delete({ where: { id } });
     
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Banner deleted successfully' 
-    });
+    return NextResponse.json({ success: true, message: 'Banner deleted successfully' });
   } catch (error) {
     console.error('Error deleting banner:', error);
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Failed to delete banner' 
-    }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to delete banner' }, { status: 500 });
   }
 }

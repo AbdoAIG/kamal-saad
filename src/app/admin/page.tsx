@@ -3288,12 +3288,11 @@ function BannersManagement() {
   const [formData, setFormData] = useState({
     title: '', titleAr: '', subtitle: '', subtitleAr: '',
     image: '', link: '', buttonText: '', buttonTextAr: '',
-    type: 'hero', active: true, order: 0
+    buttonStyle: 'white', section: 'hero', size: 'full',
+    active: true, order: 0
   });
 
-  useEffect(() => {
-    fetchBanners();
-  }, []);
+  useEffect(() => { fetchBanners(); }, []);
 
   const fetchBanners = async () => {
     setLoading(true);
@@ -3301,11 +3300,8 @@ function BannersManagement() {
       const res = await fetch('/api/banners');
       const data = await res.json();
       if (data.success) setBanners(data.data);
-    } catch (error) {
-      console.error('Error fetching banners:', error);
-    } finally {
-      setLoading(false);
-    }
+    } catch (error) { console.error('Error fetching banners:', error); }
+    finally { setLoading(false); }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -3313,45 +3309,28 @@ function BannersManagement() {
     try {
       const method = editingBanner ? 'PUT' : 'POST';
       const body = editingBanner ? { id: editingBanner.id, ...formData } : formData;
-      
       const res = await fetch('/api/banners', {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body)
+        method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
       });
-      
-      if (res.ok) {
-        fetchBanners();
-        resetForm();
-      }
-    } catch (error) {
-      console.error('Error saving banner:', error);
-    }
+      if (res.ok) { fetchBanners(); resetForm(); }
+    } catch (error) { console.error('Error saving banner:', error); }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm('هل أنت متأكد من حذف هذا البانر؟')) return;
-    try {
-      await fetch(`/api/banners?id=${id}`, { method: 'DELETE' });
-      fetchBanners();
-    } catch (error) {
-      console.error('Error deleting banner:', error);
-    }
+    try { await fetch(`/api/banners?id=${id}`, { method: 'DELETE' }); fetchBanners(); }
+    catch (error) { console.error('Error deleting banner:', error); }
   };
 
   const handleEdit = (banner: any) => {
     setFormData({
-      title: banner.title,
-      titleAr: banner.titleAr,
-      subtitle: banner.subtitle || '',
-      subtitleAr: banner.subtitleAr || '',
-      image: banner.image,
-      link: banner.link || '',
-      buttonText: banner.buttonText || '',
-      buttonTextAr: banner.buttonTextAr || '',
-      type: banner.type || 'hero',
-      active: banner.active,
-      order: banner.order
+      title: banner.title, titleAr: banner.titleAr,
+      subtitle: banner.subtitle || '', subtitleAr: banner.subtitleAr || '',
+      image: banner.image, link: banner.link || '',
+      buttonText: banner.buttonText || '', buttonTextAr: banner.buttonTextAr || '',
+      buttonStyle: banner.buttonStyle || 'white',
+      section: banner.section || 'hero', size: banner.size || 'full',
+      active: banner.active, order: banner.order
     });
     setEditingBanner(banner);
     setShowForm(true);
@@ -3361,159 +3340,275 @@ function BannersManagement() {
     setFormData({
       title: '', titleAr: '', subtitle: '', subtitleAr: '',
       image: '', link: '', buttonText: '', buttonTextAr: '',
-      type: 'hero', active: true, order: 0
+      buttonStyle: 'white', section: 'hero', size: 'full',
+      active: true, order: 0
     });
-    setEditingBanner(null);
-    setShowForm(false);
+    setEditingBanner(null); setShowForm(false);
   };
 
-  const bannerTypeLabels: Record<string, { ar: string; en: string; desc: string; icon: string }> = {
-    hero: { ar: 'بانر رئيسي', en: 'Hero', desc: 'شريط عرض كامل في أعلى الصفحة', icon: '🖼️' },
-    horizontal: { ar: 'بانر أفقي', en: 'Horizontal', desc: 'بانر عرضي متوسط في منتصف الصفحة', icon: '📐' },
-    vertical: { ar: 'بانر طولي', en: 'Vertical', desc: 'بانر طولي بجانب البانر الأفقي', icon: '📏' },
+  const sections: Record<string, { label: string; desc: string; icon: string }> = {
+    'hero': { label: 'شريط البطل (أعلى الصفحة)', desc: 'سلايدر عرض كامل في أعلى الصفحة الرئيسية', icon: '🖼️' },
+    'below-categories': { label: 'أسفل الأقسام', desc: 'يظهر تحت شبكة الأقسام مباشرة', icon: '📐' },
+    'between-products': { label: 'بين المنتجات', desc: 'يظهر بين قسم المنتجات وأقسام أخرى', icon: '📦' },
+    'above-footer': { label: 'فوق الفوتر', desc: 'يظهر في أسفل الصفحة فوق الفوتر', icon: '📌' },
   };
+
+  const sizes: Record<string, { label: string; desc: string; ratio: string }> = {
+    'full': { label: 'كامل العرض', desc: 'يأخذ عرض الصفحة بالكامل', ratio: '100%' },
+    'large': { label: 'عرض كبير (٢/٣)', desc: 'يأخذ ثلثي العرض + بانر صغير بجانبه', ratio: '66%' },
+    'small': { label: 'عرض صغير (١/٣)', desc: 'بانر طولي صغير بجانب بانر كبير', ratio: '33%' },
+    'half': { label: 'نصف العرض (١/٢)', desc: 'يأخذ نصف العرض - مثالي لاثنين بجانب بعض', ratio: '50%' },
+  };
+
+  const buttonStyles: Record<string, { label: string; color: string }> = {
+    'white': { label: 'أبيض', color: 'bg-white text-gray-900' },
+    'orange': { label: 'برتقالي', color: 'bg-orange-500 text-white' },
+    'green': { label: 'أخضر', color: 'bg-emerald-500 text-white' },
+    'red': { label: 'أحمر', color: 'bg-red-500 text-white' },
+    'teal': { label: 'تيل', color: 'bg-teal-500 text-white' },
+    'gradient': { label: 'تدرج', color: 'bg-gradient-to-l from-teal-500 to-cyan-500 text-white' },
+    'outline': { label: 'شفاف', color: 'bg-transparent border-2 border-white text-white' },
+  };
+
+  const linkExamples = [
+    { label: 'قسم المنتجات', value: '#products' },
+    { label: 'بحث عن منتج', value: '/?search=' },
+    { label: 'قسم محدد', value: '/?category=' },
+    { label: 'صفحة منتج', value: '/product/' },
+    { label: 'رابط خارجي', value: 'https://' },
+  ];
+
+  const heroBanners = banners.filter(b => b.section === 'hero').sort((a, b) => a.order - b.order);
+  const promoBanners = banners.filter(b => b.section !== 'hero').sort((a, b) => a.order - b.order);
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-xl font-bold text-gray-800">إدارة البنرات الإعلانية</h2>
-          <p className="text-sm text-gray-500 mt-1">أنشئ بنرات رئيسية وأفقية وطولية - يتم ضبط حجم أي صورة تلقائياً</p>
+          <p className="text-sm text-gray-500 mt-1">تحكم كامل في البنرات: مكانها، حجمها، أزرارها، وجهتها</p>
         </div>
         <Button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700">
-          <Plus className="h-4 w-4 ml-2" />
-          إضافة بانر
+          <Plus className="h-4 w-4 ml-2" /> إضافة بانر
         </Button>
       </div>
 
-      {/* Type Legend */}
-      <div className="grid grid-cols-3 gap-3">
-        {Object.entries(bannerTypeLabels).map(([key, val]) => (
-          <div key={key} className="flex items-center gap-2 p-3 bg-gray-50 rounded-xl text-sm">
-            <span className="text-lg">{val.icon}</span>
-            <div>
-              <p className="font-semibold text-gray-700">{val.ar}</p>
-              <p className="text-xs text-gray-400">{val.desc}</p>
+      {/* Visual Layout Guide */}
+      <Card className="shadow-md border border-gray-200">
+        <CardContent className="p-5">
+          <p className="text-sm font-semibold text-gray-700 mb-3">📍 مخطط مواقع البنرات على الصفحة الرئيسية:</p>
+          <div className="space-y-2 text-xs">
+            <div className="flex items-center gap-2 p-2 bg-gradient-to-l from-gray-100 to-gray-50 rounded-lg border border-gray-200">
+              <span className="text-lg">🖼️</span>
+              <div>
+                <p className="font-semibold text-gray-700">شريط البطل (Hero)</p>
+                <p className="text-gray-400">سلايدر عرض كامل - أعلى الصفحة</p>
+                <p className="text-gray-400 mt-0.5">البانرات الحالية: <span className="font-bold text-emerald-600">{heroBanners.length}</span></p>
+              </div>
+            </div>
+            <div className="h-2" />
+            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+              <span className="text-lg">📋</span>
+              <span className="text-gray-400">شبكة الأقسام</span>
+            </div>
+            <div className="h-2" />
+            <div className="flex items-center gap-2 p-2 bg-gradient-to-l from-blue-50 to-cyan-50 rounded-lg border border-blue-200">
+              <span className="text-lg">📐</span>
+              <div>
+                <p className="font-semibold text-gray-700">أسفل الأقسام</p>
+                <p className="text-gray-400">بانرات (كبير + صغير) أو (نصف + نصف)</p>
+              </div>
+            </div>
+            <div className="h-2" />
+            <div className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+              <span className="text-lg">🛒</span>
+              <span className="text-gray-400">قسم المنتجات</span>
+            </div>
+            <div className="h-2" />
+            <div className="flex items-center gap-2 p-2 bg-gradient-to-l from-orange-50 to-yellow-50 rounded-lg border border-orange-200">
+              <span className="text-lg">📦</span>
+              <div>
+                <p className="font-semibold text-gray-700">بين المنتجات</p>
+                <p className="text-gray-400">بانرات إعلانية بين أقسام المنتجات</p>
+              </div>
+            </div>
+            <div className="h-2" />
+            <div className="flex items-center gap-2 p-2 bg-gradient-to-l from-purple-50 to-pink-50 rounded-lg border border-purple-200">
+              <span className="text-lg">📌</span>
+              <div>
+                <p className="font-semibold text-gray-700">فوق الفوتر</p>
+                <p className="text-gray-400">بانرات في أسفل الصفحة</p>
+              </div>
             </div>
           </div>
-        ))}
-      </div>
+        </CardContent>
+      </Card>
 
+      {/* Add/Edit Form */}
       {showForm && (
         <Card className="shadow-lg border-0">
           <CardHeader className="bg-gray-50 rounded-t-xl">
             <CardTitle>{editingBanner ? 'تعديل البانر' : 'إضافة بانر جديد'}</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Banner Type */}
-              <div className="space-y-2">
-                <Label>نوع البانر *</Label>
-                <div className="grid grid-cols-3 gap-3">
-                  {Object.entries(bannerTypeLabels).map(([key, val]) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => setFormData({ ...formData, type: key })}
-                      className={`p-3 rounded-xl border-2 text-center transition-all ${
-                        formData.type === key
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                          : 'border-gray-200 hover:border-gray-300 text-gray-600'
-                      }`}
-                    >
-                      <span className="text-xl block mb-1">{val.icon}</span>
-                      <span className="text-sm font-semibold block">{val.ar}</span>
+            <form onSubmit={handleSubmit} className="space-y-6">
+
+              {/* 1. SECTION */}
+              <div className="space-y-3">
+                <Label className="text-base font-semibold">📍 أين يظهر البانر؟</Label>
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                  {Object.entries(sections).map(([key, val]) => (
+                    <button key={key} type="button" onClick={() => setFormData({ ...formData, section: key })}
+                      className={`p-3 rounded-xl border-2 text-center transition-all ${formData.section === key
+                        ? 'border-emerald-500 bg-emerald-50 text-emerald-700 shadow-sm'
+                        : 'border-gray-200 hover:border-gray-300 text-gray-500'}`}>
+                      <span className="text-2xl block mb-1">{val.icon}</span>
+                      <span className="text-xs font-bold block">{val.label}</span>
+                      <span className="text-[10px] text-gray-400 block mt-0.5">{val.desc}</span>
                     </button>
                   ))}
                 </div>
               </div>
 
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>العنوان بالإنجليزية *</Label>
-                  <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required />
+              {/* 2. SIZE - only for non-hero */}
+              {formData.section !== 'hero' && (
+                <div className="space-y-3">
+                  <Label className="text-base font-semibold">📐 حجم البانر</Label>
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                    {Object.entries(sizes).map(([key, val]) => (
+                      <button key={key} type="button" onClick={() => setFormData({ ...formData, size: key })}
+                        className={`p-3 rounded-xl border-2 text-center transition-all ${formData.size === key
+                          ? 'border-blue-500 bg-blue-50 text-blue-700 shadow-sm'
+                          : 'border-gray-200 hover:border-gray-300 text-gray-500'}`}>
+                        <span className="text-sm font-bold block">{val.label}</span>
+                        <span className="text-[10px] text-gray-400 block mt-0.5">{val.desc}</span>
+                        <span className="text-[10px] font-mono text-blue-400 block mt-1">{val.ratio}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
+              )}
+
+              {/* 3. TITLES */}
+              <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>العنوان بالعربية *</Label>
-                  <Input value={formData.titleAr} onChange={(e) => setFormData({ ...formData, titleAr: e.target.value })} required />
+                  <Input value={formData.titleAr} onChange={(e) => setFormData({ ...formData, titleAr: e.target.value })} required placeholder="عنوان البانر" />
+                </div>
+                <div className="space-y-2">
+                  <Label>العنوان بالإنجليزية *</Label>
+                  <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required placeholder="Banner title" dir="ltr" />
                 </div>
               </div>
-
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label>العنوان الفرعي بالإنجليزية</Label>
-                  <Input value={formData.subtitle} onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })} />
+                  <Label>العنوان الفرعي بالعربية</Label>
+                  <Input value={formData.subtitleAr} onChange={(e) => setFormData({ ...formData, subtitleAr: e.target.value })} placeholder="مثال: خصم 30%" />
                 </div>
                 <div className="space-y-2">
-                  <Label>العنوان الفرعي بالعربية</Label>
-                  <Input value={formData.subtitleAr} onChange={(e) => setFormData({ ...formData, subtitleAr: e.target.value })} />
+                  <Label>العنوان الفرعي بالإنجليزية</Label>
+                  <Input value={formData.subtitle} onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })} placeholder="e.g. 30% OFF" dir="ltr" />
                 </div>
               </div>
 
+              {/* 4. IMAGE */}
               <div className="space-y-2">
-                <Label>صورة البانر *</Label>
-                <p className="text-xs text-gray-400">يتم ضبط حجم الصورة تلقائياً. الصور المثالية: رئيسي (1920×600) - أفقي (1200×400) - طولي (600×800)</p>
+                <Label>صورة البانر * <span className="text-gray-400 font-normal">(يتم ضبط الحجم تلقائياً)</span></Label>
                 <ImageUploader
                   images={formData.image ? [formData.image] : []}
                   onImagesChange={(images) => setFormData({ ...formData, image: images[0] || '' })}
-                  maxImages={1}
-                  folder="kamal-saad-banners"
+                  maxImages={1} folder="kamal-saad-banners"
                 />
               </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
-                <div className="space-y-2">
-                  <Label>نص الزر بالعربية</Label>
-                  <Input value={formData.buttonTextAr} onChange={(e) => setFormData({ ...formData, buttonTextAr: e.target.value })} placeholder="مثال: تسوق الآن" />
+              {/* 5. BUTTON */}
+              <div className="space-y-4 p-4 bg-gray-50 rounded-xl border">
+                <p className="font-semibold text-sm">🔘 زر الحركة (CTA)</p>
+                <div className="grid md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>نص الزر بالعربية</Label>
+                    <Input value={formData.buttonTextAr} onChange={(e) => setFormData({ ...formData, buttonTextAr: e.target.value })} placeholder="مثال: اشتري الآن / تسوق الآن / اعرض العرض" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>نص الزر بالإنجليزية</Label>
+                    <Input value={formData.buttonText} onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })} placeholder="e.g. Buy Now / Shop Now" dir="ltr" />
+                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label>نص الزر بالإنجليزية</Label>
-                  <Input value={formData.buttonText} onChange={(e) => setFormData({ ...formData, buttonText: e.target.value })} placeholder="e.g. Shop Now" />
+                  <Label>رابط الزر (عند الضغط ينتقل للمستخدم)</Label>
+                  <Input value={formData.link} onChange={(e) => setFormData({ ...formData, link: e.target.value })} placeholder="/?search=أقلام  أو  /product/abc123  أو  https://..." dir="ltr" className="font-mono text-sm" />
+                  <div className="flex flex-wrap gap-2 mt-1">
+                    <span className="text-xs text-gray-400">أمثلة:</span>
+                    {linkExamples.map((ex, i) => (
+                      <button type="button" key={i} onClick={() => setFormData({ ...formData, link: ex.value })}
+                        className="text-[10px] bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded hover:bg-gray-100 transition-colors" dir="ltr">
+                        {ex.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
+
                 <div className="space-y-2">
-                  <Label>رابط (اختياري)</Label>
-                  <Input value={formData.link} onChange={(e) => setFormData({ ...formData, link: e.target.value })} placeholder="https://..." dir="ltr" />
+                  <Label>شكل الزر</Label>
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(buttonStyles).map(([key, val]) => (
+                      <button key={key} type="button" onClick={() => setFormData({ ...formData, buttonStyle: key })}
+                        className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all border-2 ${formData.buttonStyle === key
+                          ? `border-gray-800 ring-2 ring-offset-1 ring-gray-400 ${val.color}`
+                          : `${val.color} border-transparent opacity-60 hover:opacity-100`}`}>
+                        {val.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
+              {/* 6. ORDER & ACTIVE */}
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>الترتيب (رقم صغير يظهر أولاً)</Label>
                   <Input type="number" value={formData.order} onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })} />
                 </div>
-                <div className="space-y-2 flex items-end">
-                  <div className="flex items-center gap-2 pb-2">
-                    <input type="checkbox" id="banner-active" checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} className="w-4 h-4 accent-emerald-600" />
-                    <Label htmlFor="banner-active">بانر فعال</Label>
-                  </div>
+                <div className="flex items-end gap-2 pb-2">
+                  <input type="checkbox" id="banner-active" checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} className="w-4 h-4 accent-emerald-600" />
+                  <Label htmlFor="banner-active" className="font-semibold">بانر فعال (ظاهر للمستخدمين)</Label>
                 </div>
               </div>
 
-              {/* Preview */}
+              {/* PREVIEW */}
               {formData.image && (
-                <div className="space-y-2">
-                  <Label>معاينة البانر</Label>
-                  <div className={`relative overflow-hidden rounded-xl bg-gray-100 ${
-                    formData.type === 'vertical' ? 'max-w-xs mx-auto h-[300px]' : 'h-[160px]'
-                  }`}>
+                <div className="space-y-2 p-4 bg-gray-50 rounded-xl border">
+                  <Label>👁️ معاينة مباشرة</Label>
+                  <div className={`relative overflow-hidden rounded-xl ${formData.section === 'hero' ? 'h-[140px]' : formData.size === 'small' ? 'max-w-[200px] mx-auto h-[200px]' : formData.size === 'half' ? 'h-[120px]' : 'h-[140px]'}`}>
                     <img src={formData.image} alt="Preview" className="absolute inset-0 w-full h-full object-cover object-center" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-                    <div className="absolute bottom-3 right-3 left-3">
-                      <p className="text-white font-bold text-sm drop-shadow">{formData.titleAr || formData.title}</p>
+                    <div className="absolute bottom-2.5 right-2.5 left-2.5">
+                      {formData.subtitleAr && (
+                        <span className="inline-flex items-center gap-1 bg-white/20 text-white px-2 py-0.5 rounded-full text-[10px] font-semibold mb-1">
+                          {formData.subtitleAr}
+                        </span>
+                      )}
+                      <p className="text-white font-bold text-sm drop-shadow leading-tight">{formData.titleAr || formData.title}</p>
                       {formData.buttonTextAr && (
-                        <span className="inline-block mt-1 bg-white text-gray-900 text-xs font-semibold px-3 py-1 rounded">{formData.buttonTextAr}</span>
+                        <span className={`inline-block mt-1.5 text-[10px] font-bold px-3 py-1 rounded-lg ${buttonStyles[formData.buttonStyle]?.color || 'bg-white text-gray-900'}`}>
+                          {formData.buttonTextAr}
+                        </span>
                       )}
                     </div>
-                    <span className={`absolute top-2 left-2 text-xs bg-black/50 text-white px-2 py-0.5 rounded-full`}>
-                      {bannerTypeLabels[formData.type]?.ar}
-                    </span>
+                    <div className="absolute top-2 left-2 flex gap-1">
+                      <span className="text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded">{sections[formData.section]?.label}</span>
+                      {formData.section !== 'hero' && (
+                        <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">{sizes[formData.size]?.label}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
 
               <div className="flex gap-3">
                 <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">
-                  {editingBanner ? 'حفظ التعديلات' : 'إضافة البانر'}
+                  {editingBanner ? '💾 حفظ التعديلات' : '➕ إضافة البانر'}
                 </Button>
                 <Button type="button" variant="outline" onClick={resetForm}>إلغاء</Button>
               </div>
@@ -3522,47 +3617,87 @@ function BannersManagement() {
         </Card>
       )}
 
+      {/* Banners List */}
       {loading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-emerald-600" />
-        </div>
+        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-emerald-600" /></div>
       ) : banners.length === 0 ? (
-        <Card className="shadow-lg border-0">
-          <CardContent className="py-16 text-center">
-            <Image className="h-12 w-12 mx-auto mb-4 text-gray-400" />
-            <p className="text-gray-500">لا توجد بنرات بعد</p>
-            <p className="text-sm text-gray-400 mt-1">أضف بانر رئيسي أو أفقي أو طولي</p>
-          </CardContent>
-        </Card>
+        <Card className="shadow-lg border-0"><CardContent className="py-16 text-center">
+          <Image className="h-12 w-12 mx-auto mb-4 text-gray-400" />
+          <p className="text-gray-500">لا توجد بنرات بعد</p>
+          <p className="text-sm text-gray-400 mt-1">أضف بانر من لوحة التحكم أعلاه</p>
+        </CardContent></Card>
       ) : (
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {banners.sort((a, b) => a.order - b.order).map((banner) => (
-            <Card key={banner.id} className="overflow-hidden">
-              <div className={`relative ${banner.type === 'vertical' ? 'h-48' : 'h-32'}`}>
-                <img src={banner.image} alt={banner.titleAr} className="w-full h-full object-cover" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-                <Badge className={`absolute top-2 right-2 ${banner.active ? 'bg-green-500' : 'bg-gray-500'}`}>
-                  {banner.active ? 'فعال' : 'غير فعال'}
-                </Badge>
-                <span className="absolute top-2 left-2 text-xs bg-black/50 text-white px-2 py-0.5 rounded-full">
-                  {bannerTypeLabels[banner.type]?.icon} {bannerTypeLabels[banner.type]?.ar}
-                </span>
+        <div className="space-y-6">
+          {/* Hero Banners */}
+          {heroBanners.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-2">
+                <span className="text-lg">🖼️</span> شريط البطل ({heroBanners.length})
+              </h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {heroBanners.map(banner => (
+                  <Card key={banner.id} className="overflow-hidden">
+                    <div className="relative h-36">
+                      <img src={banner.image} alt={banner.titleAr} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                      <Badge className={`absolute top-2 right-2 ${banner.active ? 'bg-green-500' : 'bg-gray-500'}`}>
+                        {banner.active ? '✓ فعال' : '✗ متوقف'}
+                      </Badge>
+                    </div>
+                    <CardContent className="p-3">
+                      <p className="font-semibold text-sm">{banner.titleAr}</p>
+                      <p className="text-[10px] text-gray-400 mt-0.5">{banner.title}</p>
+                      <div className="flex items-center gap-2 mt-2 text-[10px] text-gray-400">
+                        <span>{banner.buttonTextAr || '—'}</span>
+                        {banner.link && <span className="text-blue-400 truncate max-w-[100px]" dir="ltr">→ {banner.link}</span>}
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(banner)}><Edit className="h-3.5 w-3.5" /> تعديل</Button>
+                        <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDelete(banner.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-              <CardContent className="p-4">
-                <h4 className="font-medium">{banner.titleAr}</h4>
-                <p className="text-xs text-gray-400 mt-0.5">{banner.title}</p>
-                <p className="text-sm text-gray-500 mt-1">الترتيب: {banner.order}</p>
-                <div className="flex gap-2 mt-3">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(banner)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDelete(banner.id)}>
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+            </div>
+          )}
+
+          {/* Promo Banners */}
+          {promoBanners.length > 0 && (
+            <div>
+              <h3 className="text-sm font-semibold text-gray-500 mb-3 flex items-center gap-2">
+                <span className="text-lg">📐</span> بانرات إعلانية ({promoBanners.length})
+              </h3>
+              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {promoBanners.map(banner => (
+                  <Card key={banner.id} className="overflow-hidden">
+                    <div className="relative h-36">
+                      <img src={banner.image} alt={banner.titleAr} className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
+                      <Badge className={`absolute top-2 right-2 ${banner.active ? 'bg-green-500' : 'bg-gray-500'}`}>
+                        {banner.active ? '✓ فعال' : '✗ متوقف'}
+                      </Badge>
+                      <div className="absolute top-2 left-2 flex gap-1">
+                        <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">{sections[banner.section]?.icon} {sections[banner.section]?.label}</span>
+                        <span className="text-[10px] bg-gray-600 text-white px-1.5 py-0.5 rounded">{sizes[banner.size]?.label}</span>
+                      </div>
+                    </div>
+                    <CardContent className="p-3">
+                      <p className="font-semibold text-sm">{banner.titleAr}</p>
+                      <div className="flex items-center gap-2 mt-1 text-[10px] text-gray-400">
+                        <span>{banner.buttonTextAr || '—'}</span>
+                        {banner.link && <span className="text-blue-400 truncate max-w-[100px]" dir="ltr">→ {banner.link}</span>}
+                      </div>
+                      <div className="flex gap-2 mt-2">
+                        <Button variant="outline" size="sm" onClick={() => handleEdit(banner)}><Edit className="h-3.5 w-3.5" /> تعديل</Button>
+                        <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDelete(banner.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
