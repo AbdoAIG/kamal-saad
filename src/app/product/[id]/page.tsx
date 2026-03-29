@@ -20,7 +20,6 @@ import { AuthModal } from '@/components/store/AuthModal';
 import { FavoritesSidebar } from '@/components/store/FavoritesSidebar';
 import { ReviewsSection } from '@/components/store/ReviewsSection';
 import { useStore, Product, t } from '@/store/useStore';
-import { optimizeImage, ImagePresets } from '@/lib/image-utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
@@ -363,7 +362,7 @@ export default function ProductPage() {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.25 }}
-                    src={optimizeImage(images[selectedImage] || '', ImagePresets.productDetail) || 'https://via.placeholder.com/500'}
+                    src={images[selectedImage] || 'https://via.placeholder.com/500'}
                     alt={productName}
                     className="w-full h-full object-contain p-8"
                   />
@@ -429,7 +428,7 @@ export default function ProductPage() {
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 opacity-70'
                       }`}
                     >
-                      <img src={optimizeImage(img, ImagePresets.thumbnail)} alt="" className="w-full h-full object-cover" />
+                      <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -759,7 +758,7 @@ export default function ProductPage() {
               key={selectedImage}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              src={optimizeImage(images[selectedImage], ImagePresets.productDetail)}
+              src={images[selectedImage]}
               alt={productName}
               className="max-w-full max-h-full object-contain"
               style={{ transform: `scale(${zoomLevel})` }}
