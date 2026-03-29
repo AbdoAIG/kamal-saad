@@ -101,9 +101,7 @@ export function Sidebar({ isOpen, onClose, categories, selectedCategory, onCateg
               {/* Header */}
               <div className="flex items-center justify-between p-4 border-b dark:border-gray-700 bg-gradient-to-l from-teal-600 to-cyan-600">
                 <div className="flex items-center gap-3">
-                  <div className="h-12 w-12 rounded-xl overflow-hidden bg-white shadow-lg">
-                    <img src="/logo.png" alt="Logo" className="w-full h-full object-contain" />
-                  </div>
+                  <img src="/KMS LOGO FINAL.png" alt="Logo" className="h-14 w-14 object-contain drop-shadow-lg" />
                   <div>
                     <h2 className="text-lg font-bold text-white">{t('siteName', language)}</h2>
                     <p className="text-xs text-white/80">{isArabic ? 'تصفح الأقسام' : 'Browse Categories'}</p>

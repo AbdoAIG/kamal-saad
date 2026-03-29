@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useStore } from '@/store/useStore';
+import { useSettings } from '@/hooks/useSettings';
 
 // Contact page translations
 const contactTranslations = {
@@ -154,8 +155,14 @@ interface FormErrors {
 export default function ContactPage() {
   const { language } = useStore();
   const { toast } = useToast();
+  const { settings } = useSettings();
   const isArabic = language === 'ar';
   const t = contactTranslations[language];
+
+  // Override contact info from settings
+  const displayAddress = settings.address || t.addressValue;
+  const displayPhone = settings.phone || t.phoneValue1;
+  const displayEmail = settings.email || t.emailValue;
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -257,24 +264,24 @@ export default function ContactPage() {
     }
   };
 
-  // Social media links
+  // Social media links from settings
   const socialLinks = [
     {
       name: 'Facebook',
       icon: Facebook,
-      href: 'https://facebook.com/kamalsaad',
+      href: settings.facebook || 'https://facebook.com/kamalsaad',
       color: 'hover:bg-blue-600',
     },
     {
       name: 'Instagram',
       icon: Instagram,
-      href: 'https://instagram.com/kamalsaad',
+      href: settings.instagram || 'https://instagram.com/kamalsaad',
       color: 'hover:bg-pink-600',
     },
     {
       name: 'WhatsApp',
       icon: MessageCircle,
-      href: 'https://wa.me/201001234567',
+      href: settings.whatsapp ? `https://wa.me/${settings.whatsapp.replace(/[^0-9]/g, '')}` : 'https://wa.me/201001234567',
       color: 'hover:bg-green-600',
     },
   ];
@@ -514,7 +521,7 @@ export default function ContactPage() {
                       </div>
                       <div className={isArabic ? 'text-right' : 'text-left'}>
                         <p className="font-semibold text-gray-900 dark:text-white">{t.addressLabel}</p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">{t.addressValue}</p>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">{displayAddress}</p>
                       </div>
                     </div>
 
@@ -525,8 +532,7 @@ export default function ContactPage() {
                       </div>
                       <div className={isArabic ? 'text-right' : 'text-left'}>
                         <p className="font-semibold text-gray-900 dark:text-white">{t.phoneLabel2}</p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">{t.phoneValue1}</p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">{t.phoneValue2}</p>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">{displayPhone}</p>
                       </div>
                     </div>
 
@@ -537,7 +543,7 @@ export default function ContactPage() {
                       </div>
                       <div className={isArabic ? 'text-right' : 'text-left'}>
                         <p className="font-semibold text-gray-900 dark:text-white">{t.emailLabel2}</p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">{t.emailValue}</p>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">{displayEmail}</p>
                       </div>
                     </div>
 
@@ -608,7 +614,7 @@ export default function ContactPage() {
                         <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
                           {t.addressLabel}
                         </h3>
-                        <p className="text-gray-600 dark:text-gray-300 mb-6">{t.addressValue}</p>
+                        <p className="text-gray-600 dark:text-gray-300 mb-6">{displayAddress}</p>
                         <a
                           href="https://maps.google.com/?q=30.0444,31.2357"
                           target="_blank"

@@ -162,11 +162,16 @@ export function Footer() {
           <div className={isArabic ? 'text-right' : 'text-left'}>
             <h3 className="text-white font-bold text-lg mb-6">{t('quickLinks', language)}</h3>
             <ul className="space-y-3">
-              {[t('aboutUs', language), t('contactUs', language), t('privacyPolicy', language), t('offers', language)].map((link, idx) => (
+              {[
+                { label: t('aboutUs', language), href: '/' },
+                { label: t('contactUs', language), href: '/contact' },
+                { label: t('privacyPolicy', language), href: '/terms' },
+                { label: t('offers', language), href: '/?sort=offers' },
+              ].map((link, idx) => (
                 <li key={idx}>
-                  <Link href="/" className="hover:text-teal-400 transition-colors flex items-center gap-2">
+                  <Link href={link.href} className="hover:text-teal-400 transition-colors flex items-center gap-2">
                     {isArabic && <span className="w-1.5 h-1.5 bg-teal-500 rounded-full" />}
-                    {link}
+                    {link.label}
                     {!isArabic && <span className="w-1.5 h-1.5 bg-teal-500 rounded-full" />}
                   </Link>
                 </li>
