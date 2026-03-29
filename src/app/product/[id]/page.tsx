@@ -661,8 +661,8 @@ export default function ProductPage() {
                 <Button
                   className={`h-12 flex-1 rounded-sm text-xs font-semibold tracking-widest uppercase transition-all border-2 ${
                     addedToCart
-                      ? 'bg-green-600 hover:bg-green-600 border-green-600 text-white'
-                      : 'bg-white border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white'
+                      ? 'bg-emerald-500 hover:bg-emerald-500 border-emerald-500 text-white'
+                      : 'bg-orange-500 border-orange-500 text-white hover:bg-orange-600'
                   }`}
                   onClick={handleAddToCart}
                   disabled={addedToCart || (product.hasVariants && !selectedSKU) || currentStock === 0}
@@ -683,7 +683,7 @@ export default function ProductPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  className={`h-12 flex-1 rounded-sm text-xs font-semibold tracking-widest uppercase border-2 border-gray-800 text-gray-800 bg-transparent hover:bg-gray-800 hover:text-white transition-all`}
+                  className={`h-12 flex-1 rounded-sm text-xs font-semibold tracking-widest uppercase border-2 border-emerald-500 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all`}
                   onClick={handleBuyNow}
                   disabled={(product.hasVariants && !selectedSKU) || currentStock === 0}
                 >
