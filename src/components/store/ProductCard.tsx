@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Star, ShoppingCart, Heart, Package } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Package, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Product, useStore, t } from '@/store/useStore';
 import { motion } from 'framer-motion';
@@ -32,7 +32,6 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   }
   
   const mainImage = images[0] || '';
-  const hasMultipleImages = images.length > 1;
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
   const discountPercent = hasDiscount
     ? Math.round(((product.price - (product.discountPrice || 0)) / product.price) * 100)
@@ -100,18 +99,25 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               </div>
             )}
 
-            {/* Heart - top right */}
+            {/* Discount badge - top center */}
+            {hasDiscount && (
+              <div className="absolute top-3 left-1/2 -translate-x-1/2 bg-red-500 text-white px-2.5 py-1 rounded-lg text-xs font-bold">
+                -{discountPercent}%
+              </div>
+            )}
+
+            {/* Heart - top right - More prominent */}
             <motion.button
               whileHover={{ scale: 1.15 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleFavorite}
-              className={`absolute top-3 ${isArabic ? 'left-3' : 'right-3'} h-8 w-8 rounded-full flex items-center justify-center transition-colors duration-200 z-20 ${
+              className={`absolute top-3 ${isArabic ? 'left-3' : 'right-3'} h-10 w-10 rounded-full flex items-center justify-center transition-all duration-200 z-20 shadow-md ${
                 isProductFavorite
-                  ? 'text-red-500'
-                  : 'text-gray-300 hover:text-red-400'
+                  ? 'bg-red-50 text-red-500 shadow-red-200'
+                  : 'bg-white/90 text-gray-400 hover:text-red-500 hover:bg-red-50 shadow-gray-200'
               }`}
             >
-              <Heart className={`h-4 w-4 ${isProductFavorite ? 'fill-red-500' : ''}`} />
+              <Heart className={`h-5 w-5 transition-all ${isProductFavorite ? 'fill-red-500' : ''}`} />
             </motion.button>
           </div>
         </Link>
@@ -120,7 +126,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         <div className="p-4">
           {/* Title */}
           <Link href={`/product/${product.id}`}>
-            <h3 className="font-semibold text-gray-800 text-sm leading-snug mb-1 line-clamp-2 hover:text-gray-600 transition-colors">
+            <h3 className="font-bold text-gray-800 text-sm leading-snug mb-1.5 line-clamp-2 hover:text-gray-600 transition-colors">
               {productName}
             </h3>
           </Link>
@@ -141,45 +147,40 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
             </span>
           </div>
 
-          {/* Price Row */}
+          {/* Price Row - More prominent */}
           <div className={`flex items-center gap-2 flex-wrap mb-4 ${isArabic ? 'flex-row-reverse' : ''}`}>
-            <span className="text-lg font-bold text-gray-800">
+            <span className="text-xl font-extrabold text-gray-900">
               {(hasDiscount ? product.discountPrice : product.price)?.toFixed(2)}
             </span>
-            <span className="text-xs text-gray-400">{currency}</span>
+            <span className="text-sm font-semibold text-gray-500">{currency}</span>
             {hasDiscount && (
               <>
                 <span className="text-sm text-gray-400 line-through">{product.price.toFixed(2)}</span>
-                <span className="text-[10px] font-semibold text-green-700 bg-green-50 px-1.5 py-0.5 rounded">
-                  -{discountPercent}%
-                </span>
               </>
             )}
           </div>
 
-          {/* Action Buttons */}
-          <div className={`flex gap-2 ${isArabic ? 'flex-row-reverse' : ''}`}>
+          {/* Action Buttons - Desktop: side by side, Mobile: stacked */}
+          <div className={`flex flex-col-reverse sm:flex-row gap-2 ${isArabic ? 'sm:flex-row-reverse' : ''}`}>
+            {/* Add to Cart - Orange */}
             <Button
-              variant="outline"
-              className={`flex-1 h-10 border border-gray-200 text-gray-600 bg-transparent hover:bg-gray-50 hover:border-gray-300 rounded-lg text-xs font-medium transition-all ${
+              className={`flex-1 h-11 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-2 border-orange-500 hover:border-orange-600 ${
                 isArabic ? 'pl-3' : 'pr-3'
-              }`}
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                router.push(`/product/${product.id}`);
-              }}
-            >
-              {isArabic ? 'التفاصيل' : 'Details'}
-            </Button>
-            <Button
-              className={`flex-1 h-10 bg-gray-800 hover:bg-gray-900 text-white rounded-lg text-xs font-medium transition-all flex items-center justify-center gap-1.5 ${
-                isArabic ? 'pr-3' : 'pl-3'
               }`}
               onClick={handleAddToCart}
             >
-              <ShoppingCart className="h-3.5 w-3.5" />
+              <ShoppingCart className="h-4 w-4" />
               <span>{t('addToCart', language)}</span>
+            </Button>
+            {/* Buy Now - Green */}
+            <Button
+              className={`flex-1 h-11 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-xs font-bold transition-all flex items-center justify-center gap-1.5 border-2 border-emerald-500 hover:border-emerald-600 shadow-sm shadow-emerald-200 ${
+                isArabic ? 'pr-3' : 'pl-3'
+              }`}
+              onClick={handleBuyNow}
+            >
+              <Zap className="h-4 w-4" />
+              <span>{isArabic ? 'اشتري الان' : 'Buy Now'}</span>
             </Button>
           </div>
         </div>
