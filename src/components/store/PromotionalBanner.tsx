@@ -73,42 +73,46 @@ export function HeroBanner({ banners }: { banners: Banner[] }) {
   if (banners.length === 0) return null;
   const b = banners[current];
   const h = b.height > 0 ? b.height : 0;
-  const w = b.width > 0 ? b.width : 0;
+
+  // Build the outer container style
+  const outerStyle: React.CSSProperties = {
+    position: 'relative',
+    width: '100%',
+    overflow: 'hidden',
+  };
+  if (h > 0) {
+    outerStyle.height = `${h}px`;
+  } else {
+    outerStyle.minHeight = '200px';
+    outerStyle.maxHeight = '460px';
+  }
 
   return (
     <div
-      className="relative w-full overflow-hidden"
+      style={outerStyle}
       dir={isArabic ? 'rtl' : 'ltr'}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      style={{
-        height: h > 0 ? `${h}px` : undefined,
-        maxHeight: h > 0 ? undefined : '460px',
-        minHeight: h > 0 ? undefined : '200px',
-      }}
     >
-      {/* Fallback: use class-based heights when no custom height */}
-      <div className={`absolute inset-0 ${h === 0 ? 'h-[260px] sm:h-[340px] md:h-[380px] lg:h-[460px]' : ''}`}>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={b.id}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.6 }}
-            className="absolute inset-0"
-          >
-            {/* Image - always covers the container */}
-            <img
-              src={b.image}
-              alt={isArabic ? b.titleAr : b.title}
-              className="w-full h-full object-cover object-center"
-              loading={current === 0 ? 'eager' : 'lazy'}
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none" />
-          </motion.div>
-        </AnimatePresence>
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={b.id}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.6 }}
+          className="absolute inset-0"
+        >
+          {/* Image */}
+          <img
+            src={b.image}
+            alt={isArabic ? b.titleAr : b.title}
+            className="w-full h-full object-cover object-center"
+            loading={current === 0 ? 'eager' : 'lazy'}
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none" />
+        </motion.div>
+      </AnimatePresence>
 
       <Hotspot banner={b} />
 
@@ -145,21 +149,32 @@ export function HeroBanner({ banners }: { banners: Banner[] }) {
 // PROMO CARD
 // ============================================================
 function PromoCard({ banner, isArabic }: { banner: Banner; isArabic: boolean }) {
+  const [imgError, setImgError] = useState(false);
   const h = banner.height > 0 ? banner.height : 220;
 
   return (
     <motion.div
       whileHover={{ scale: 1.01, y: -2 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      className="relative overflow-hidden rounded-2xl shadow-lg group"
+      className="relative overflow-hidden rounded-2xl shadow-lg group bg-gray-100"
       style={{ height: `${h}px` }}
     >
-      <img
-        src={banner.image}
-        alt={isArabic ? banner.titleAr : banner.title}
-        className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
-        loading="lazy"
-      />
+      {!imgError ? (
+        <img
+          src={banner.image}
+          alt={isArabic ? banner.titleAr : banner.title}
+          className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
+          loading="lazy"
+          onError={() => setImgError(true)}
+        />
+      ) : (
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
+          <div className="text-center text-gray-500">
+            <div className="text-3xl mb-1">🖼️</div>
+            <p className="text-xs">صورة غير متوفرة</p>
+          </div>
+        </div>
+      )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
       <Hotspot banner={banner} />
     </motion.div>
@@ -180,21 +195,28 @@ function PromoSection({ banners, isArabic }: { banners: Banner[]; isArabic: bool
 }
 
 // ============================================================
-// MAIN
+// MAIN - BannerSections
 // ============================================================
 export function BannerSections() {
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
   const { language } = useStore();
   const isArabic = language === 'ar';
 
   const fetchBanners = useCallback(async () => {
     try {
+      setError(false);
       const res = await fetch('/api/banners');
       const data = await res.json();
       if (data.success) setBanners(data.data);
-    } catch (e) { console.error(e); }
-    finally { setLoading(false); }
+      else setError(true);
+    } catch (e) {
+      console.error(e);
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
   }, []);
 
   useEffect(() => { fetchBanners(); }, [fetchBanners]);
@@ -205,7 +227,7 @@ export function BannerSections() {
   const aboveFooter = banners.filter(b => b.section === 'above-footer').sort((a, b) => a.order - b.order);
 
   if (loading) return <div className="w-full h-[260px] bg-gray-200 dark:bg-gray-800 animate-pulse" />;
-  if (banners.length === 0) return null;
+  if (error || banners.length === 0) return null;
 
   return (
     <>

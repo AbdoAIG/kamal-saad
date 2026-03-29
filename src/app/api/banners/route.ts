@@ -38,10 +38,10 @@ export async function POST(request: Request) {
         section: section || 'hero',
         width: parseInt(width) || 0,
         height: parseInt(height) || 0,
-        hotspotX: parseInt(hotspotX) || 0,
-        hotspotY: parseInt(hotspotY) || 0,
-        hotspotW: parseInt(hotspotW) || 0,
-        hotspotH: parseInt(hotspotH) || 0,
+        hotspotX: parseFloat(hotspotX) || 0,
+        hotspotY: parseFloat(hotspotY) || 0,
+        hotspotW: parseFloat(hotspotW) || 0,
+        hotspotH: parseFloat(hotspotH) || 0,
         active: active !== undefined ? active : true,
         order: parseInt(order) || 0
       }
@@ -66,10 +66,10 @@ export async function PUT(request: Request) {
     const updateData: any = { ...data };
     if (updateData.width !== undefined) updateData.width = parseInt(updateData.width) || 0;
     if (updateData.height !== undefined) updateData.height = parseInt(updateData.height) || 0;
-    if (updateData.hotspotX !== undefined) updateData.hotspotX = parseInt(updateData.hotspotX) || 0;
-    if (updateData.hotspotY !== undefined) updateData.hotspotY = parseInt(updateData.hotspotY) || 0;
-    if (updateData.hotspotW !== undefined) updateData.hotspotW = parseInt(updateData.hotspotW) || 0;
-    if (updateData.hotspotH !== undefined) updateData.hotspotH = parseInt(updateData.hotspotH) || 0;
+    if (updateData.hotspotX !== undefined) updateData.hotspotX = parseFloat(updateData.hotspotX) || 0;
+    if (updateData.hotspotY !== undefined) updateData.hotspotY = parseFloat(updateData.hotspotY) || 0;
+    if (updateData.hotspotW !== undefined) updateData.hotspotW = parseFloat(updateData.hotspotW) || 0;
+    if (updateData.hotspotH !== undefined) updateData.hotspotH = parseFloat(updateData.hotspotH) || 0;
     if (updateData.order !== undefined) updateData.order = parseInt(updateData.order) || 0;
     delete updateData.id;
 
