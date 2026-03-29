@@ -8,7 +8,7 @@ import { useStore } from '@/store/useStore';
  * SessionSync - Bridges NextAuth sessions to the Zustand store
  *
  * The app has two auth systems:
- * 1. Custom credential auth → sets Zustand store directly
+ * 1. Custom credential auth → sets Zustand store directly via AuthModal
  * 2. NextAuth (Google OAuth) → only sets next-auth.session-token cookie
  *
  * This component watches the NextAuth session and syncs it to Zustand
@@ -39,12 +39,14 @@ export function SessionSync() {
         setUser(userData);
         setUserId(userData.id);
         hasSyncedRef.current = true;
+        console.log('[SessionSync] Synced NextAuth session to Zustand:', userData.id);
       }
     }
 
     // Case 2: NextAuth session expired but Zustand still thinks user is logged in
     // (Only if we previously synced - don't clear credential-based sessions)
     if (!session && user && hasSyncedRef.current) {
+      console.log('[SessionSync] NextAuth session expired, clearing Zustand user');
       logout();
       hasSyncedRef.current = false;
     }

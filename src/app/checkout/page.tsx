@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, ShoppingBag, MapPin, CreditCard, Check, Loader2, MapPinned } from 'lucide-react';
+import { ArrowRight, ShoppingBag, MapPin, CreditCard, Check, Loader2, MapPinned, AlertTriangle } from 'lucide-react';
 import { Header } from '@/components/store/Header';
 import { Footer } from '@/components/store/Footer';
 import { CartSidebar } from '@/components/store/CartSidebar';
@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useStore } from '@/store/useStore';
+import { useToast } from '@/hooks/use-toast';
 import { Category } from '@prisma/client';
 
 interface SavedAddress {
@@ -31,7 +32,8 @@ interface SavedAddress {
 
 export default function CheckoutPage() {
   const router = useRouter();
-  const { items, language, user, clearCart } = useStore();
+  const { items, language, user, clearCart, setAuthModalOpen } = useStore();
+  const { toast } = useToast();
   const isArabic = language === 'ar';
   
   const [categories, setCategories] = useState<Category[]>([]);
@@ -137,9 +139,67 @@ export default function CheckoutPage() {
     }
   }, [items.length, paymentSuccess, router]);
 
+  // Validate shipping form
+  const validateShippingForm = (): boolean => {
+    if (!shippingForm.fullName || shippingForm.fullName.trim().length < 2) {
+      toast({
+        title: isArabic ? 'خطأ' : 'Error',
+        description: isArabic ? 'يرجى إدخال الاسم الكامل' : 'Please enter your full name',
+        variant: 'destructive',
+      });
+      setStep('shipping');
+      return false;
+    }
+
+    const phoneRegex = /^(\+20|0)?1[0-25][0-9]{8}$/;
+    if (!phoneRegex.test(shippingForm.phone.replace(/\s/g, ''))) {
+      toast({
+        title: isArabic ? 'خطأ' : 'Error',
+        description: isArabic ? 'يرجى إدخال رقم هاتف صالح' : 'Please enter a valid phone number',
+        variant: 'destructive',
+      });
+      setStep('shipping');
+      return false;
+    }
+
+    if (!shippingForm.governorate) {
+      toast({
+        title: isArabic ? 'خطأ' : 'Error',
+        description: isArabic ? 'يرجى اختيار المحافظة' : 'Please select a governorate',
+        variant: 'destructive',
+      });
+      setStep('shipping');
+      return false;
+    }
+
+    if (!shippingForm.city || shippingForm.city.trim().length < 2) {
+      toast({
+        title: isArabic ? 'خطأ' : 'Error',
+        description: isArabic ? 'يرجى إدخال المدينة' : 'Please enter the city',
+        variant: 'destructive',
+      });
+      setStep('shipping');
+      return false;
+    }
+
+    if (!shippingForm.address || shippingForm.address.trim().length < 5) {
+      toast({
+        title: isArabic ? 'خطأ' : 'Error',
+        description: isArabic ? 'يرجى إدخال العنوان التفصيلي' : 'Please enter a detailed address',
+        variant: 'destructive',
+      });
+      setStep('shipping');
+      return false;
+    }
+
+    return true;
+  };
+
   const handleShippingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setStep('payment');
+    if (validateShippingForm()) {
+      setStep('payment');
+    }
   };
 
   const handlePaymentSuccess = async (data: PaymentData) => {
@@ -147,56 +207,107 @@ export default function CheckoutPage() {
     setPaymentData(data);
     
     try {
-      // Step 1: Create order first
+      // Validate data before sending
+      if (!items || items.length === 0) {
+        toast({
+          title: isArabic ? 'خطأ' : 'Error',
+          description: isArabic ? 'السلة فارغة' : 'Cart is empty',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // Build order payload
+      const orderPayload: Record<string, any> = {
+        userId: user?.id || null,
+        items: items.map(item => ({
+          productId: item.productId,
+          skuId: item.skuId || null,
+          quantity: item.quantity,
+          price: item.product.discountPrice || item.product.price,
+        })),
+        shippingAddress: JSON.stringify({
+          fullName: shippingForm.fullName,
+          phone: shippingForm.phone,
+          email: shippingForm.email,
+          governorate: shippingForm.governorate,
+          city: shippingForm.city,
+          address: shippingForm.address,
+          notes: shippingForm.notes,
+        }),
+        phone: shippingForm.phone,
+        subtotal,
+        shippingFee,
+        total: data.method === 'cod' ? total + 15 : total,
+        paymentMethod: data.method,
+      };
+
+      console.log('[Checkout] Sending order:', {
+        userId: orderPayload.userId,
+        itemCount: orderPayload.items.length,
+        paymentMethod: orderPayload.paymentMethod,
+        total: orderPayload.total,
+        hasShippingAddress: !!orderPayload.shippingAddress,
+      });
+
+      // Step 1: Create order
       const orderResponse = await fetch('/api/orders', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user?.id || null,
-          items: items.map(item => ({
-            productId: item.productId,
-            skuId: item.skuId,
-            quantity: item.quantity,
-            price: item.product.discountPrice || item.product.price,
-          })),
-          shippingAddress: JSON.stringify({
-            fullName: shippingForm.fullName,
-            phone: shippingForm.phone,
-            email: shippingForm.email,
-            governorate: shippingForm.governorate,
-            city: shippingForm.city,
-            address: shippingForm.address,
-            notes: shippingForm.notes,
-          }),
-          phone: shippingForm.phone,
-          subtotal,
-          shippingFee,
-          total: data.method === 'cod' ? total + 15 : total,
-          paymentMethod: data.method,
-        }),
+        body: JSON.stringify(orderPayload),
       });
 
-      const orderResult = await orderResponse.json();
+      let orderResult: any;
+      try {
+        orderResult = await orderResponse.json();
+      } catch (parseError) {
+        console.error('[Checkout] Failed to parse order response:', parseError);
+        toast({
+          title: isArabic ? 'خطأ في الاتصال' : 'Connection Error',
+          description: isArabic ? 'لم يتم الاستجابة من الخادم، يرجى المحاولة مرة أخرى' : 'Server did not respond, please try again',
+          variant: 'destructive',
+        });
+        setIsLoading(false);
+        return;
+      }
 
-      console.log('[Checkout] Order result:', orderResult);
+      console.log('[Checkout] Order response:', orderResult);
 
       if (!orderResult.success) {
         setIsLoading(false);
         const errorMsg = orderResult.error || (isArabic ? 'فشل في إنشاء الطلب' : 'Failed to create order');
-        alert(isArabic 
-          ? `حدث خطأ في إنشاء الطلب:\n${errorMsg}\n\n${orderResult.details || ''}` 
-          : `Order Error:\n${errorMsg}\n\n${orderResult.details || ''}`
-        );
+        const errorDetails = orderResult.details || '';
+        
+        // Show user-friendly error based on type
+        if (orderResponse.status === 401) {
+          toast({
+            title: isArabic ? 'يجب تسجيل الدخول' : 'Login Required',
+            description: isArabic ? 'يرجى تسجيل الدخول لإتمام الطلب' : 'Please login to complete your order',
+            variant: 'destructive',
+          });
+          // Open login modal after a delay
+          setTimeout(() => setAuthModalOpen(true, 'login'), 1000);
+          return;
+        }
+
+        toast({
+          title: isArabic ? 'خطأ في إنشاء الطلب' : 'Order Creation Error',
+          description: `${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`,
+          variant: 'destructive',
+        });
         return;
       }
 
       const orderId = orderResult.order?.id;
       
-      console.log('[Checkout] Order ID:', orderId);
-      
       if (!orderId) {
         setIsLoading(false);
-        alert(isArabic ? 'لم يتم إنشاء الطلب بشكل صحيح. حاول مرة أخرى.' : 'Order was not created properly. Please try again.');
+        toast({
+          title: isArabic ? 'خطأ' : 'Error',
+          description: isArabic ? 'لم يتم إنشاء الطلب بشكل صحيح. حاول مرة أخرى.' : 'Order was not created properly. Please try again.',
+          variant: 'destructive',
+        });
         return;
       }
 
@@ -205,6 +316,10 @@ export default function CheckoutPage() {
         setPaymentSuccess(true);
         setStep('confirmation');
         clearCart();
+        toast({
+          title: isArabic ? 'تم تأكيد الطلب!' : 'Order Confirmed!',
+          description: isArabic ? `طلبك رقم ${orderId.substring(0, 8)} تم تأكيده بنجاح` : `Your order #${orderId.substring(0, 8)} has been confirmed`,
+        });
         return;
       }
 
@@ -219,37 +334,46 @@ export default function CheckoutPage() {
         }),
       });
 
-      const paymentResult = await paymentResponse.json();
-
-      console.log('[Checkout] Payment result:', paymentResult);
-
-      if (!paymentResult.success) {
+      let paymentResult: any;
+      try {
+        paymentResult = await paymentResponse.json();
+      } catch (parseError) {
+        console.error('[Checkout] Failed to parse payment response:', parseError);
+        toast({
+          title: isArabic ? 'خطأ في الدفع' : 'Payment Error',
+          description: isArabic ? 'لم يتم الاستجابة من بوابة الدفع' : 'Payment gateway did not respond',
+          variant: 'destructive',
+        });
         setIsLoading(false);
-        const errorDetails = paymentResult.details 
-          ? `\nالتفاصيل: ${JSON.stringify(paymentResult.details)}`
-          : '';
-        alert(isArabic 
-          ? `حدث خطأ في الدفع:\n${paymentResult.error || ''}${errorDetails}` 
-          : `Payment Error:\n${paymentResult.error || ''}${errorDetails}`
-        );
         return;
       }
 
-      // Step 4: Handle payment result
+      console.log('[Checkout] Payment response:', paymentResult);
+
+      if (!paymentResult.success) {
+        setIsLoading(false);
+        const payError = paymentResult.error || (isArabic ? 'فشل في الدفع' : 'Payment failed');
+        const payDetails = paymentResult.details ? JSON.stringify(paymentResult.details) : '';
+        toast({
+          title: isArabic ? 'خطأ في الدفع' : 'Payment Error',
+          description: `${payError}${payDetails ? `\n${payDetails}` : ''}`,
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      // Step 4: Handle payment result based on method
       if (data.method === 'card' && paymentResult.paymentUrl) {
-        // Redirect to Paymob payment page
         window.location.href = paymentResult.paymentUrl;
         return;
       }
 
       if (data.method === 'wallet' && paymentResult.redirectUrl) {
-        // Redirect to wallet authorization
         window.location.href = paymentResult.redirectUrl;
         return;
       }
 
       if (data.method === 'kiosk' && paymentResult.billReference) {
-        // Show bill reference
         setPaymentData({
           ...data,
           referenceNumber: paymentResult.billReference,
@@ -257,6 +381,12 @@ export default function CheckoutPage() {
         setPaymentSuccess(true);
         setStep('confirmation');
         clearCart();
+        toast({
+          title: isArabic ? 'تم إنشاء الطلب!' : 'Order Created!',
+          description: isArabic 
+            ? `رقم الفاتورة: ${paymentResult.billReference}` 
+            : `Bill Reference: ${paymentResult.billReference}`,
+        });
         return;
       }
 
@@ -266,8 +396,12 @@ export default function CheckoutPage() {
       clearCart();
 
     } catch (error) {
-      console.error('Order error:', error);
-      alert(isArabic ? 'حدث خطأ في الاتصال' : 'Connection error');
+      console.error('[Checkout] Order error:', error);
+      toast({
+        title: isArabic ? 'خطأ في الاتصال' : 'Connection Error',
+        description: isArabic ? 'تعذر الاتصال بالخادم. تأكد من اتصالك بالإنترنت وحاول مرة أخرى.' : 'Could not connect to the server. Check your internet connection and try again.',
+        variant: 'destructive',
+      });
     } finally {
       setIsLoading(false);
     }
@@ -332,6 +466,30 @@ export default function CheckoutPage() {
             ))}
           </div>
 
+          {/* Login Warning */}
+          {!user?.id && step !== 'confirmation' && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-2xl flex items-center gap-3"
+            >
+              <AlertTriangle className="h-5 w-5 text-amber-600 flex-shrink-0" />
+              <p className="text-amber-800 dark:text-amber-200 text-sm">
+                {isArabic 
+                  ? 'يرجى تسجيل الدخول لإتمام الطلب وتتبع حالة الشحن' 
+                  : 'Please login to complete your order and track shipping status'}
+              </p>
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100 dark:border-amber-700 dark:text-amber-300"
+                onClick={() => setAuthModalOpen(true, 'login')}
+              >
+                {isArabic ? 'تسجيل الدخول' : 'Login'}
+              </Button>
+            </motion.div>
+          )}
+
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Main Content */}
             <div className="lg:col-span-2">
@@ -360,7 +518,7 @@ export default function CheckoutPage() {
                         <Label className="text-gray-700 dark:text-gray-300 mb-3 block">
                           {isArabic ? 'اختر عنوان محفوظ' : 'Select a saved address'}
                         </Label>
-                        <div className="grid gap-3">
+                        <div className="grid gap-3 max-h-60 overflow-y-auto">
                           {savedAddresses.map((addr) => (
                             <button
                               key={addr.id}
@@ -430,8 +588,10 @@ export default function CheckoutPage() {
                             type="tel"
                             value={shippingForm.phone}
                             onChange={(e) => setShippingForm({ ...shippingForm, phone: e.target.value })}
+                            placeholder="01xxxxxxxxx"
                             required
                             className="h-12 rounded-xl"
+                            dir="ltr"
                           />
                         </div>
                       </div>
@@ -444,6 +604,7 @@ export default function CheckoutPage() {
                           onChange={(e) => setShippingForm({ ...shippingForm, email: e.target.value })}
                           required
                           className="h-12 rounded-xl"
+                          dir="ltr"
                         />
                       </div>
 
@@ -525,7 +686,13 @@ export default function CheckoutPage() {
                     <PaymentOptions
                       total={total}
                       onPaymentSuccess={handlePaymentSuccess}
-                      onPaymentError={(error) => console.error('Payment error:', error)}
+                      onPaymentError={(error) => {
+                        toast({
+                          title: isArabic ? 'خطأ' : 'Error',
+                          description: error,
+                          variant: 'destructive',
+                        });
+                      }}
                     />
 
                     <Button
@@ -570,6 +737,22 @@ export default function CheckoutPage() {
                       </div>
                     )}
 
+                    {paymentData?.referenceNumber && (
+                      <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 mb-6">
+                        <p className="text-blue-800 dark:text-blue-200 mb-1">
+                          {isArabic ? 'رقم الفاتورة:' : 'Bill Reference:'}
+                        </p>
+                        <p className="text-2xl font-bold text-blue-600 font-mono">
+                          {paymentData.referenceNumber}
+                        </p>
+                        <p className="text-sm text-blue-600 dark:text-blue-400 mt-2">
+                          {isArabic 
+                            ? 'يمكنك الدفع من أي فرع فوري أو أجري باستخدام هذا الرقم' 
+                            : 'You can pay at any Fawry or Aman outlet using this reference'}
+                        </p>
+                      </div>
+                    )}
+
                     <p className="text-gray-600 dark:text-gray-400 mb-6">
                       {isArabic 
                         ? 'سيتم إرسال تفاصيل الطلب إلى بريدك الإلكتروني'
@@ -577,15 +760,46 @@ export default function CheckoutPage() {
                       }
                     </p>
 
-                    <Button
-                      onClick={() => router.push('/')}
-                      className="bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-xl"
-                    >
-                      {isArabic ? 'العودة للرئيسية' : 'Back to Home'}
-                    </Button>
+                    <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                      <Button
+                        onClick={() => router.push('/')}
+                        className="bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-xl"
+                      >
+                        {isArabic ? 'العودة للرئيسية' : 'Back to Home'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => router.push('/profile')}
+                        className="rounded-xl"
+                      >
+                        {isArabic ? 'تتبع الطلب' : 'Track Order'}
+                      </Button>
+                    </div>
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Loading Overlay */}
+              {isLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center"
+                >
+                  <div className="bg-white dark:bg-gray-800 rounded-2xl p-8 text-center shadow-2xl">
+                    <Loader2 className="h-12 w-12 animate-spin text-teal-500 mx-auto mb-4" />
+                    <p className="text-lg font-medium text-gray-900 dark:text-white">
+                      {paymentData?.method === 'cod' 
+                        ? (isArabic ? 'جاري تأكيد الطلب...' : 'Confirming order...')
+                        : (isArabic ? 'جاري معالجة الدفع...' : 'Processing payment...')
+                      }
+                    </p>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">
+                      {isArabic ? 'يرجى الانتظار ولا تغلق الصفحة' : 'Please wait, do not close the page'}
+                    </p>
+                  </div>
+                </motion.div>
+              )}
             </div>
 
             {/* Order Summary */}
@@ -595,7 +809,7 @@ export default function CheckoutPage() {
                   {isArabic ? 'ملخص الطلب' : 'Order Summary'}
                 </h3>
 
-                <div className="space-y-3 mb-4">
+                <div className="space-y-3 mb-4 max-h-60 overflow-y-auto">
                   {items.map((item) => {
                     const images = JSON.parse(item.product.images || '[]');
                     const mainImage = images[0] || 'https://via.placeholder.com/100';
@@ -603,20 +817,20 @@ export default function CheckoutPage() {
                     
                     return (
                       <div key={item.id} className="flex items-center gap-3">
-                        <div className="h-14 w-14 rounded-lg overflow-hidden bg-gray-100">
+                        <div className="h-14 w-14 rounded-lg overflow-hidden bg-gray-100 flex-shrink-0">
                           <img
                             src={mainImage}
                             alt={isArabic ? item.product.nameAr : item.product.name}
                             className="w-full h-full object-cover"
                           />
                         </div>
-                        <div className="flex-1">
+                        <div className="flex-1 min-w-0">
                           <p className="font-medium text-gray-900 dark:text-white text-sm line-clamp-1">
                             {isArabic ? item.product.nameAr : item.product.name}
                           </p>
                           <p className="text-xs text-gray-500">x{item.quantity}</p>
                         </div>
-                        <span className="font-bold text-gray-900 dark:text-white">
+                        <span className="font-bold text-gray-900 dark:text-white text-sm">
                           {(price * item.quantity).toLocaleString()} {isArabic ? 'ج.م' : 'EGP'}
                         </span>
                       </div>
