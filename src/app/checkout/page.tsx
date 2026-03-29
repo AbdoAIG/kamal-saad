@@ -182,9 +182,10 @@ export default function CheckoutPage() {
 
       if (!orderResult.success) {
         setIsLoading(false);
+        const errorMsg = orderResult.error || (isArabic ? 'فشل في إنشاء الطلب' : 'Failed to create order');
         alert(isArabic 
-          ? `حدث خطأ في إنشاء الطلب:\n${orderResult.error || ''}\n${orderResult.details || ''}` 
-          : `Order Error:\n${orderResult.error || ''}\n${orderResult.details || ''}`
+          ? `حدث خطأ في إنشاء الطلب:\n${errorMsg}\n\n${orderResult.details || ''}` 
+          : `Order Error:\n${errorMsg}\n\n${orderResult.details || ''}`
         );
         return;
       }
@@ -195,7 +196,7 @@ export default function CheckoutPage() {
       
       if (!orderId) {
         setIsLoading(false);
-        alert(isArabic ? 'لم يتم إنشاء الطلب بشكل صحيح' : 'Order was not created properly');
+        alert(isArabic ? 'لم يتم إنشاء الطلب بشكل صحيح. حاول مرة أخرى.' : 'Order was not created properly. Please try again.');
         return;
       }
 

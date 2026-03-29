@@ -202,8 +202,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Determine user ID - allow guest orders
-    const userId = body.userId || user?.id || 'guest';
+    // Determine user ID - require authentication for order placement
+    const userId = body.userId || user?.id;
+    
+    if (!userId) {
+      return NextResponse.json(
+        { success: false, error: 'يجب تسجيل الدخول لإتمام الطلب' },
+        { status: 401 }
+      );
+    }
 
     // Create order
     const order = await db.order.create({

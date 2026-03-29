@@ -52,8 +52,8 @@ export function AuthModal() {
         }
         setError(data.error || (isArabic ? 'فشل في تسجيل الدخول' : 'Login failed'));
       } else {
-        setUser(data);
-        setUserId(data.id);
+        setUser(data.user);
+        setUserId(data.user.id);
         setAuthModalOpen(false);
         setLoginForm({ email: '', password: '' });
       }
