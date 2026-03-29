@@ -64,6 +64,15 @@ upload
 # Download folder
 download
 
+# Mini services
+mini-services
+
+# Database
+db
+
+# Coolify data
+coolify
+
 # Misc
 *.log
 *.pid

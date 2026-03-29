@@ -1,6 +1,6 @@
 # ============================================
-# Docker Compose for Kamal Saad E-commerce
-# Production deployment on Hetzner
+# Docker Compose — كمال سعد E-commerce
+# للنشر على Coolify (Vultr / أي خادم)
 # ============================================
 
 services:
@@ -17,15 +17,19 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://kamal:${DB_PASSWORD}@pgbouncer:6432/kamal_saad
-      - DIRECT_DATABASE_URL=postgresql://kamal:${DB_PASSWORD}@db:5432/kamal_saad
-      - REDIS_URL=redis://redis:6379
-      - REDIS_TOKEN=
+      - DATABASE_URL=${DATABASE_URL}
       - AUTH_SECRET=${AUTH_SECRET}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET}
       - NEXTAUTH_URL=${NEXTAUTH_URL}
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
       - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
       - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET=${R2_BUCKET}
+      - R2_ENDPOINT=${R2_ENDPOINT}
+      - R2_REGION=${R2_REGION}
+      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
       - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME}
       - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY}
       - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET}
@@ -35,84 +39,41 @@ services:
       - PAYMOB_KIOSK_INTEGRATION_ID=${PAYMOB_KIOSK_INTEGRATION_ID}
       - PAYMOB_IFRAME_ID=${PAYMOB_IFRAME_ID}
       - PAYMOB_HMAC_SECRET=${PAYMOB_HMAC_SECRET}
-      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
     depends_on:
-      pgbouncer:
-        condition: service_healthy
-      redis:
+      db:
         condition: service_healthy
     networks:
       - kamal-network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # ============================================
-  # PostgreSQL Database with PgBouncer
+  # PostgreSQL Database
   # ============================================
   db:
     image: postgres:16-alpine
     container_name: kamal-db
     restart: unless-stopped
     environment:
-      POSTGRES_USER: kamal
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: kamal_saad
+      POSTGRES_USER: ${POSTGRES_USER:-kamal}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-kamal_saad}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - kamal-network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U kamal -d kamal_saad"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-kamal} -d ${POSTGRES_DB:-kamal_saad}"]
       interval: 10s
       timeout: 5s
       retries: 5
 
   # ============================================
-  # PgBouncer - Connection Pooler
-  # Sits between app and database to manage connections efficiently
-  # Handles thousands of concurrent visitors with connection pooling
-  # ============================================
-  pgbouncer:
-    image: edoburu/pgbouncer
-    container_name: kamal-pgbouncer
-    restart: unless-stopped
-    environment:
-      DATABASE_URL: "postgres://kamal:${DB_PASSWORD}@db:5432/kamal_saad"
-      PGBOUNCER_POOL_MODE: transaction
-      PGBOUNCER_MAX_CLIENT_CONN: 1000
-      PGBOUNCER_DEFAULT_POOL_SIZE: 20
-      PGBOUNCER_MIN_POOL_SIZE: 5
-      PGBOUNCER_RESERVE_POOL_SIZE: 5
-      PGBOUNCER_RESERVE_POOL_TIMEOUT: 3
-      PGBOUNCER_SERVER_IDLE_TIMEOUT: 600
-      PGBOUNCER_SERVER_LIFETIME: 3600
-      PGBOUNCER_SERVER_CONNECT_TIMEOUT: 15
-      PGBOUNCER_SERVER_RESET_QUERY: "DISSET ALL"
-    ports:
-      - "6432:6432"
-    depends_on:
-      db:
-        condition: service_healthy
-    networks:
-      - kamal-network
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 -U kamal"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # ============================================
-  # Redis Cache - For distributed caching & rate limiting
+  # Redis Cache
   # ============================================
   redis:
     image: redis:7-alpine
     container_name: kamal-redis
     restart: unless-stopped
-    command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru --appendonly yes
+    command: redis-server --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
     networks:
@@ -123,43 +84,10 @@ services:
       timeout: 5s
       retries: 5
 
-  # ============================================
-  # Nginx Reverse Proxy
-  # ============================================
-  nginx:
-    image: nginx:alpine
-    container_name: kamal-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/conf.d:/etc/nginx/conf.d:ro
-      - ./certbot/conf:/etc/letsencrypt:ro
-      - ./certbot/www:/var/www/certbot:ro
-    depends_on:
-      - app
-    networks:
-      - kamal-network
-
-  # ============================================
-  # Certbot for SSL Certificates (Let's Encrypt)
-  # ============================================
-  certbot:
-    image: certbot/certbot
-    container_name: kamal-certbot
-    volumes:
-      - ./certbot/conf:/etc/letsencrypt
-      - ./certbot/www:/var/www/certbot
-    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
-    networks:
-      - kamal-network
-
 networks:
   kamal-network:
     driver: bridge
 
 volumes:
-  redis_data:
   postgres_data:
+  redis_data:
