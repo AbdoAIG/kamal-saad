@@ -78,6 +78,13 @@ export default function CheckoutPage() {
       .catch(console.error);
   }, []);
 
+  // Pre-fill email from logged-in user
+  useEffect(() => {
+    if (user?.email && !shippingForm.email) {
+      setShippingForm(prev => ({ ...prev, email: user.email }));
+    }
+  }, [user?.email]);
+
   // Load saved addresses if user is logged in
   useEffect(() => {
     if (user?.id) {
@@ -95,6 +102,7 @@ export default function CheckoutPage() {
                 ...prev,
                 fullName: defaultAddress.fullName,
                 phone: defaultAddress.phone,
+                email: user?.email || prev.email,
                 governorate: defaultAddress.governorate,
                 city: defaultAddress.city,
                 address: defaultAddress.address,
@@ -105,7 +113,7 @@ export default function CheckoutPage() {
         .catch(console.error)
         .finally(() => setIsLoadingAddress(false));
     }
-  }, [user?.id]);
+  }, [user?.id, user?.email]);
 
   const handleAddressSelect = (addressId: string) => {
     const address = savedAddresses.find(a => a.id === addressId);
@@ -115,6 +123,7 @@ export default function CheckoutPage() {
         ...prev,
         fullName: address.fullName,
         phone: address.phone,
+        email: user?.email || prev.email,
         governorate: address.governorate,
         city: address.city,
         address: address.address,

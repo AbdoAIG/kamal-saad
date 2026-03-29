@@ -234,7 +234,7 @@ const governorates = [
 export default function ProfilePage() {
   const router = useRouter();
   const { data: session, status } = useSession();
-  const { language } = useStore();
+  const { language, user } = useStore();
   const { toast } = useToast();
   const t = profileTranslations[language];
   const isArabic = language === 'ar';
@@ -279,40 +279,106 @@ export default function ProfilePage() {
   // Validation errors
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Redirect if not authenticated
+  // Redirect if not authenticated — only when BOTH NextAuth session AND Zustand user are missing
   useEffect(() => {
-    if (status === 'unauthenticated') {
+    if (status !== 'loading' && status === 'unauthenticated' && !user) {
       toast({
         title: t.loginRequired,
         variant: 'destructive'
       });
       router.push('/');
     }
-  }, [status, router, toast, t.loginRequired]);
+  }, [status, user, router, toast, t.loginRequired]);
+
+  // Always set isLoading to false when NextAuth status is no longer 'loading'
+  // and we have a Zustand user (for custom auth users)
+  useEffect(() => {
+    if (status !== 'loading' && user) {
+      setIsLoading(false);
+    }
+  }, [status, user]);
 
   // Fetch user data
   useEffect(() => {
     const fetchData = async () => {
-      if (status !== 'authenticated') return;
-      
+      // Skip if NextAuth is still loading and no Zustand user either
+      if (status === 'loading' && !user) return;
+      // Skip if neither auth system has a user
+      if (status === 'unauthenticated' && !user) return;
+
+      // Determine the effective user ID (NextAuth or Zustand)
+      const effectiveUserId = session?.user?.id || user?.id;
+      if (!effectiveUserId) {
+        setIsLoading(false);
+        return;
+      }
+
       try {
-        const [userRes, loyaltyRes] = await Promise.all([
-          fetch('/api/user'),
-          fetch(`/api/loyalty?userId=${session?.user?.id}`)
-        ]);
-        
-        const userData = await userRes.json();
-        const loyaltyResult = await loyaltyRes.json();
-        
-        if (userData.success) {
-          setProfile(userData.data);
-          setEditName(userData.data.name || '');
-          setEditPhone(userData.data.phone || '');
-          setEditImage(userData.data.image || '');
+        // Try NextAuth-protected /api/user first
+        let userProfile: UserProfile | null = null;
+
+        if (status === 'authenticated') {
+          const [userRes, loyaltyRes] = await Promise.all([
+            fetch('/api/user'),
+            fetch(`/api/loyalty?userId=${effectiveUserId}`)
+          ]);
+          
+          const userData = await userRes.json();
+          const loyaltyResult = await loyaltyRes.json();
+
+          if (userData.success && userData.data) {
+            userProfile = userData.data;
+          }
+
+          if (loyaltyResult.success) {
+            setLoyaltyData(loyaltyResult.data);
+          }
         }
-        
-        if (loyaltyResult.success) {
-          setLoyaltyData(loyaltyResult.data);
+
+        // Fallback: build profile from Zustand user data if /api/user failed
+        if (!userProfile && user) {
+          userProfile = {
+            id: user.id,
+            email: user.email,
+            name: user.name || null,
+            phone: user.phone || null,
+            image: null,
+            role: user.role,
+            loyaltyPoints: 0,
+            createdAt: new Date().toISOString(),
+            addresses: [],
+          };
+        }
+
+        if (userProfile) {
+          setProfile(userProfile);
+          setEditName(userProfile.name || '');
+          setEditPhone(userProfile.phone || '');
+          setEditImage(userProfile.image || '');
+        }
+
+        // Fetch addresses (uses custom session cookie, works for both auth systems)
+        try {
+          const addressesRes = await fetch('/api/addresses');
+          const addressesData = await addressesRes.json();
+          if (addressesData.success && addressesData.data) {
+            setProfile(prev => prev ? { ...prev, addresses: addressesData.data } : null);
+          }
+        } catch (addrError) {
+          console.error('Error fetching addresses:', addrError);
+        }
+
+        // Fetch loyalty if we haven't already (for custom auth users)
+        if (status !== 'authenticated' || !loyaltyData) {
+          try {
+            const loyaltyRes = await fetch(`/api/loyalty?userId=${effectiveUserId}`);
+            const loyaltyResult = await loyaltyRes.json();
+            if (loyaltyResult.success) {
+              setLoyaltyData(loyaltyResult.data);
+            }
+          } catch (loyaltyError) {
+            console.error('Error fetching loyalty:', loyaltyError);
+          }
         }
       } catch (error) {
         console.error('Error fetching profile:', error);
@@ -326,7 +392,7 @@ export default function ProfilePage() {
     };
     
     fetchData();
-  }, [status, session?.user?.id, toast, t.error]);
+  }, [status, session?.user?.id, user, toast, t.error]);
 
   // Handle profile update
   const handleProfileUpdate = async () => {
@@ -567,9 +633,28 @@ export default function ProfilePage() {
     );
   }
 
-  // Not authenticated
-  if (!profile) {
-    return null;
+  // Not authenticated — show message instead of blank page
+  if (!profile && !isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900" dir={isArabic ? 'rtl' : 'ltr'}>
+        <Header onMenuClick={() => {}} />
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center p-8 max-w-md">
+            <User className="h-16 w-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" />
+            <h2 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">
+              {t.loginRequired}
+            </h2>
+            <p className="text-gray-500 dark:text-gray-400 mb-6">
+              {isArabic ? 'يرجى تسجيل الدخول أولاً للوصول لملفك الشخصي' : 'Please login first to access your profile'}
+            </p>
+            <Button onClick={() => router.push('/')} className="bg-teal-500 hover:bg-teal-600 text-white rounded-xl px-8">
+              {t.backToHome}
+            </Button>
+          </div>
+        </main>
+        <Footer />
+      </div>
+    );
   }
 
   return (
