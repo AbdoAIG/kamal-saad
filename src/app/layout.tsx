@@ -43,30 +43,34 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" className="light" suppressHydrationWarning>
+    <html lang="ar" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
-        {/* Force light color-scheme to prevent browser auto dark mode on mobile */}
-        <meta name="color-scheme" content="light" />
         <meta name="theme-color" content="#ffffff" />
-        {/* Force light mode - dark mode disabled */}
+        {/* Theme initialization - respect user choice */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
-                document.documentElement.classList.remove('dark');
-                document.documentElement.classList.add('light');
-                document.documentElement.style.colorScheme = 'light';
-                // Clear any stale dark theme from localStorage
                 try {
-                  var saved = localStorage.getItem('kamal-saad-store');
-                  if (saved) {
-                    var parsed = JSON.parse(saved);
-                    if (parsed.state && parsed.state.theme === 'dark') {
-                      parsed.state.theme = 'light';
-                      localStorage.setItem('kamal-saad-store', JSON.stringify(parsed));
+                  var savedTheme = localStorage.getItem('kamal-saad-store');
+                  var isDark = false;
+
+                  if (savedTheme) {
+                    var parsed = JSON.parse(savedTheme);
+                    if (parsed.state && parsed.state.theme) {
+                      isDark = parsed.state.theme === 'dark';
                     }
+                  } else {
+                    // No saved preference - default to light
+                    isDark = false;
+                  }
+
+                  if (isDark) {
+                    document.documentElement.classList.add('dark');
+                  } else {
+                    document.documentElement.classList.remove('dark');
                   }
                 } catch (e) {}
               })();
