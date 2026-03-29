@@ -1,10 +1,10 @@
 /**
  * ═══════════════════════════════════════════════════════════════
- *  نظام العلامة المائية — مضمون يعمل على Vercel
+ *  نظام العلامة المائية — شعار KMS
  * ═══════════════════════════════════════════════════════════════
  *
- * يقرأ العلامة المائية من public/watermark.png
- * يمكنك استبدال هذا الملف بشعار KMS الخاص بك
+ * يقرأ شعار KMS من public/watermark.png ويضعه على الصور
+ * الشعار يحافظ على نسبة العرض/الارتفاع الأصلية
  */
 
 import sharp from 'sharp';
@@ -13,10 +13,10 @@ import path from 'path';
 
 // ذاكرة مؤقتة
 let cachedWm: Buffer | null = null;
+let cachedWmMeta: { width: number; height: number; ratio: number } | null = null;
 
 /**
- * قراءة ملف العلامة المائية
- * يبحث في: public/watermark.png
+ * قراءة ملف شعار العلامة المائية
  */
 function loadWatermark(): Buffer | null {
   if (cachedWm) return cachedWm;
@@ -25,7 +25,6 @@ function loadWatermark(): Buffer | null {
     path.join(process.cwd(), 'public', 'watermark.png'),
     path.join(process.cwd(), '.next', 'server', 'watermark.png'),
     path.join(__dirname, '..', '..', 'public', 'watermark.png'),
-    path.join(__dirname, 'watermark.png'),
   ];
 
   for (const p of possiblePaths) {
@@ -36,47 +35,75 @@ function loadWatermark(): Buffer | null {
     }
   }
 
-  console.error('[Watermark] NOT FOUND in any path:', possiblePaths);
+  console.error('[Watermark] NOT FOUND — checked:', possiblePaths.map(p => p.replace(process.cwd(), '...')));
   return null;
 }
 
 /**
- * وضع العلامة المائية على صورة
+ * قراءة أبعاد العلامة المائية (مع cache)
+ */
+async function getWatermarkMeta(): Promise<{ width: number; height: number; ratio: number } | null> {
+  if (cachedWmMeta) return cachedWmMeta;
+
+  const wm = loadWatermark();
+  if (!wm) return null;
+
+  const meta = await sharp(wm).metadata();
+  const w = meta.width || 300;
+  const h = meta.height || 100;
+
+  cachedWmMeta = { width: w, height: h, ratio: h / w };
+  return cachedWmMeta;
+}
+
+/**
+ * وضع شعار KMS كعلامة مائية على صورة
  */
 export async function addWatermark(imageBuffer: Buffer): Promise<Buffer> {
   try {
     const wmSource = loadWatermark();
     if (!wmSource) {
-      console.error('[Watermark] No watermark file found — skipping');
+      console.error('[Watermark] No watermark file — skipping');
       return imageBuffer;
     }
 
-    // قراءة أبعاد الصورة
-    const meta = await sharp(imageBuffer).metadata();
-    const imgW = meta.width || 800;
+    const wmMeta = await getWatermarkMeta();
+    if (!wmMeta) return imageBuffer;
 
-    // حجم العلامة نسبة لحجم الصورة (18% من العرض، حد أدنى 80px)
-    const wmTargetW = Math.max(80, Math.round(imgW * 0.18));
+    // أبعاد الصورة
+    const imgMeta = await sharp(imageBuffer).metadata();
+    const imgW = imgMeta.width || 800;
+    const imgH = imgMeta.height || 800;
 
-    // تغيير حجم العلامة
+    // حجم الشعار: 22% من عرض الصورة (حد أدنى 80px، حد أقصى 250px)
+    const wmTargetW = Math.min(250, Math.max(80, Math.round(imgW * 0.22)));
+    const wmTargetH = Math.round(wmTargetW * wmMeta.ratio);
+
+    // تغيير حجم الشعار مع الحفاظ على النسبة
     const resizedWm = await sharp(wmSource)
-      .resize(wmTargetW)
+      .resize(wmTargetW, wmTargetH, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
       .png()
       .toBuffer();
 
-    // دمج العلامة مع الصورة
+    // حساب المسافة من الحواف
+    const padding = Math.max(10, Math.round(imgW * 0.02));
+
+    // دمج الشعار مع الصورة (أسفل اليمين)
     const result = await sharp(imageBuffer)
       .composite([
         {
           input: resizedWm,
           gravity: 'southeast',
-          offset: [12, 12],
+          offset: [padding, padding],
         },
       ])
       .toBuffer();
 
     const worked = result.length > imageBuffer.length;
-    console.log(`[Watermark] ${worked ? 'APPLIED ✓' : 'SKIPPED ✗'} — img: ${imgW}px, wm: ${wmTargetW}px, before: ${imageBuffer.length}B, after: ${result.length}B`);
+    console.log(`[Watermark] ${worked ? 'APPLIED ✓' : 'SKIPPED ✗'} — img: ${imgW}x${imgH}, logo: ${wmTargetW}x${wmTargetH}px`);
 
     return result;
   } catch (error) {
@@ -86,7 +113,7 @@ export async function addWatermark(imageBuffer: Buffer): Promise<Buffer> {
 }
 
 /**
- * تحسين الصورة
+ * تحسين الصورة: تحويل صيغة + تصغير أبعاد
  */
 export async function optimizeImage(
   imageBuffer: Buffer,
@@ -140,7 +167,10 @@ export async function processImage(
 ): Promise<Buffer> {
   const { maxWidth = 1920, quality = 85, format = 'webp', skipWatermark = false } = options || {};
 
+  // 1) تحسين الصورة
   const optimized = await optimizeImage(imageBuffer, { maxWidth, quality, format });
+
+  // 2) علامة مائية
   if (skipWatermark) return optimized;
 
   return addWatermark(optimized);
