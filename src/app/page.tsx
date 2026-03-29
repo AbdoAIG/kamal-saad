@@ -10,7 +10,7 @@ import { PartnersMarquee } from '@/components/store/PartnersMarquee';
 import { CartSidebar } from '@/components/store/CartSidebar';
 import { AuthModal } from '@/components/store/AuthModal';
 import { ProductCard } from '@/components/store/ProductCard';
-import { BannerSections } from '@/components/store/PromotionalBanner';
+import { HeroBannerSection, BelowCategoriesBannerSection, BetweenProductsBannerSection, AboveFooterBannerSection } from '@/components/store/PromotionalBanner';
 import { Sidebar } from '@/components/store/Sidebar';
 import { FavoritesSidebar } from '@/components/store/FavoritesSidebar';
 import { Button } from '@/components/ui/button';
@@ -180,8 +180,8 @@ function HomePageContent() {
       />
       
       <main className="flex-1">
-        {/* Banners - Hero + All Sections */}
-        <BannerSections />
+        {/* Hero Banners */}
+        <HeroBannerSection />
 
         {/* Categories Section */}
         <section className="py-6 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
@@ -217,7 +217,8 @@ function HomePageContent() {
           </div>
         </section>
 
-        {/* Banner slots are rendered inside BannerSections */}
+        {/* Below Categories Banners */}
+        <BelowCategoriesBannerSection />
 
         {/* Products Section */}
         <section id="products" className="py-6 bg-white dark:bg-gray-800">
@@ -289,6 +290,9 @@ function HomePageContent() {
           </div>
         </section>
 
+        {/* Between Products Banners */}
+        <BetweenProductsBannerSection />
+
         {/* How to Order */}
         <section className="py-6 bg-gray-50 dark:bg-gray-950">
           <div className="container mx-auto px-4">
@@ -313,6 +317,9 @@ function HomePageContent() {
           </div>
         </section>
       </main>
+
+        {/* Above Footer Banners */}
+        <AboveFooterBannerSection />
 
       {/* Partners Marquee */}
       <PartnersMarquee />
