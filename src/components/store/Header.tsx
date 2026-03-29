@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import { 
-  ShoppingCart, Search, User, Menu, X, Heart, 
-  Sun, Moon, Languages, Flame, Package, Settings, LogOut, MapPin, MessageCircle, LayoutDashboard
+  ShoppingCart, Search, User, Menu, Heart, 
+  Languages, Flame, Package, LogOut, MapPin, MessageCircle, LayoutDashboard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,7 +45,7 @@ export function Header({ onMenuClick }: HeaderProps) {
   
   const { 
     items, toggleCart, toggleAuthModal, user, searchQuery, setSearchQuery,
-    theme, toggleTheme, language, toggleLanguage, favorites, logout
+    language, toggleLanguage, favorites, logout
   } = useStore();
   
   const { settings } = useSettings();
@@ -57,13 +57,7 @@ export function Header({ onMenuClick }: HeaderProps) {
     setLocalSearch(searchQuery);
   }, [searchQuery]);
 
-  useEffect(() => {
-    if (theme === 'dark') {
-      document.documentElement.classList.add('dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-    }
-  }, [theme]);
+  // Dark mode disabled - always light mode
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -137,20 +131,7 @@ export function Header({ onMenuClick }: HeaderProps) {
                 <Languages className="h-5 w-5 text-gray-600 dark:text-gray-300" />
               </Button>
 
-              {/* Theme Toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={toggleTheme}
-                className="h-9 w-9 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
-                title={theme === 'dark' ? t('lightMode', language) : t('darkMode', language)}
-              >
-                {theme === 'dark' ? (
-                  <Sun className="h-5 w-5 text-yellow-500" />
-                ) : (
-                  <Moon className="h-5 w-5 text-gray-600" />
-                )}
-              </Button>
+
 
               {/* Favorites */}
               <Button

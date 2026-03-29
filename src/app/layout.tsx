@@ -43,34 +43,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ar" suppressHydrationWarning>
+    <html lang="ar" className="light" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
-        {/* Theme initialization - respect user preference */}
+        {/* Force light mode - dark mode disabled */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               (function() {
+                document.documentElement.classList.remove('dark');
+                document.documentElement.classList.add('light');
+                // Clear any stale dark theme from localStorage
                 try {
-                  var savedTheme = localStorage.getItem('kamal-saad-store');
-                  var isDark = false;
-
-                  if (savedTheme) {
-                    var parsed = JSON.parse(savedTheme);
-                    if (parsed.state && parsed.state.theme) {
-                      isDark = parsed.state.theme === 'dark';
+                  var saved = localStorage.getItem('kamal-saad-store');
+                  if (saved) {
+                    var parsed = JSON.parse(saved);
+                    if (parsed.state && parsed.state.theme === 'dark') {
+                      parsed.state.theme = 'light';
+                      localStorage.setItem('kamal-saad-store', JSON.stringify(parsed));
                     }
-                  } else {
-                    // No saved preference - use system preference (light by default)
-                    // User must explicitly choose dark mode
-                    isDark = false;
-                  }
-
-                  if (isDark) {
-                    document.documentElement.classList.add('dark');
-                  } else {
-                    document.documentElement.classList.remove('dark');
                   }
                 } catch (e) {}
               })();
