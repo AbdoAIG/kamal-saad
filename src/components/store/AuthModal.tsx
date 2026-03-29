@@ -11,7 +11,7 @@ import { useStore } from '@/store/useStore';
 import { motion } from 'framer-motion';
 
 export function AuthModal() {
-  const { isAuthModalOpen, setAuthModalOpen, authMode, setUser, setUserId, language } = useStore();
+  const { isAuthModalOpen, setAuthModalOpen, authMode, setUser, setUserId, language, mergeCartWithDB, loadFavoritesFromDB } = useStore();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -54,6 +54,19 @@ export function AuthModal() {
       } else {
         setUser(data);
         setUserId(data.id);
+
+        // Generate new session ID on login
+        useStore.setState({
+          sessionId: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`
+        });
+
+        // Merge local cart with DB and load DB favorites (non-blocking)
+        mergeCartWithDB();
+        loadFavoritesFromDB();
+
+        // Track login event
+        useStore.getState().trackEvent('login', {}, undefined);
+
         setAuthModalOpen(false);
         setLoginForm({ email: '', password: '' });
       }

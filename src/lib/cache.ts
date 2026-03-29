@@ -249,6 +249,11 @@ export const CacheKeys = {
     featured: () => 'products:featured',
     search: (query: string, page: number) =>
       `products:search:${encodeURIComponent(query)}:${page}`,
+    advancedSearch: (filters: string) =>
+      `products:adv-search:${filters}`,
+    suggestions: (query: string) =>
+      `products:suggestions:${encodeURIComponent(query)}`,
+    trending: () => 'products:trending',
   },
   categories: {
     list: () => 'categories:list',

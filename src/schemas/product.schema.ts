@@ -88,6 +88,29 @@ export const productQuerySchema = z.object({
   sortOrder: z.enum(['asc', 'desc']).default('desc'),
 });
 
+// Advanced search query schema
+export const advancedSearchQuerySchema = z.object({
+  q: z.string().max(200).optional(),
+  category: z.string().optional(),
+  minPrice: z.coerce.number().min(0).optional(),
+  maxPrice: z.coerce.number().max(999999.99).optional(),
+  rating: z.coerce.number().int().min(1).max(5).optional(),
+  inStock: z.coerce.boolean().optional(),
+  featured: z.coerce.boolean().optional(),
+  sortBy: z.enum(['relevance', 'price_asc', 'price_desc', 'newest', 'rating', 'sales']).default('relevance'),
+  sortOrder: z.enum(['asc', 'desc']).default('desc'),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(60).default(20),
+  hasDiscount: z.coerce.boolean().optional(),
+});
+
+// Search suggestions query schema
+export const searchSuggestionsQuerySchema = z.object({
+  q: z.string().min(1).max(200),
+});
+
+export type AdvancedSearchQuery = z.infer<typeof advancedSearchQuerySchema>;
+export type SearchSuggestionsQuery = z.infer<typeof searchSuggestionsQuerySchema>;
 export type ProductInput = z.infer<typeof productSchema>;
 export type UpdateProductInput = z.infer<typeof updateProductSchema>;
 export type ProductQuery = z.infer<typeof productQuerySchema>;

@@ -62,7 +62,8 @@ interface AppState {
   selectedCategory: string | null;
   theme: 'light' | 'dark';
   language: 'ar' | 'en';
-  
+  sessionId: string;
+
   setItems: (items: CartItem[]) => void;
   addItem: (product: Product, quantity?: number, skuId?: string, skuLabel?: string) => void;
   removeItem: (itemId: string) => void;
@@ -97,6 +98,19 @@ interface AppState {
   setTheme: (theme: 'light' | 'dark') => void;
   toggleLanguage: () => void;
   setLanguage: (lang: 'ar' | 'en') => void;
+
+  // DB Sync - Cart
+  syncCartToDB: () => Promise<void>;
+  loadCartFromDB: () => Promise<void>;
+  mergeCartWithDB: () => Promise<void>;
+
+  // DB Sync - Favorites
+  syncFavoritesToDB: () => Promise<void>;
+  loadFavoritesFromDB: () => Promise<void>;
+  checkFavoritesStatus: (productIds: string[]) => Promise<Record<string, boolean>>;
+
+  // Analytics
+  trackEvent: (event: string, data?: any, productId?: string) => Promise<void>;
 }
 
 export const useStore = create<AppState>()(
@@ -114,6 +128,7 @@ export const useStore = create<AppState>()(
       selectedCategory: null,
       theme: 'light',
       language: 'ar',
+      sessionId: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
 
       setItems: (items) => set({ items }),
 
@@ -145,9 +160,17 @@ export const useStore = create<AppState>()(
           };
           set({ items: [...items, newItem] });
         }
+
+        // Non-blocking DB sync and analytics
+        get().syncCartToDB();
+        get().trackEvent('add_to_cart', {}, product.id);
       },
 
-      removeItem: (itemId) => set({ items: get().items.filter(item => item.id !== itemId) }),
+      removeItem: (itemId) => {
+        set({ items: get().items.filter(item => item.id !== itemId) });
+        // Non-blocking DB sync
+        get().syncCartToDB();
+      },
 
       updateQuantity: (itemId, quantity) => {
         if (quantity <= 0) {
@@ -158,10 +181,19 @@ export const useStore = create<AppState>()(
               item.id === itemId ? { ...item, quantity } : item
             )
           });
+          // Non-blocking DB sync
+          get().syncCartToDB();
         }
       },
 
-      clearCart: () => set({ items: [] }),
+      clearCart: () => {
+        set({ items: [] });
+        // Non-blocking DB sync
+        const state = get();
+        if (state.userId) {
+          fetch('/api/cart', { method: 'DELETE' }).catch(() => {});
+        }
+      },
 
       getTotal: () => {
         return get().items.reduce((total, item) => {
@@ -184,11 +216,28 @@ export const useStore = create<AppState>()(
             addedAt: new Date()
           };
           set({ favorites: [...favorites, newFavorite] });
+
+          // Non-blocking DB sync and analytics
+          const state = get();
+          if (state.userId) {
+            fetch('/api/favorites', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ productId: product.id })
+            }).catch(() => {});
+          }
+          get().trackEvent('add_to_favorites', {}, product.id);
         }
       },
 
       removeFavorite: (productId) => {
         set({ favorites: get().favorites.filter(f => f.productId !== productId) });
+
+        // Non-blocking DB sync
+        const state = get();
+        if (state.userId) {
+          fetch(`/api/favorites?productId=${productId}`, { method: 'DELETE' }).catch(() => {});
+        }
       },
 
       isFavorite: (productId) => {
@@ -210,7 +259,7 @@ export const useStore = create<AppState>()(
 
       setUser: (user) => set({ user }),
       setUserId: (id) => set({ userId: id }),
-      logout: () => set({ user: null, userId: null, items: [] }),
+      logout: () => set({ user: null, userId: null, items: [], favorites: [] }),
 
       toggleCart: () => set({ isCartOpen: !get().isCartOpen }),
       setCartOpen: (open) => set({ isCartOpen: open }),
@@ -252,6 +301,156 @@ export const useStore = create<AppState>()(
       },
 
       setLanguage: (lang) => set({ language: lang }),
+
+      // ============ DB Sync - Cart ============
+
+      // Sync cart to database (called when user logs in or cart changes)
+      syncCartToDB: async () => {
+        const state = get();
+        if (!state.userId) return;
+        try {
+          await fetch('/api/cart/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: state.items.map(item => ({
+                productId: item.productId,
+                skuId: item.skuId || undefined,
+                quantity: item.quantity
+              }))
+            })
+          });
+        } catch (error) {
+          console.error('Failed to sync cart to DB:', error);
+        }
+      },
+
+      // Load cart from database (called after login)
+      loadCartFromDB: async () => {
+        const state = get();
+        if (!state.userId) return;
+        try {
+          const res = await fetch('/api/cart');
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.cart && data.cart.items) {
+            set({
+              items: data.cart.items.map((item: any) => ({
+                id: `cart-${item.id}`,
+                productId: item.productId,
+                product: item.product,
+                quantity: item.quantity,
+                skuId: item.skuId || undefined,
+                skuLabel: item.sku ? `${item.sku.values?.map((v: any) => v.option?.value).join(' / ')}` : undefined
+              }))
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load cart from DB:', error);
+        }
+      },
+
+      // Merge local cart into DB cart (after login, merge both)
+      mergeCartWithDB: async () => {
+        const state = get();
+        if (!state.userId || state.items.length === 0) return;
+        try {
+          await fetch('/api/cart/merge', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              items: state.items.map(item => ({
+                productId: item.productId,
+                skuId: item.skuId || undefined,
+                quantity: item.quantity
+              }))
+            })
+          });
+          // Reload merged cart from DB
+          await get().loadCartFromDB();
+        } catch (error) {
+          console.error('Failed to merge cart:', error);
+        }
+      },
+
+      // ============ DB Sync - Favorites ============
+
+      // Sync favorites to database
+      syncFavoritesToDB: async () => {
+        const state = get();
+        if (!state.userId) return;
+        try {
+          await fetch('/api/favorites/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              productIds: state.favorites.map(f => f.productId)
+            })
+          });
+        } catch (error) {
+          console.error('Failed to sync favorites to DB:', error);
+        }
+      },
+
+      // Load favorites from database
+      loadFavoritesFromDB: async () => {
+        const state = get();
+        if (!state.userId) return;
+        try {
+          const res = await fetch('/api/favorites');
+          if (!res.ok) return;
+          const data = await res.json();
+          if (data.favorites) {
+            set({
+              favorites: data.favorites.map((fav: any) => ({
+                id: `fav-${fav.id}`,
+                productId: fav.productId,
+                product: fav.product,
+                addedAt: fav.createdAt
+              }))
+            });
+          }
+        } catch (error) {
+          console.error('Failed to load favorites from DB:', error);
+        }
+      },
+
+      // Check if products are favorited (for product listing)
+      checkFavoritesStatus: async (productIds: string[]) => {
+        const state = get();
+        if (!state.userId || productIds.length === 0) return {};
+        try {
+          const res = await fetch(`/api/favorites/check?productIds=${productIds.join(',')}`);
+          if (!res.ok) return {};
+          const data = await res.json();
+          return data.favorites || {};
+        } catch (error) {
+          console.error('Failed to check favorites:', error);
+          return {};
+        }
+      },
+
+      // ============ Analytics ============
+
+      // Track analytics event
+      trackEvent: async (event: string, data?: any, productId?: string) => {
+        try {
+          await fetch('/api/analytics/track', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              event,
+              data: typeof data === 'object' ? JSON.stringify(data) : data,
+              page: typeof window !== 'undefined' ? window.location.pathname : '/',
+              productId,
+              sessionId: get().sessionId
+            })
+          });
+        } catch (error) {
+          // Analytics should never block UI
+          console.debug('Analytics tracking failed:', error);
+        }
+      },
     }),
     {
       name: 'kamal-saad-store',
@@ -261,7 +460,8 @@ export const useStore = create<AppState>()(
         userId: state.userId,
         user: state.user,
         theme: state.theme,
-        language: state.language
+        language: state.language,
+        sessionId: state.sessionId,
       }),
     }
   )

@@ -51,6 +51,8 @@ model Cart {
   updatedAt DateTime   @updatedAt
   user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
   items     CartItem[]
+
+  @@unique([userId])
 }
 
 model CartItem {
@@ -194,6 +196,8 @@ model Product {
   stockNotifications StockNotification[]
   variants           ProductVariant[]
   variantSKUs        ProductVariantSKU[]
+  favorites          Favorite[]
+  views              ProductView[]
 }
 
 model Return {
@@ -292,6 +296,8 @@ model User {
   reviews            Review[]
   sessions           Session[]
   stockNotifications StockNotification[]
+  favorites          Favorite[]
+  productViews       ProductView[]
 }
 
 model Role {
@@ -431,4 +437,43 @@ model ProductVariantSKUValue {
   option    VariantOption      @relation(fields: [optionId], references: [id], onDelete: Cascade)
 
   @@unique([skuId, variantId])
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  userId    String
+  productId String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId])
+}
+
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  event     String
+  data      String?  @db.Text
+  page      String?
+  productId String?
+  sessionId String?
+  createdAt DateTime @default(now())
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String?
+  query     String
+  results   Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model ProductView {
+  id        String   @id @default(cuid())
+  productId String
+  userId    String?
+  createdAt DateTime @default(now())
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 }

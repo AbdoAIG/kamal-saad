@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Star, ShoppingCart, Heart, Package } from 'lucide-react';
@@ -17,7 +17,9 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const router = useRouter();
   const [imageLoaded, setImageLoaded] = useState(false);
   const [imageError, setImageError] = useState(false);
-  const { language, isFavorite, toggleFavorite } = useStore();
+  const { language, isFavorite, toggleFavorite, trackEvent, sessionId } = useStore();
+  const cardRef = useRef<HTMLDivElement>(null);
+  const hasTrackedView = useRef(false);
 
   const isArabic = language === 'ar';
   const isProductFavorite = isFavorite(product.id);
@@ -42,6 +44,33 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   const categoryName = isArabic ? product.category?.nameAr : product.category?.name;
   const currency = t('currency', language);
 
+  // IntersectionObserver for product view analytics (debounced - once per session per product)
+  const handleIntersection = useCallback((entries: IntersectionObserverEntry[]) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting && !hasTrackedView.current) {
+        hasTrackedView.current = true;
+        trackEvent('product_view', {}, product.id);
+      }
+    });
+  }, [trackEvent, product.id]);
+
+  useEffect(() => {
+    const el = cardRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(handleIntersection, {
+      threshold: 0.5, // At least 50% of the card must be visible
+    });
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [handleIntersection]);
+
+  // Reset tracking when product ID changes (reusable card component)
+  useEffect(() => {
+    hasTrackedView.current = false;
+  }, [product.id]);
+
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -63,6 +92,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
   return (
     <motion.div
+      ref={cardRef}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -4 }}
