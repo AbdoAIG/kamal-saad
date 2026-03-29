@@ -142,12 +142,23 @@ export async function POST(request: Request) {
 
     // ─── الخطوة 2: تحسين + علامة مائية ───
     console.log('[Upload] Processing image (optimize + watermark)...');
-    const processedBuffer = await processImage(fileBuffer, {
-      maxWidth: 1920,
-      quality: 85,
-      format: 'webp',
-    });
-    console.log(`[Upload] Optimized: ${(fileBuffer.length / 1024).toFixed(1)}KB → ${(processedBuffer.length / 1024).toFixed(1)}KB (${Math.round((1 - processedBuffer.length / fileBuffer.length) * 100)}% saved)`);
+    let processedBuffer: Buffer;
+    let watermarkApplied = false;
+
+    try {
+      processedBuffer = await processImage(fileBuffer, {
+        maxWidth: 1920,
+        quality: 85,
+        format: 'webp',
+      });
+      // التحقق: إذا حجم الصورة تغيّر = العلامة المائية نجحت
+      watermarkApplied = processedBuffer.length !== fileBuffer.length;
+      console.log(`[Upload] Processed: ${(fileBuffer.length / 1024).toFixed(1)}KB → ${(processedBuffer.length / 1024).toFixed(1)}KB, watermark: ${watermarkApplied ? 'YES' : 'NO'}`);
+    } catch (err) {
+      console.error('[Upload] processImage failed, using original:', err);
+      processedBuffer = fileBuffer;
+      watermarkApplied = false;
+    }
 
     // ─── الخطوة 3: رفع إلى الخلفية ───
     let result: UploadedFile;
@@ -179,6 +190,7 @@ export async function POST(request: Request) {
       height: result.height,
       size: result.size,
       format: result.format,
+      watermarkApplied,
     });
   } catch (error: any) {
     console.error('[Upload] Error:', error);
