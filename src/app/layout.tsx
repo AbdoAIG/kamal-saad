@@ -47,6 +47,9 @@ export default function RootLayout({
       <head>
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
+        {/* Force light color-scheme to prevent browser auto dark mode on mobile */}
+        <meta name="color-scheme" content="light" />
+        <meta name="theme-color" content="#ffffff" />
         {/* Force light mode - dark mode disabled */}
         <script
           dangerouslySetInnerHTML={{
@@ -54,6 +57,7 @@ export default function RootLayout({
               (function() {
                 document.documentElement.classList.remove('dark');
                 document.documentElement.classList.add('light');
+                document.documentElement.style.colorScheme = 'light';
                 // Clear any stale dark theme from localStorage
                 try {
                   var saved = localStorage.getItem('kamal-saad-store');
