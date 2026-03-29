@@ -26,7 +26,7 @@ const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN
 /**
  * Simple Redis client for Upstash REST API
  */
-async function redisCommand(command: string[]): Promise<unknown> {
+export async function redisCommand(command: string[]): Promise<unknown> {
   if (!REDIS_URL || !REDIS_TOKEN) {
     throw new Error('Redis not configured')
   }

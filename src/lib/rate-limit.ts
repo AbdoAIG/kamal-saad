@@ -1,15 +1,14 @@
 /**
  * Rate Limiting System for API Protection
- * Uses in-memory storage with automatic cleanup
+ * Supports both in-memory (development) and Redis (production) backends
  */
 
 interface RateLimitEntry {
   count: number;
   resetTime: number;
-  blocked: boolean;
 }
 
-// In-memory store for rate limiting
+// In-memory store for rate limiting (fallback)
 const rateLimitStore = new Map<string, RateLimitEntry>();
 
 // Clean up old entries every minute
@@ -23,72 +22,152 @@ setInterval(() => {
 }, 60000);
 
 export interface RateLimitConfig {
-  interval: number; // Time window in milliseconds
-  limit: number;    // Max requests per interval
-  message?: string; // Custom error message
+  interval: number;
+  limit: number;
+  message?: string;
 }
 
 // Default rate limits for different endpoints
 export const rateLimits = {
-  // Authentication endpoints - stricter limits
   auth: {
-    interval: 60 * 1000, // 1 minute
-    limit: 5, // 5 attempts per minute
+    interval: 60 * 1000,
+    limit: 5,
     message: 'عدد محاولات كثيرة، يرجى المحاولة بعد دقيقة',
   },
   login: {
-    interval: 15 * 60 * 1000, // 15 minutes
-    limit: 10, // 10 attempts per 15 minutes
+    interval: 15 * 60 * 1000,
+    limit: 10,
     message: 'عدد محاولات تسجيل الدخول كثيرة، يرجى المحاولة بعد 15 دقيقة',
   },
   register: {
-    interval: 60 * 60 * 1000, // 1 hour
-    limit: 3, // 3 registrations per hour
+    interval: 60 * 60 * 1000,
+    limit: 3,
     message: 'تم الوصول للحد الأقصى من التسجيلات، يرجى المحاولة لاحقاً',
   },
-  // API endpoints - moderate limits
   api: {
-    interval: 60 * 1000, // 1 minute
-    limit: 60, // 60 requests per minute
+    interval: 60 * 1000,
+    limit: 60,
     message: 'عدد الطلبات كثيرة، يرجى التريث',
   },
-  // Public endpoints - higher limits
   public: {
-    interval: 60 * 1000, // 1 minute
-    limit: 100, // 100 requests per minute
+    interval: 60 * 1000,
+    limit: 100,
     message: 'عدد الطلبات كثيرة، يرجى التريث',
   },
-  // Checkout - moderate limits
   checkout: {
-    interval: 60 * 1000, // 1 minute
-    limit: 10, // 10 requests per minute
+    interval: 60 * 1000,
+    limit: 10,
     message: 'عدد طلبات الشراء كثيرة، يرجى المحاولة لاحقاً',
   },
 };
 
 /**
- * Check if a request should be rate limited
+ * Check if Redis is available for distributed rate limiting
  */
-export function checkRateLimit(
+function isRedisAvailable(): boolean {
+  return !!(
+    (process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL) &&
+    process.env.UPSTASH_REDIS_REST_TOKEN
+  );
+}
+
+/**
+ * Redis pipeline for atomic INCR + EXPIRE
+ * Uses MULTI/EXEC for true atomicity
+ */
+async function redisIncr(key: string, ttlSeconds: number): Promise<{ count: number; ttl: number }> {
+  const REDIS_URL = process.env.REDIS_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  if (!REDIS_URL || !REDIS_TOKEN) {
+    throw new Error('Redis not configured');
+  }
+
+  // Use pipeline: MULTI, INCR, EXPIRE, EXEC
+  const response = await fetch(REDIS_URL, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${REDIS_TOKEN}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify([
+      ['MULTI'],
+      ['INCR', key],
+      ['EXPIRE', key, ttlSeconds.toString()],
+      ['EXEC'],
+    ]),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Redis error: ${response.status}`);
+  }
+
+  const data = await response.json() as any;
+
+  // Pipeline returns array of results; EXEC result is the last element
+  if (data?.result && Array.isArray(data.result)) {
+    const execResult = data.result[data.result.length - 1];
+    // EXEC returns an array of individual command results
+    if (Array.isArray(execResult)) {
+      // execResult[0] is the INCR result (count), execResult[1] is EXPIRE result
+      const count = typeof execResult[0] === 'object' && execResult[0] !== null
+        ? Number((execResult[0] as { result?: number }).result || 0)
+        : Number(execResult[0] || 0);
+
+      return {
+        count,
+        ttl: ttlSeconds,
+      };
+    }
+  }
+
+  throw new Error('Invalid Redis response');
+}
+
+/**
+ * Check rate limit using Redis (distributed) or in-memory (local)
+ */
+export async function checkRateLimit(
   identifier: string,
   config: RateLimitConfig
-): { allowed: boolean; remaining: number; resetTime: number; message?: string } {
+): Promise<{ allowed: boolean; remaining: number; resetTime: number; message?: string }> {
+  const key = `ratelimit:${identifier}`;
+  const ttlSeconds = Math.ceil(config.interval / 1000);
+
+  // Try Redis first for distributed rate limiting
+  if (isRedisAvailable()) {
+    try {
+      const result = await redisIncr(key, ttlSeconds);
+
+      if (result.count > config.limit) {
+        return {
+          allowed: false,
+          remaining: 0,
+          resetTime: Date.now() + result.ttl * 1000,
+          message: config.message || 'Rate limit exceeded',
+        };
+      }
+
+      return {
+        allowed: true,
+        remaining: Math.max(0, config.limit - result.count),
+        resetTime: Date.now() + result.ttl * 1000,
+      };
+    } catch (error) {
+      // Fall back to in-memory if Redis fails
+      console.warn('[RateLimit] Redis rate limit failed, falling back to in-memory:', error);
+    }
+  }
+
+  // In-memory fallback (original logic)
   const now = Date.now();
-  const key = identifier;
-  
   let entry = rateLimitStore.get(key);
-  
-  // If no entry or expired, create new one
+
   if (!entry || entry.resetTime < now) {
-    entry = {
-      count: 0,
-      resetTime: now + config.interval,
-      blocked: false,
-    };
+    entry = { count: 0, resetTime: now + config.interval };
     rateLimitStore.set(key, entry);
   }
-  
-  // Check if limit exceeded
+
   if (entry.count >= config.limit) {
     return {
       allowed: false,
@@ -97,10 +176,9 @@ export function checkRateLimit(
       message: config.message || 'Rate limit exceeded',
     };
   }
-  
-  // Increment count
+
   entry.count++;
-  
+
   return {
     allowed: true,
     remaining: config.limit - entry.count,
@@ -112,17 +190,13 @@ export function checkRateLimit(
  * Get client identifier from request
  */
 export function getClientIdentifier(request: Request): string {
-  // Try to get IP from various headers
   const forwarded = request.headers.get('x-forwarded-for');
   const realIp = request.headers.get('x-real-ip');
-  const cfIp = request.headers.get('cf-connecting-ip'); // Cloudflare
-  
+  const cfIp = request.headers.get('cf-connecting-ip');
+
   const ip = cfIp || realIp || (forwarded?.split(',')[0]?.trim()) || 'unknown';
-  
-  // Also consider user agent for more unique identification
   const userAgent = request.headers.get('user-agent') || '';
-  
-  // Create a hash-like identifier
+
   return `${ip}:${userAgent.slice(0, 50)}`;
 }
 
@@ -142,15 +216,15 @@ export function getRateLimitHeaders(
 }
 
 /**
- * Middleware-like function to apply rate limiting
+ * Middleware-like function to apply rate limiting (async version)
  */
-export function withRateLimit(
+export async function withRateLimit(
   request: Request,
   config: RateLimitConfig
-): Response | null {
+): Promise<Response | null> {
   const identifier = getClientIdentifier(request);
-  const result = checkRateLimit(identifier, config);
-  
+  const result = await checkRateLimit(identifier, config);
+
   if (!result.allowed) {
     return new Response(
       JSON.stringify({
@@ -167,6 +241,6 @@ export function withRateLimit(
       }
     );
   }
-  
-  return null; // Request allowed
+
+  return null;
 }

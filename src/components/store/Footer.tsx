@@ -1,10 +1,12 @@
 'use client';
 
+import { useState, FormEvent } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { 
   Phone, Mail, MapPin, Facebook, Instagram, Youtube,
-  CreditCard, Shield, Truck, Clock, Heart, MessageCircle
+  CreditCard, Shield, Truck, Clock, Heart, MessageCircle,
+  Check, Loader2
 } from 'lucide-react';
 
 // X (Twitter) Icon Component
@@ -19,11 +21,17 @@ import { useStore, t } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSettings } from '@/hooks/useSettings';
+import { useToast } from '@/hooks/use-toast';
 
 export function Footer() {
   const { language } = useStore();
   const { settings } = useSettings();
+  const { toast } = useToast();
   const isArabic = language === 'ar';
+
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSubscribed, setIsSubscribed] = useState(false);
 
   return (
     <footer className="bg-gray-900 text-gray-300 mt-auto" dir={isArabic ? 'rtl' : 'ltr'}>
@@ -39,16 +47,36 @@ export function Footer() {
                 {t('newsletterDesc', language)}
               </p>
             </div>
-            <div className="flex gap-2 w-full md:w-auto">
+            <form onSubmit={handleSubscribe} className="flex gap-2 w-full md:w-auto">
               <Input
                 type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder={t('emailPlaceholder', language)}
-                className={`flex-1 md:w-80 px-5 py-3 rounded-xl ${isArabic ? 'text-right' : 'text-left'} bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50`}
+                disabled={isLoading || isSubscribed}
+                required
+                className={`flex-1 md:w-80 px-5 py-3 rounded-xl ${isArabic ? 'text-right' : 'text-left'} bg-white/95 focus:outline-none focus:ring-2 focus:ring-white/50 disabled:opacity-60`}
               />
-              <button className="px-6 py-3 bg-white text-teal-600 font-bold rounded-xl hover:bg-gray-100 transition-colors">
-                {t('subscribe', language)}
+              <button
+                type="submit"
+                disabled={isLoading || isSubscribed || !email}
+                className="px-6 py-3 bg-white text-teal-600 font-bold rounded-xl hover:bg-gray-100 transition-colors disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2 min-w-[120px] justify-center"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    {isArabic ? 'جاري...' : 'Loading...'}
+                  </>
+                ) : isSubscribed ? (
+                  <>
+                    <Check className="h-5 w-5" />
+                    {isArabic ? 'تم!' : 'Done!'}
+                  </>
+                ) : (
+                  t('subscribe', language)
+                )}
               </button>
-            </div>
+            </form>
           </div>
         </div>
       </div>
@@ -267,4 +295,52 @@ export function Footer() {
       </div>
     </footer>
   );
+
+  async function handleSubscribe(e: FormEvent) {
+    e.preventDefault();
+
+    if (!email || !email.includes('@')) {
+      toast({
+        title: isArabic ? 'خطأ' : 'Error',
+        description: isArabic ? 'يرجى إدخال بريد إلكتروني صحيح' : 'Please enter a valid email address',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsLoading(true);
+
+    try {
+      const res = await fetch('/api/newsletter', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        setIsSubscribed(true);
+        setEmail('');
+        toast({
+          title: isArabic ? 'تم الاشتراك!' : 'Subscribed!',
+          description: data.message,
+        });
+      } else {
+        toast({
+          title: isArabic ? 'خطأ' : 'Error',
+          description: data.error,
+          variant: 'destructive',
+        });
+      }
+    } catch {
+      toast({
+        title: isArabic ? 'خطأ' : 'Error',
+        description: isArabic ? 'حدث خطأ أثناء الاشتراك' : 'An error occurred during subscription',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
 }

@@ -8,7 +8,7 @@ import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
   // Apply rate limiting for registration (3 registrations per hour)
-  const rateLimitResponse = withRateLimit(request, rateLimits.register);
+  const rateLimitResponse = await withRateLimit(request, rateLimits.register);
   if (rateLimitResponse) {
     return rateLimitResponse;
   }

@@ -7,6 +7,7 @@ import { SessionSync } from "@/components/auth/SessionSync";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import WhatsAppButton from "@/components/store/WhatsAppButton";
 import { ScrollToTopButton } from "@/components/store/ScrollToTopButton";
+import { StoreStructuredData, WebsiteStructuredData, BreadcrumbStructuredData } from "@/components/store/StructuredData";
 
 const notoSansArabic = Noto_Sans_Arabic({
   variable: "--font-arabic",
@@ -48,6 +49,13 @@ export default function RootLayout({
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
         <meta name="theme-color" content="#ffffff" />
+        <meta name="robots" content="index, follow" />
+        <meta name="googlebot" content="index, follow, max-video-preview:-1, max-image-preview:large, max-snippet:-1" />
+        <link rel="canonical" href="https://kamal-saad.vercel.app" />
+        {/* Structured Data for SEO */}
+        <StoreStructuredData />
+        <WebsiteStructuredData />
+        <BreadcrumbStructuredData />
         {/* Theme initialization - respect user choice */}
         <script
           dangerouslySetInnerHTML={{

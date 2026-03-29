@@ -37,7 +37,7 @@ function validateLogin(body: any): { email: string; password: string } | { error
 
 export async function POST(request: NextRequest) {
   // Apply rate limiting for login (10 attempts per 15 minutes)
-  const rateLimitResponse = withRateLimit(request, rateLimits.login);
+  const rateLimitResponse = await withRateLimit(request, rateLimits.login);
   if (rateLimitResponse) {
     return rateLimitResponse;
   }

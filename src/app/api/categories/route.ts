@@ -2,23 +2,34 @@ import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { requireAdmin } from '@/lib/auth-utils';
 import { categorySchema, validateBody } from '@/schemas';
+import { cacheGetOrSet, cacheDelPattern, CacheTTL, isRedisAvailable } from '@/lib/cache';
 
-// GET - Get all categories
+// GET - Get all categories (cached)
 export async function GET() {
   try {
-    const categories = await db.category.findMany({
-      orderBy: { nameAr: 'asc' },
-      include: {
-        _count: {
-          select: { products: true }
-        }
-      }
-    });
+    const result = await cacheGetOrSet(
+      'categories:all',
+      async () => {
+        const categories = await db.category.findMany({
+          orderBy: { nameAr: 'asc' },
+          include: {
+            _count: {
+              select: { products: true }
+            }
+          }
+        });
+        return categories;
+      },
+      { ttl: CacheTTL.LONG, prefix: 'api' }
+    );
 
-    return NextResponse.json({
-      success: true,
-      data: categories
-    });
+    const headers: HeadersInit = {};
+    headers['X-Cache'] = isRedisAvailable() ? 'HIT' : 'MEMORY';
+
+    return NextResponse.json(
+      { success: true, data: result },
+      { headers }
+    );
   } catch (error) {
     console.error('Error fetching categories:', error);
     return NextResponse.json(
@@ -70,6 +81,9 @@ export async function POST(request: NextRequest) {
         description: description || null
       }
     });
+
+    // Invalidate categories cache
+    await cacheDelPattern('categories:*', { prefix: 'api' });
 
     return NextResponse.json({
       success: true,
@@ -144,6 +158,9 @@ export async function PUT(request: NextRequest) {
         description: description || null
       }
     });
+
+    // Invalidate categories cache
+    await cacheDelPattern('categories:*', { prefix: 'api' });
 
     return NextResponse.json({
       success: true,

@@ -6,7 +6,7 @@ import { withRateLimit, rateLimits } from '@/lib/rate-limit';
 // GET - Get all orders for admin with pagination
 export async function GET(request: NextRequest) {
   // Apply rate limiting
-  const rateLimitResponse = withRateLimit(request, rateLimits.api);
+  const rateLimitResponse = await withRateLimit(request, rateLimits.api);
   if (rateLimitResponse) {
     return rateLimitResponse;
   }

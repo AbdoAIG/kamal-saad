@@ -7,7 +7,7 @@ import { withRateLimit, rateLimits } from '@/lib/rate-limit';
 // Products where stock <= minStock
 export async function GET(request: NextRequest) {
   // Apply rate limiting
-  const rateLimitResponse = withRateLimit(request, rateLimits.api);
+  const rateLimitResponse = await withRateLimit(request, rateLimits.api);
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
@@ -136,7 +136,7 @@ export async function GET(request: NextRequest) {
 // POST - Send low stock notification to admins
 export async function POST(request: NextRequest) {
   // Apply rate limiting
-  const rateLimitResponse = withRateLimit(request, rateLimits.api);
+  const rateLimitResponse = await withRateLimit(request, rateLimits.api);
   if (rateLimitResponse) {
     return rateLimitResponse;
   }

@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Star, ShoppingCart, Heart, Package, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Product, useStore, t } from '@/store/useStore';
+import { optimizeImage, ImagePresets } from '@/lib/image-utils';
 import { motion } from 'framer-motion';
 
 interface ProductCardProps {
@@ -32,6 +34,7 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
   }
   
   const mainImage = images[0] || '';
+  const optimizedImage = optimizeImage(mainImage, ImagePresets.productCard);
   const hasDiscount = product.discountPrice && product.discountPrice < product.price;
   const discountPercent = hasDiscount
     ? Math.round(((product.price - (product.discountPrice || 0)) / product.price) * 100)
@@ -74,10 +77,12 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <div className="relative aspect-square bg-[#f8f8f8] dark:bg-gray-700 overflow-hidden">
             {/* Product Image */}
             {!imageError && mainImage ? (
-              <img
-                src={mainImage}
+              <Image
+                src={optimizedImage}
                 alt={productName}
-                className={`w-full h-full object-contain p-6 transition-transform duration-500 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                className={`object-contain p-6 transition-transform duration-500 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 onLoad={() => setImageLoaded(true)}
                 onError={() => { setImageError(true); setImageLoaded(true); }}
               />

@@ -10,12 +10,17 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useStore, t } from '@/store/useStore';
-import { Category } from '@prisma/client';
+// Minimal category shape — works with Prisma Category, server-serialized, or API data
+interface CategoryItem {
+  id: string;
+  name: string;
+  nameAr: string;
+}
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  categories: Category[];
+  categories: CategoryItem[];
   selectedCategory: string | null;
   onCategorySelect: (categoryId: string | null) => void;
 }

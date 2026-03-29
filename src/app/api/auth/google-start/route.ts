@@ -3,7 +3,7 @@ import { withRateLimit, rateLimits } from '@/lib/rate-limit';
 
 export async function GET(request: NextRequest) {
   // Apply rate limiting for OAuth (5 attempts per minute)
-  const rateLimitResponse = withRateLimit(request, rateLimits.auth);
+  const rateLimitResponse = await withRateLimit(request, rateLimits.auth);
   if (rateLimitResponse) {
     return rateLimitResponse;
   }
