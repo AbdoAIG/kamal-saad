@@ -354,22 +354,24 @@ model Partner {
 }
 
 model Banner {
-  id           String   @id @default(cuid())
-  title        String
-  titleAr      String
-  subtitle     String?
-  subtitleAr   String?
-  image        String
-  link         String?
-  buttonText   String?
-  buttonTextAr String?
-  buttonStyle  String   @default("white")
-  section      String   @default("hero")
-  size         String   @default("full")
-  active       Boolean  @default(true)
-  order        Int      @default(0)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id              String   @id @default(cuid())
+  title           String
+  titleAr         String
+  subtitle        String?
+  subtitleAr      String?
+  image           String
+  link            String?
+  section         String   @default("hero")
+  width           Int      @default(0)
+  height          Int      @default(0)
+  hotspotX        Int      @default(0)
+  hotspotY        Int      @default(0)
+  hotspotW        Int      @default(0)
+  hotspotH        Int      @default(0)
+  active          Boolean  @default(true)
+  order           Int      @default(0)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }
 
 // ============================================
