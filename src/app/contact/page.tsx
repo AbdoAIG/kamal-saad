@@ -401,7 +401,7 @@ export default function ContactPage() {
                         <div className="space-y-2">
                           <Label htmlFor="phone" className="text-gray-700 dark:text-gray-300">
                             {t.phoneLabel}{' '}
-                            <span className="text-gray-400 text-sm">{t.phoneOptional}</span>
+                            <span className="text-gray-400 dark:text-gray-500 text-sm">{t.phoneOptional}</span>
                           </Label>
                           <Input
                             id="phone"

@@ -158,7 +158,7 @@ export function AuthModal() {
   if (showVerificationSuccess) {
     return (
       <Dialog open={isAuthModalOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden dark:bg-gray-900">
           <div className="bg-gradient-to-l from-teal-500 to-cyan-500 p-8 text-center text-white">
             <motion.div
               initial={{ scale: 0 }}
@@ -173,20 +173,20 @@ export function AuthModal() {
             </DialogTitle>
           </div>
           
-          <div className="p-6 text-center">
-            <div className="bg-teal-50 border border-teal-100 rounded-xl p-4 mb-4">
+          <div className="p-6 text-center dark:bg-gray-900">
+            <div className="bg-teal-50 dark:bg-teal-900/30 border border-teal-100 dark:border-teal-800 rounded-xl p-4 mb-4">
               <Mail className="h-8 w-8 text-teal-500 mx-auto mb-2" />
-              <p className="text-gray-700 font-medium mb-2">
+              <p className="text-gray-700 dark:text-gray-300 font-medium mb-2">
                 {isArabic ? 'تحقق من بريدك الإلكتروني' : 'Check your email'}
               </p>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 {isArabic 
                   ? `أرسلنا رابط التحقق إلى ${registeredEmail}`
                   : `We sent a verification link to ${registeredEmail}`}
               </p>
             </div>
             
-            <p className="text-sm text-gray-500 mb-4">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">
               {isArabic 
                 ? 'اضغط على الرابط في البريد لتفعيل حسابك والبدء في التسوق.'
                 : 'Click the link in the email to activate your account and start shopping.'}
@@ -208,7 +208,7 @@ export function AuthModal() {
   if (resendSuccess) {
     return (
       <Dialog open={isAuthModalOpen} onOpenChange={handleOpenChange}>
-        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+        <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden dark:bg-gray-900">
           <div className="bg-gradient-to-l from-green-500 to-emerald-500 p-8 text-center text-white">
             <motion.div
               initial={{ scale: 0 }}
@@ -223,8 +223,8 @@ export function AuthModal() {
             </DialogTitle>
           </div>
           
-          <div className="p-6 text-center">
-            <p className="text-gray-700 mb-4">
+          <div className="p-6 text-center dark:bg-gray-900">
+            <p className="text-gray-700 dark:text-gray-300 mb-4">
               {isArabic 
                 ? 'تم إرسال رابط تحقق جديد إلى بريدك الإلكتروني. تحقق من صندوق الوارد.'
                 : 'A new verification link has been sent to your email. Check your inbox.'}
@@ -247,7 +247,7 @@ export function AuthModal() {
 
   return (
     <Dialog open={isAuthModalOpen} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden">
+      <DialogContent className="sm:max-w-md p-0 gap-0 overflow-hidden dark:bg-gray-900">
         {/* Header with Logo */}
         <div className="bg-gradient-to-l from-teal-500 to-cyan-500 p-6 text-center text-white">
           <motion.div
@@ -270,14 +270,14 @@ export function AuthModal() {
         </div>
 
         <Tabs defaultValue={authMode} className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-14 rounded-none bg-gray-50">
+          <TabsList className="grid w-full grid-cols-2 h-14 rounded-none bg-gray-50 dark:bg-gray-800">
             <TabsTrigger
               value="login"
               onClick={() => {
                 setError('');
                 setRequiresVerification(false);
               }}
-              className="h-full rounded-none data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium"
+              className="h-full rounded-none data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-900 font-medium"
             >
               {isArabic ? 'تسجيل الدخول' : 'Sign In'}
             </TabsTrigger>
@@ -287,7 +287,7 @@ export function AuthModal() {
                 setError('');
                 setRequiresVerification(false);
               }}
-              className="h-full rounded-none data-[state=active]:bg-white data-[state=active]:shadow-sm font-medium"
+              className="h-full rounded-none data-[state=active]:bg-white data-[state=active]:shadow-sm dark:data-[state=active]:bg-gray-900 font-medium"
             >
               {isArabic ? 'حساب جديد' : 'Sign Up'}
             </TabsTrigger>
@@ -299,7 +299,7 @@ export function AuthModal() {
               <Button
                 type="button"
                 variant="outline"
-                className="w-full h-12 rounded-xl border-2 hover:bg-gray-50 font-medium flex items-center justify-center gap-3"
+                className="w-full h-12 rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800 font-medium flex items-center justify-center gap-3"
                 onClick={handleGoogleLogin}
               >
                 <svg className="h-5 w-5" viewBox="0 0 24 24">
@@ -327,10 +327,10 @@ export function AuthModal() {
             {/* Divider */}
             <div className="relative mb-6">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t" />
+                <span className="w-full border-t dark:border-gray-700" />
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white px-2 text-gray-500">
+                <span className="bg-white dark:bg-gray-900 px-2 text-gray-500 dark:text-gray-400">
                   {isArabic ? 'أو' : 'or'}
                 </span>
               </div>
@@ -343,12 +343,12 @@ export function AuthModal() {
                     {isArabic ? 'البريد الإلكتروني' : 'Email'}
                   </Label>
                   <div className="relative">
-                    <Mail className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400`} />
+                    <Mail className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400 dark:text-gray-500`} />
                     <Input
                       id="login-email"
                       type="email"
                       placeholder="example@email.com"
-                      className={`${isArabic ? 'pr-11' : 'pl-11'} h-12 rounded-xl bg-gray-50 border-0 focus:bg-white`}
+                      className={`${isArabic ? 'pr-11' : 'pl-11'} h-12 rounded-xl bg-gray-50 dark:bg-gray-800 border-0 focus:bg-white dark:focus:bg-gray-700`}
                       value={loginForm.email}
                       onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
                       required
@@ -360,12 +360,12 @@ export function AuthModal() {
                     {isArabic ? 'كلمة المرور' : 'Password'}
                   </Label>
                   <div className="relative">
-                    <Lock className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400`} />
+                    <Lock className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400 dark:text-gray-500`} />
                     <Input
                       id="login-password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className={`${isArabic ? 'pr-11 pl-11' : 'pl-11 pr-11'} h-12 rounded-xl bg-gray-50 border-0 focus:bg-white`}
+                      className={`${isArabic ? 'pr-11 pl-11' : 'pl-11 pr-11'} h-12 rounded-xl bg-gray-50 dark:bg-gray-800 border-0 focus:bg-white dark:focus:bg-gray-700`}
                       value={loginForm.password}
                       onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                       required
@@ -373,7 +373,7 @@ export function AuthModal() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className={`absolute ${isArabic ? 'left-3' : 'right-3'} top-3 text-gray-400 hover:text-gray-600`}
+                      className={`absolute ${isArabic ? 'left-3' : 'right-3'} top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300`}
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -384,11 +384,11 @@ export function AuthModal() {
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-xl"
+                    className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-xl"
                   >
                     {error}
                     {requiresVerification && (
-                      <div className="mt-2 pt-2 border-t border-red-100">
+                      <div className="mt-2 pt-2 border-t border-red-100 dark:border-red-800">
                         <Button
                           type="button"
                           variant="link"
@@ -432,12 +432,12 @@ export function AuthModal() {
                     {isArabic ? 'الاسم الكامل' : 'Full Name'}
                   </Label>
                   <div className="relative">
-                    <User className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400`} />
+                    <User className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400 dark:text-gray-500`} />
                     <Input
                       id="register-name"
                       type="text"
                       placeholder={isArabic ? 'أحمد محمد' : 'John Doe'}
-                      className={`${isArabic ? 'pr-11' : 'pl-11'} h-12 rounded-xl bg-gray-50 border-0 focus:bg-white`}
+                      className={`${isArabic ? 'pr-11' : 'pl-11'} h-12 rounded-xl bg-gray-50 dark:bg-gray-800 border-0 focus:bg-white dark:focus:bg-gray-700`}
                       value={registerForm.name}
                       onChange={(e) => setRegisterForm({ ...registerForm, name: e.target.value })}
                       required
@@ -449,12 +449,12 @@ export function AuthModal() {
                     {isArabic ? 'البريد الإلكتروني' : 'Email'}
                   </Label>
                   <div className="relative">
-                    <Mail className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400`} />
+                    <Mail className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400 dark:text-gray-500`} />
                     <Input
                       id="register-email"
                       type="email"
                       placeholder="example@email.com"
-                      className={`${isArabic ? 'pr-11' : 'pl-11'} h-12 rounded-xl bg-gray-50 border-0 focus:bg-white`}
+                      className={`${isArabic ? 'pr-11' : 'pl-11'} h-12 rounded-xl bg-gray-50 dark:bg-gray-800 border-0 focus:bg-white dark:focus:bg-gray-700`}
                       value={registerForm.email}
                       onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
                       required
@@ -466,12 +466,12 @@ export function AuthModal() {
                     {isArabic ? 'رقم الهاتف' : 'Phone Number'}
                   </Label>
                   <div className="relative">
-                    <Phone className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400`} />
+                    <Phone className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400 dark:text-gray-500`} />
                     <Input
                       id="register-phone"
                       type="tel"
                       placeholder="+20 100 123 4567"
-                      className={`${isArabic ? 'pr-11' : 'pl-11'} h-12 rounded-xl bg-gray-50 border-0 focus:bg-white`}
+                      className={`${isArabic ? 'pr-11' : 'pl-11'} h-12 rounded-xl bg-gray-50 dark:bg-gray-800 border-0 focus:bg-white dark:focus:bg-gray-700`}
                       value={registerForm.phone}
                       onChange={(e) => setRegisterForm({ ...registerForm, phone: e.target.value })}
                     />
@@ -482,12 +482,12 @@ export function AuthModal() {
                     {isArabic ? 'كلمة المرور' : 'Password'}
                   </Label>
                   <div className="relative">
-                    <Lock className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400`} />
+                    <Lock className={`absolute ${isArabic ? 'right-3' : 'left-3'} top-3 h-5 w-5 text-gray-400 dark:text-gray-500`} />
                     <Input
                       id="register-password"
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
-                      className={`${isArabic ? 'pr-11 pl-11' : 'pl-11 pr-11'} h-12 rounded-xl bg-gray-50 border-0 focus:bg-white`}
+                      className={`${isArabic ? 'pr-11 pl-11' : 'pl-11 pr-11'} h-12 rounded-xl bg-gray-50 dark:bg-gray-800 border-0 focus:bg-white dark:focus:bg-gray-700`}
                       value={registerForm.password}
                       onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
                       required
@@ -495,7 +495,7 @@ export function AuthModal() {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className={`absolute ${isArabic ? 'left-3' : 'right-3'} top-3 text-gray-400 hover:text-gray-600`}
+                      className={`absolute ${isArabic ? 'left-3' : 'right-3'} top-3 text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300`}
                     >
                       {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
                     </button>
@@ -506,7 +506,7 @@ export function AuthModal() {
                   <motion.p
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="text-red-500 text-sm text-center bg-red-50 p-3 rounded-xl"
+                    className="text-red-500 text-sm text-center bg-red-50 dark:bg-red-900/20 p-3 rounded-xl"
                   >
                     {error}
                   </motion.p>

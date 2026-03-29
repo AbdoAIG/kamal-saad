@@ -68,25 +68,25 @@ export default function WhatsAppButton() {
       {/* Tooltip */}
       {showTooltip && (
         <div className="fixed bottom-24 left-6 z-50 animate-fade-in">
-          <div className="relative bg-white rounded-2xl shadow-2xl p-4 max-w-xs border border-gray-100">
+          <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-2xl dark:shadow-gray-900/30 p-4 max-w-xs border border-gray-100 dark:border-gray-700">
             <button
               onClick={handleCloseTooltip}
-              className="absolute -top-2 -right-2 w-6 h-6 bg-gray-200 hover:bg-gray-300 rounded-full flex items-center justify-center transition-colors"
+              className="absolute -top-2 -right-2 w-6 h-6 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 rounded-full flex items-center justify-center transition-colors"
             >
-              <X className="w-4 h-4 text-gray-600" />
+              <X className="w-4 h-4 text-gray-600 dark:text-gray-300" />
             </button>
             <div className="flex items-start gap-3">
               <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center flex-shrink-0">
                 <MessageCircle className="w-5 h-5 text-white" />
               </div>
               <div>
-                <p className="font-bold text-gray-800 text-sm">تحتاج مساعدة؟</p>
-                <p className="text-gray-500 text-xs mt-1">
+                <p className="font-bold text-gray-800 dark:text-gray-100 text-sm">تحتاج مساعدة؟</p>
+                <p className="text-gray-500 dark:text-gray-400 text-xs mt-1">
                   تواصل معنا عبر واتساب ونحن سعداء بخدمتك!
                 </p>
               </div>
             </div>
-            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-4 h-4 bg-white border-r border-b border-gray-100"></div>
+            <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 rotate-45 w-4 h-4 bg-white dark:bg-gray-800 border-r border-b border-gray-100 dark:border-gray-700"></div>
           </div>
         </div>
       )}

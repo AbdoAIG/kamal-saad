@@ -133,10 +133,10 @@ function HomePageContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-cyan-50">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-gray-800 dark:to-gray-900">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 border-4 border-teal-200 rounded-full border-t-teal-500 animate-spin" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">
+          <div className="w-16 h-16 mx-auto mb-4 border-4 border-teal-200 dark:border-teal-700 rounded-full border-t-teal-500 animate-spin" />
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 mb-2">
             {isArabic ? 'جاري تحميل المتجر...' : 'Loading store...'}
           </h2>
         </div>
@@ -146,13 +146,13 @@ function HomePageContent() {
 
   if (isSeeding && products.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50">
-        <div className="text-center max-w-lg p-10 bg-white rounded-3xl shadow-xl">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50 dark:from-gray-800 dark:via-gray-900 dark:to-gray-950">
+        <div className="text-center max-w-lg p-10 bg-white dark:bg-gray-800 rounded-3xl shadow-xl dark:shadow-gray-900/30">
           <img src="/logo.png" alt="KMS Logo" className="w-20 h-20 mx-auto mb-6 object-contain" />
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100 mb-4">
             {isArabic ? 'مرحباً بك في كمال سعد!' : 'Welcome to Kamal Saad!'}
           </h1>
-          <p className="text-gray-600 mb-8">
+          <p className="text-gray-600 dark:text-gray-300 mb-8">
             {isArabic ? 'يبدو أن المتجر فارغ حالياً. اضغط على الزر أدناه لإضافة منتجات تجريبية.' : 'The store appears to be empty. Click below to add sample products.'}
           </p>
           <Button
@@ -168,7 +168,7 @@ function HomePageContent() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50 overflow-x-hidden" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950 overflow-x-hidden" dir={isArabic ? 'rtl' : 'ltr'}>
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
       
       <Sidebar
@@ -184,10 +184,10 @@ function HomePageContent() {
         <PromotionalBanner isHero={true} />
 
         {/* Categories Section */}
-        <section className="py-6 bg-white border-b">
+        <section className="py-6 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {isArabic ? 'تسوق حسب القسم' : 'Shop by Category'}
               </h2>
               <Link href="/?category=all" className="text-teal-600 hover:text-teal-700 text-sm font-medium">
@@ -197,8 +197,8 @@ function HomePageContent() {
             <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
               {categories.map((category) => (
                 <Link key={category.id} href={`/?category=${category.id}#products`} className="group">
-                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 hover:from-teal-100 hover:to-cyan-100 dark:hover:from-gray-700 dark:hover:to-gray-600 border border-teal-100 dark:border-gray-600 rounded-2xl p-4 text-center transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer">
-                    <div className="w-12 h-12 mx-auto mb-2 bg-white dark:bg-gray-600 rounded-xl shadow-sm flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
+                  <div className="bg-gradient-to-br from-teal-50 to-cyan-50 dark:from-gray-800 dark:to-gray-700 hover:from-teal-100 hover:to-cyan-100 dark:hover:from-gray-700 dark:hover:to-gray-600 border border-teal-100 dark:border-gray-600 rounded-2xl p-4 text-center transition-all duration-300 hover:shadow-lg dark:hover:shadow-gray-900/30 hover:-translate-y-1 cursor-pointer">
+                    <div className="w-12 h-12 mx-auto mb-2 bg-white dark:bg-gray-600 rounded-xl shadow-sm dark:shadow-gray-900/30 flex items-center justify-center text-2xl group-hover:scale-110 transition-transform">
                       {category.slug === 'pens-pencils' && '🖊️'}
                       {category.slug === 'notebooks' && '📓'}
                       {category.slug === 'school-bags' && '🎒'}
@@ -223,24 +223,24 @@ function HomePageContent() {
         </div>
 
         {/* Products Section */}
-        <section id="products" className="py-6 bg-white">
+        <section id="products" className="py-6 bg-white dark:bg-gray-800">
           <div className="container mx-auto px-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-bold text-gray-900">
+              <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">
                 {searchQuery 
                   ? (isArabic ? `نتائج البحث عن "${searchQuery}"` : `Search results for "${searchQuery}"`)
                   : (isArabic ? 'جميع المنتجات' : 'All Products')
                 }
               </h2>
-              <span className="text-sm text-gray-500">
+              <span className="text-sm text-gray-500 dark:text-gray-400">
                 {products.length} / {totalProducts.toLocaleString()} {isArabic ? 'منتج' : 'products'}
               </span>
             </div>
             
             {products.length === 0 && !isLoadingMore && (
               <div className="text-center py-12">
-                <Package className="h-12 w-12 mx-auto mb-4 text-gray-300" />
-                <p className="text-gray-500">
+                <Package className="h-12 w-12 mx-auto mb-4 text-gray-300 dark:text-gray-600" />
+                <p className="text-gray-500 dark:text-gray-400">
                   {isArabic ? 'لا توجد منتجات' : 'No products found'}
                 </p>
                 <Link href="/" className="text-teal-600 hover:text-teal-700 text-sm mt-2 inline-block">
@@ -265,7 +265,7 @@ function HomePageContent() {
                 <Button
                   onClick={loadMoreProducts}
                   disabled={isLoadingMore}
-                  className="bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-8 py-6 text-lg rounded-xl font-bold shadow-lg hover:shadow-xl transition-all duration-300 gap-2"
+                  className="bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white px-8 py-6 text-lg rounded-xl font-bold shadow-lg dark:shadow-gray-900/30 hover:shadow-xl dark:hover:shadow-gray-900/50 transition-all duration-300 gap-2"
                 >
                   {isLoadingMore ? (
                     <>
@@ -283,7 +283,7 @@ function HomePageContent() {
               
               {!hasMore && products.length > 0 && (
                 <div className="text-center">
-                  <p className="text-gray-400 text-sm">
+                  <p className="text-gray-400 dark:text-gray-500 text-sm">
                     {isArabic ? 'تم تحميل جميع المنتجات' : 'All products loaded'}
                   </p>
                 </div>
@@ -293,9 +293,9 @@ function HomePageContent() {
         </section>
 
         {/* How to Order */}
-        <section className="py-6 bg-gray-50">
+        <section className="py-6 bg-gray-50 dark:bg-gray-950">
           <div className="container mx-auto px-4">
-            <h2 className="text-lg font-bold text-gray-900 mb-6 text-center">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 mb-6 text-center">
               {isArabic ? 'كيف تطلب؟' : 'How to Order?'}
             </h2>
             <div className="flex flex-wrap justify-center gap-4 md:gap-8">
@@ -305,11 +305,11 @@ function HomePageContent() {
                 { step: '3', text: isArabic ? 'التوصيل' : 'Delivery' },
                 { step: '4', text: isArabic ? 'استلم واستمتع' : 'Receive' },
               ].map((item, index) => (
-                <div key={index} className="flex items-center gap-3 bg-white px-4 py-3 rounded-xl shadow-sm">
+                <div key={index} className="flex items-center gap-3 bg-white dark:bg-gray-800 px-4 py-3 rounded-xl shadow-sm dark:shadow-gray-900/30">
                   <div className="h-8 w-8 bg-gradient-to-l from-teal-500 to-cyan-500 rounded-lg flex items-center justify-center text-white font-bold text-sm">
                     {item.step}
                   </div>
-                  <span className="font-medium text-gray-700 text-sm">{item.text}</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300 text-sm">{item.text}</span>
                 </div>
               ))}
             </div>
@@ -330,7 +330,7 @@ function HomePageContent() {
 
 function LoadingFallback() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950">
       <Loader2 className="h-8 w-8 animate-spin text-teal-500" />
     </div>
   );

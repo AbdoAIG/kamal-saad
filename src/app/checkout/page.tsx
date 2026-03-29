@@ -265,10 +265,10 @@ export default function CheckoutPage() {
 
   if (items.length === 0 && !paymentSuccess) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
         <div className="text-center p-8">
-          <ShoppingBag className="h-24 w-24 text-gray-300 mx-auto mb-6" />
-          <h2 className="text-2xl font-bold text-gray-700 mb-4">
+          <ShoppingBag className="h-24 w-24 text-gray-300 dark:text-gray-600 mx-auto mb-6" />
+          <h2 className="text-2xl font-bold text-gray-700 dark:text-gray-300 mb-4">
             {isArabic ? 'سلة التسوق فارغة' : 'Your cart is empty'}
           </h2>
           <Button onClick={() => router.push('/')}>
@@ -280,7 +280,7 @@ export default function CheckoutPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
       
       <Sidebar
@@ -302,7 +302,7 @@ export default function CheckoutPage() {
                     ? 'bg-teal-500 text-white' 
                     : i < ['shipping', 'payment', 'confirmation'].indexOf(step)
                       ? 'bg-teal-500 text-white'
-                      : 'bg-gray-200 text-gray-500'
+                      : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                 }`}>
                   {i < ['shipping', 'payment', 'confirmation'].indexOf(step) ? (
                     <Check className="h-5 w-5" />
@@ -317,7 +317,7 @@ export default function CheckoutPage() {
                   {s === 'payment' && (isArabic ? 'الدفع' : 'Payment')}
                   {s === 'confirmation' && (isArabic ? 'التأكيد' : 'Confirmation')}
                 </span>
-                {i < 2 && <ArrowRight className={`h-5 w-5 ${isArabic ? 'rotate-180' : ''} text-gray-300`} />}
+                {i < 2 && <ArrowRight className={`h-5 w-5 ${isArabic ? 'rotate-180' : ''} text-gray-300 dark:text-gray-600`} />}
               </div>
             ))}
           </div>
@@ -333,7 +333,7 @@ export default function CheckoutPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6"
+                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-gray-900/30 p-6"
                   >
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-xl">
@@ -501,7 +501,7 @@ export default function CheckoutPage() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6"
+                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-gray-900/30 p-6"
                   >
                     <div className="flex items-center gap-3 mb-6">
                       <div className="p-2 bg-teal-100 dark:bg-teal-900/30 rounded-xl">
@@ -534,7 +534,7 @@ export default function CheckoutPage() {
                     key="confirmation"
                     initial={{ opacity: 0, scale: 0.9 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center"
+                    className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-gray-900/30 p-8 text-center"
                   >
                     <motion.div
                       initial={{ scale: 0 }}
@@ -580,7 +580,7 @@ export default function CheckoutPage() {
 
             {/* Order Summary */}
             <div className="lg:col-span-1">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 sticky top-24">
+              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg dark:shadow-gray-900/30 p-6 sticky top-24">
                 <h3 className="font-bold text-lg text-gray-900 dark:text-white mb-4">
                   {isArabic ? 'ملخص الطلب' : 'Order Summary'}
                 </h3>

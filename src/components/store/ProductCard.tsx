@@ -68,10 +68,10 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
       className="group"
       dir={isArabic ? 'rtl' : 'ltr'}
     >
-      <div className="relative bg-white rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 overflow-hidden">
+      <div className="relative bg-white dark:bg-gray-800 rounded-2xl shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_12px_rgba(0,0,0,0.3)] hover:shadow-[0_8px_30px_rgba(0,0,0,0.12)] dark:hover:shadow-[0_8px_30px_rgba(0,0,0,0.5)] transition-all duration-300 overflow-hidden">
         {/* Image Section */}
         <Link href={`/product/${product.id}`} className="block">
-          <div className="relative aspect-square bg-[#f8f8f8] overflow-hidden">
+          <div className="relative aspect-square bg-[#f8f8f8] dark:bg-gray-700 overflow-hidden">
             {/* Product Image */}
             {!imageError && mainImage ? (
               <img
@@ -89,12 +89,12 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
 
             {/* Loading skeleton */}
             {!imageLoaded && !imageError && (
-              <div className="absolute inset-0 bg-gray-100 animate-pulse" />
+              <div className="absolute inset-0 bg-gray-100 dark:bg-gray-700 animate-pulse" />
             )}
 
             {/* Featured / Discount badge - top left */}
             {product.featured && (
-              <div className={`absolute top-3 ${isArabic ? 'right-3' : 'left-3'} bg-[#f5f5f5] text-gray-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold tracking-wide uppercase`}>
+              <div className={`absolute top-3 ${isArabic ? 'right-3' : 'left-3'} bg-[#f5f5f5] dark:bg-gray-700 dark:text-gray-300 text-gray-600 px-2.5 py-1 rounded-lg text-[10px] font-semibold tracking-wide uppercase`}>
                 {isArabic ? 'مميز' : 'Featured'}
               </div>
             )}
@@ -113,8 +113,8 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
               onClick={handleFavorite}
               className={`absolute top-3 ${isArabic ? 'left-3' : 'right-3'} h-10 w-10 rounded-full flex items-center justify-center transition-all duration-200 z-20 shadow-md ${
                 isProductFavorite
-                  ? 'bg-red-50 text-red-500 shadow-red-200'
-                  : 'bg-white/90 text-gray-400 hover:text-red-500 hover:bg-red-50 shadow-gray-200'
+                  ? 'bg-red-50 dark:bg-red-900/30 text-red-500 shadow-red-200'
+                  : 'bg-white/90 dark:bg-gray-800 text-gray-400 hover:text-red-500 hover:bg-red-50 shadow-gray-200'
               }`}
             >
               <Heart className={`h-5 w-5 transition-all ${isProductFavorite ? 'fill-red-500' : ''}`} />
@@ -126,36 +126,36 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
         <div className="p-4">
           {/* Title */}
           <Link href={`/product/${product.id}`}>
-            <h3 className="font-bold text-gray-800 text-sm leading-snug mb-1.5 line-clamp-2 hover:text-gray-600 transition-colors">
+            <h3 className="font-bold text-gray-800 dark:text-gray-100 text-sm leading-snug mb-1.5 line-clamp-2 hover:text-gray-600 dark:hover:text-gray-300 transition-colors">
               {productName}
             </h3>
           </Link>
 
           {/* Category + Reviews */}
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-gray-400">
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               {categoryName || (isArabic ? 'عام' : 'General')}
             </span>
-            <span className="text-gray-200">·</span>
+            <span className="text-gray-200 dark:text-gray-600">·</span>
             <div className="flex items-center gap-0.5">
               <Star className="h-3 w-3 text-amber-400 fill-amber-400" />
-              <span className="text-xs text-gray-400">{product.rating.toFixed(1)}</span>
+              <span className="text-xs text-gray-400 dark:text-gray-500">{product.rating.toFixed(1)}</span>
             </div>
-            <span className="text-gray-200">·</span>
-            <span className="text-xs text-gray-400">
+            <span className="text-gray-200 dark:text-gray-600">·</span>
+            <span className="text-xs text-gray-400 dark:text-gray-500">
               {product.reviewsCount} {isArabic ? 'تقييم' : 'reviews'}
             </span>
           </div>
 
           {/* Price Row - More prominent */}
           <div className={`flex items-center gap-2 flex-wrap mb-4 ${isArabic ? 'flex-row-reverse' : ''}`}>
-            <span className="text-xl font-extrabold text-gray-900">
+            <span className="text-xl font-extrabold text-gray-900 dark:text-gray-100">
               {(hasDiscount ? product.discountPrice : product.price)?.toFixed(2)}
             </span>
-            <span className="text-sm font-semibold text-gray-500">{currency}</span>
+            <span className="text-sm font-semibold text-gray-500 dark:text-gray-400">{currency}</span>
             {hasDiscount && (
               <>
-                <span className="text-sm text-gray-400 line-through">{product.price.toFixed(2)}</span>
+                <span className="text-sm text-gray-400 dark:text-gray-500 line-through">{product.price.toFixed(2)}</span>
               </>
             )}
           </div>

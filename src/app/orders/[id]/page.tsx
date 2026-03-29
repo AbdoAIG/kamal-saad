@@ -244,7 +244,7 @@ export default function OrderDetailsPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
         <Sidebar
           isOpen={isSidebarOpen}
@@ -276,7 +276,7 @@ export default function OrderDetailsPage() {
   // Not found state
   if (!order) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
         <Sidebar
           isOpen={isSidebarOpen}
@@ -291,7 +291,7 @@ export default function OrderDetailsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="text-center"
           >
-            <AlertCircle className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+            <AlertCircle className="h-16 w-16 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">
               {isArabic ? 'الطلب غير موجود' : 'Order not found'}
             </h2>
@@ -313,7 +313,7 @@ export default function OrderDetailsPage() {
   const currentStep = getCurrentStepIndex();
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
       <Sidebar
@@ -346,7 +346,7 @@ export default function OrderDetailsPage() {
             animate={{ opacity: 1, y: 0 }}
             className="mb-6"
           >
-            <Card className="border-0 shadow-lg overflow-hidden">
+            <Card className="border-0 shadow-lg dark:shadow-gray-900/30 overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div className="flex items-center gap-4">
@@ -382,7 +382,7 @@ export default function OrderDetailsPage() {
               transition={{ delay: 0.1 }}
               className="mb-6"
             >
-              <Card className="border-0 shadow-lg">
+              <Card className="border-0 shadow-lg dark:shadow-gray-900/30">
                 <CardContent className="p-6">
                   <h2 className="text-lg font-bold text-gray-900 dark:text-white mb-4">
                     {isArabic ? 'تتبع الطلب' : 'Order Tracking'}
@@ -443,7 +443,7 @@ export default function OrderDetailsPage() {
               transition={{ delay: 0.2 }}
               className="md:col-span-2"
             >
-              <Card className="border-0 shadow-lg">
+              <Card className="border-0 shadow-lg dark:shadow-gray-900/30">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Package className="h-5 w-5 text-teal-500" />
@@ -479,7 +479,7 @@ export default function OrderDetailsPage() {
                               </p>
                             )}
                             <div className="flex items-center justify-between mt-2">
-                              <p className="text-sm text-gray-500">
+                              <p className="text-sm text-gray-500 dark:text-gray-400">
                                 {isArabic ? 'الكمية:' : 'Qty:'} {item.quantity}
                               </p>
                               <p className="font-bold text-gray-900 dark:text-white">
@@ -543,7 +543,7 @@ export default function OrderDetailsPage() {
               className="space-y-6"
             >
               {/* Order Info */}
-              <Card className="border-0 shadow-lg">
+              <Card className="border-0 shadow-lg dark:shadow-gray-900/30">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Calendar className="h-5 w-5 text-teal-500" />
@@ -571,7 +571,7 @@ export default function OrderDetailsPage() {
               </Card>
 
               {/* Shipping Address */}
-              <Card className="border-0 shadow-lg">
+              <Card className="border-0 shadow-lg dark:shadow-gray-900/30">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <MapPin className="h-5 w-5 text-teal-500" />
@@ -592,7 +592,7 @@ export default function OrderDetailsPage() {
               </Card>
 
               {/* Contact */}
-              <Card className="border-0 shadow-lg">
+              <Card className="border-0 shadow-lg dark:shadow-gray-900/30">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Phone className="h-5 w-5 text-teal-500" />
@@ -613,7 +613,7 @@ export default function OrderDetailsPage() {
               </Card>
 
               {/* Payment Method */}
-              <Card className="border-0 shadow-lg">
+              <Card className="border-0 shadow-lg dark:shadow-gray-900/30">
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5 text-teal-500" />
@@ -628,7 +628,7 @@ export default function OrderDetailsPage() {
               </Card>
 
               {/* Actions */}
-              <Card className="border-0 shadow-lg">
+              <Card className="border-0 shadow-lg dark:shadow-gray-900/30">
                 <CardContent className="p-4 space-y-3">
                   <Button
                     onClick={handleReorder}

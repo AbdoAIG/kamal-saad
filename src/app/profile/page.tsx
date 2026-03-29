@@ -801,7 +801,7 @@ export default function ProfilePage() {
                           initial={{ opacity: 0, scale: 0.95 }}
                           animate={{ opacity: 1, scale: 1 }}
                           exit={{ opacity: 0, scale: 0.95 }}
-                          className="border rounded-lg p-4 relative"
+                          className="border dark:border-gray-700 rounded-lg p-4 relative"
                         >
                           {address.isDefault && (
                             <Badge className="absolute top-2 start-2 bg-teal-500">
@@ -1016,7 +1016,7 @@ export default function ProfilePage() {
                     {errors.newPassword && (
                       <p className="text-sm text-red-500">{errors.newPassword}</p>
                     )}
-                    <p className="text-xs text-gray-500">{t.passwordRequirements}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{t.passwordRequirements}</p>
                   </div>
                   
                   <div className="space-y-2">

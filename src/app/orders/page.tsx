@@ -172,7 +172,7 @@ export default function OrdersPage() {
   // Not authenticated state
   if (!user && !userId && !isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
         <Sidebar
           isOpen={isSidebarOpen}
@@ -217,7 +217,7 @@ export default function OrdersPage() {
   // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
         <Sidebar
           isOpen={isSidebarOpen}
@@ -249,7 +249,7 @@ export default function OrdersPage() {
   // Empty state
   if (orders.length === 0) {
     return (
-      <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+      <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
         <Header onMenuClick={() => setIsSidebarOpen(true)} />
         <Sidebar
           isOpen={isSidebarOpen}
@@ -296,7 +296,7 @@ export default function OrdersPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-950" dir={isArabic ? 'rtl' : 'ltr'}>
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
       <Sidebar
@@ -348,7 +348,7 @@ export default function OrdersPage() {
                     exit={{ opacity: 0, y: -20 }}
                     transition={{ delay: index * 0.1 }}
                   >
-                    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-md">
+                    <Card className="overflow-hidden hover:shadow-lg transition-all duration-300 border-0 shadow-md dark:shadow-gray-900/30">
                       <CardContent className="p-0">
                         {/* Order Header */}
                         <div className="bg-gradient-to-l from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-800/50 p-4 border-b dark:border-gray-700">

@@ -285,8 +285,8 @@ export default function ProductPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#ffffff]">
-        <Loader2 className="h-10 w-10 animate-spin text-gray-500" />
+      <div className="min-h-screen flex items-center justify-center bg-[#ffffff] dark:bg-gray-900">
+        <Loader2 className="h-10 w-10 animate-spin text-gray-500 dark:text-gray-400" />
       </div>
     );
   }
@@ -294,16 +294,16 @@ export default function ProductPage() {
   if (!product) return null;
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#ffffff]" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="min-h-screen flex flex-col bg-[#ffffff] dark:bg-gray-900" dir={isArabic ? 'rtl' : 'ltr'}>
       <Header onMenuClick={() => setIsSidebarOpen(true)} />
 
       <main className="flex-1">
         {/* Top navigation bar */}
-        <div className="border-b border-gray-200 bg-[#ffffff]">
+        <div className="border-b border-gray-200 dark:border-gray-700 bg-[#ffffff] dark:bg-gray-900">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
             <Link 
               href={`/?category=${product.category?.id || 'all'}#products`}
-              className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+              className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 transition-colors"
             >
               {isArabic ? <ArrowRight className="h-3.5 w-3.5" /> : <ChevronLeft className="h-3.5 w-3.5" />}
               <span>{isArabic ? `العودة إلى ${categoryName}` : `Back to ${categoryName || 'Products'}`}</span>
@@ -312,7 +312,7 @@ export default function ProductPage() {
               <div className="relative">
                 <button 
                   onClick={() => setShowShareMenu(!showShareMenu)}
-                  className="p-2 text-gray-400 hover:text-gray-700 transition-colors"
+                  className="p-2 text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
                 >
                   <Share2 className="h-5 w-5" />
                 </button>
@@ -322,13 +322,13 @@ export default function ProductPage() {
                       initial={{ opacity: 0, y: 5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 5 }}
-                      className={`absolute top-full mt-2 bg-white rounded-lg shadow-xl border border-gray-100 p-3 min-w-[180px] z-50 ${isArabic ? 'right-0' : 'left-0'}`}
+                      className={`absolute top-full mt-2 bg-white dark:bg-gray-900 rounded-lg shadow-xl dark:shadow-gray-900/50 border border-gray-100 dark:border-gray-700 p-3 min-w-[180px] z-50 ${isArabic ? 'right-0' : 'left-0'}`}
                     >
                       <div className="flex justify-center gap-2">
                         <button onClick={() => { shareHandlers.facebook(); setShowShareMenu(false); }} className="h-9 w-9 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center transition-all"><Facebook className="h-4 w-4" /></button>
                         <button onClick={() => { shareHandlers.twitter(); setShowShareMenu(false); }} className="h-9 w-9 rounded-lg bg-gray-900 hover:bg-black text-white flex items-center justify-center transition-all"><Twitter className="h-4 w-4" /></button>
                         <button onClick={() => { shareHandlers.whatsapp(); setShowShareMenu(false); }} className="h-9 w-9 rounded-lg bg-green-500 hover:bg-green-600 text-white flex items-center justify-center transition-all"><MessageCircle className="h-4 w-4" /></button>
-                        <button onClick={() => shareHandlers.copyLink()} className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${copiedLink ? 'bg-green-500 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>{copiedLink ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}</button>
+                        <button onClick={() => shareHandlers.copyLink()} className={`h-9 w-9 rounded-lg flex items-center justify-center transition-all ${copiedLink ? 'bg-green-500 text-white' : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700'}`}>{copiedLink ? <Check className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}</button>
                       </div>
                     </motion.div>
                   )}
@@ -336,7 +336,7 @@ export default function ProductPage() {
               </div>
               <button 
                 onClick={handleToggleFavorite}
-                className={`p-2 transition-colors ${isProductFavorite ? 'text-red-500' : 'text-gray-400 hover:text-gray-700'}`}
+                className={`p-2 transition-colors ${isProductFavorite ? 'text-red-500' : 'text-gray-400 dark:text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
               >
                 <Heart className={`h-5 w-5 ${isProductFavorite ? 'fill-red-500' : ''}`} />
               </button>
@@ -352,7 +352,7 @@ export default function ProductPage() {
             <div className="space-y-3">
               {/* Main Image */}
               <div 
-                className="relative aspect-square bg-white rounded-lg overflow-hidden cursor-zoom-in group"
+                className="relative aspect-square bg-white dark:bg-gray-900 rounded-lg overflow-hidden cursor-zoom-in group"
                 onClick={() => setIsLightboxOpen(true)}
               >
                 <AnimatePresence mode="wait">
@@ -384,7 +384,7 @@ export default function ProductPage() {
 
                 {/* Zoom icon - top right */}
                 <div className={`absolute top-3 ${isArabic ? 'left-3' : 'right-3'} opacity-0 group-hover:opacity-100 transition-opacity`}>
-                  <div className="bg-white p-2 rounded-full shadow-md text-gray-500">
+                  <div className="bg-white dark:bg-gray-700 p-2 rounded-full shadow-md dark:shadow-gray-900/50 text-gray-500 dark:text-gray-400">
                     <ZoomIn className="h-4 w-4" />
                   </div>
                 </div>
@@ -394,15 +394,15 @@ export default function ProductPage() {
                   <>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedImage(prev => prev > 0 ? prev - 1 : images.length - 1); }}
-                      className={`absolute top-1/2 -translate-y-1/2 bg-white/90 p-2 rounded-full shadow-md hover:bg-white transition-colors ${isArabic ? 'left-2' : 'right-2'}`}
+                      className={`absolute top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-700 p-2 rounded-full shadow-md dark:shadow-gray-900/50 hover:bg-white dark:hover:bg-gray-600 transition-colors ${isArabic ? 'left-2' : 'right-2'}`}
                     >
-                      {isArabic ? <ChevronLeft className="h-4 w-4 text-gray-700" /> : <ChevronRight className="h-4 w-4 text-gray-700" />}
+                      {isArabic ? <ChevronLeft className="h-4 w-4 text-gray-700 dark:text-gray-300" /> : <ChevronRight className="h-4 w-4 text-gray-700 dark:text-gray-300" />}
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setSelectedImage(prev => prev < images.length - 1 ? prev + 1 : 0); }}
-                      className={`absolute top-1/2 -translate-y-1/2 bg-white/90 p-2 rounded-full shadow-md hover:bg-white transition-colors ${isArabic ? 'right-2' : 'left-2'}`}
+                      className={`absolute top-1/2 -translate-y-1/2 bg-white/90 dark:bg-gray-700 p-2 rounded-full shadow-md dark:shadow-gray-900/50 hover:bg-white dark:hover:bg-gray-600 transition-colors ${isArabic ? 'right-2' : 'left-2'}`}
                     >
-                      {isArabic ? <ChevronRight className="h-4 w-4 text-gray-700" /> : <ChevronLeft className="h-4 w-4 text-gray-700" />}
+                      {isArabic ? <ChevronRight className="h-4 w-4 text-gray-700 dark:text-gray-300" /> : <ChevronLeft className="h-4 w-4 text-gray-700 dark:text-gray-300" />}
                     </button>
                   </>
                 )}
@@ -424,8 +424,8 @@ export default function ProductPage() {
                       onClick={() => setSelectedImage(idx)}
                       className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-md overflow-hidden border-2 transition-all ${
                         selectedImage === idx
-                          ? 'border-gray-900 shadow-sm'
-                          : 'border-gray-200 hover:border-gray-400 opacity-70'
+                          ? 'border-gray-900 dark:border-gray-100 shadow-sm dark:shadow-gray-900/50'
+                          : 'border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 opacity-70'
                       }`}
                     >
                       <img src={img} alt="" className="w-full h-full object-cover" />
@@ -439,29 +439,29 @@ export default function ProductPage() {
             <div className="space-y-5 sm:space-y-6">
               {/* Category + New badge */}
               <div className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                <span className="text-xs tracking-widest uppercase text-gray-400 font-medium">
+                <span className="text-xs tracking-widest uppercase text-gray-400 dark:text-gray-500 font-medium">
                   {categoryName || (isArabic ? 'عام' : 'General')}
                 </span>
                 {hasDiscount && (
-                  <span className="text-[10px] tracking-wider uppercase text-gray-500 bg-[#ffffff] px-2 py-0.5 rounded-sm font-semibold">
+                  <span className="text-[10px] tracking-wider uppercase text-gray-500 dark:text-gray-400 bg-[#ffffff] dark:bg-gray-900 px-2 py-0.5 rounded-sm font-semibold">
                     {isArabic ? 'تخفيض' : 'Sale'}
                   </span>
                 )}
                 {product.featured && (
-                  <span className="text-[10px] tracking-wider uppercase text-gray-500 bg-[#ffffff] px-2 py-0.5 rounded-sm font-semibold">
+                  <span className="text-[10px] tracking-wider uppercase text-gray-500 dark:text-gray-400 bg-[#ffffff] dark:bg-gray-900 px-2 py-0.5 rounded-sm font-semibold">
                     {isArabic ? 'جديد' : 'New'}
                   </span>
                 )}
               </div>
 
               {/* Product Title */}
-              <h1 className="text-2xl sm:text-[28px] font-bold text-gray-800 leading-tight">
+              <h1 className="text-2xl sm:text-[28px] font-bold text-gray-800 dark:text-gray-100 leading-tight">
                 {productName}
               </h1>
 
               {/* Subtitle / collection */}
               {productDescription && (
-                <p className="text-xs sm:text-sm text-gray-500 tracking-wide uppercase leading-relaxed line-clamp-2">
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 tracking-wide uppercase leading-relaxed line-clamp-2">
                   {isArabic ? 'كمال سعد — مستلزمات مكتبية ومدرسية' : 'Kamal Saad — Office & School Supplies'}
                 </p>
               )}
@@ -470,28 +470,28 @@ export default function ProductPage() {
               <div className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
                 <div className="flex gap-0.5">
                   {[...Array(5)].map((_, i) => (
-                    <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200'}`} />
+                    <Star key={i} className={`h-4 w-4 ${i < Math.floor(product.rating) ? 'text-amber-400 fill-amber-400' : 'text-gray-200 dark:text-gray-600'}`} />
                   ))}
                 </div>
-                <span className="text-sm font-semibold text-gray-700">{product.rating.toFixed(1)}</span>
-                <span className="text-xs text-gray-400">({product.reviewsCount} {t('reviews', language)})</span>
-                <span className="text-gray-200">|</span>
-                <span className="text-xs text-gray-400">{product.salesCount} {t('sold', language)}</span>
+                <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">{product.rating.toFixed(1)}</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">({product.reviewsCount} {t('reviews', language)})</span>
+                <span className="text-gray-200 dark:text-gray-600">|</span>
+                <span className="text-xs text-gray-400 dark:text-gray-500">{product.salesCount} {t('sold', language)}</span>
               </div>
 
               {/* Price */}
               <div className={`flex items-baseline gap-3 flex-wrap ${isArabic ? 'flex-row-reverse' : ''}`}>
-                <span className="text-2xl sm:text-3xl font-bold text-gray-800">
+                <span className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-gray-100">
                   {(hasDiscount ? currentDiscountPrice : currentPrice)?.toFixed(2)}
                 </span>
-                <span className="text-sm text-gray-400">{currency}</span>
+                <span className="text-sm text-gray-400 dark:text-gray-500">{currency}</span>
                 {hasDiscount && (
-                  <span className="text-base text-gray-400 line-through">{currentPrice.toFixed(2)}</span>
+                  <span className="text-base text-gray-400 dark:text-gray-500 line-through">{currentPrice.toFixed(2)}</span>
                 )}
               </div>
 
               {/* Underline Tabs */}
-              <div className="border-b border-gray-200">
+              <div className="border-b border-gray-200 dark:border-gray-700">
                 <div className={`flex gap-6 sm:gap-8 ${isArabic ? 'flex-row-reverse' : ''}`}>
                   {[
                     { id: 'description', label: isArabic ? 'الوصف' : 'Description' },
@@ -503,8 +503,8 @@ export default function ProductPage() {
                       onClick={() => setActiveTab(tab.id)}
                       className={`pb-3 text-sm font-medium transition-colors border-b-2 ${
                         activeTab === tab.id
-                          ? 'border-gray-800 text-gray-800'
-                          : 'border-transparent text-gray-400 hover:text-gray-600'
+                          ? 'border-gray-800 dark:border-gray-200 text-gray-800 dark:text-gray-100'
+                          : 'border-transparent text-gray-400 dark:text-gray-500 hover:text-gray-600 dark:hover:text-gray-300'
                       }`}
                     >
                       {tab.label}
@@ -516,27 +516,27 @@ export default function ProductPage() {
               {/* Tab Content */}
               <div className="min-h-[120px]">
                 {activeTab === 'description' && (
-                  <p className="text-sm text-gray-500 leading-relaxed">
+                  <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                     {productDescription || (isArabic ? 'لا يوجد وصف متاح.' : 'No description available.')}
                   </p>
                 )}
                 {activeTab === 'details' && (
                   <div className="space-y-2 text-sm">
-                    <div className={`flex justify-between py-2 border-b border-gray-100 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                      <span className="text-gray-400">{isArabic ? 'الفئة' : 'Category'}</span>
-                      <span className="text-gray-700 font-medium">{categoryName || '-'}</span>
+                    <div className={`flex justify-between py-2 border-b border-gray-100 dark:border-gray-700 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                      <span className="text-gray-400 dark:text-gray-500">{isArabic ? 'الفئة' : 'Category'}</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{categoryName || '-'}</span>
                     </div>
-                    <div className={`flex justify-between py-2 border-b border-gray-100 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                      <span className="text-gray-400">{isArabic ? 'المخزون' : 'Stock'}</span>
-                      <span className="text-gray-700 font-medium">{currentStock}</span>
+                    <div className={`flex justify-between py-2 border-b border-gray-100 dark:border-gray-700 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                      <span className="text-gray-400 dark:text-gray-500">{isArabic ? 'المخزون' : 'Stock'}</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{currentStock}</span>
                     </div>
-                    <div className={`flex justify-between py-2 border-b border-gray-100 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                      <span className="text-gray-400">{isArabic ? 'التقييم' : 'Rating'}</span>
-                      <span className="text-gray-700 font-medium">{product.rating.toFixed(1)} / 5</span>
+                    <div className={`flex justify-between py-2 border-b border-gray-100 dark:border-gray-700 ${isArabic ? 'flex-row-reverse' : ''}`}>
+                      <span className="text-gray-400 dark:text-gray-500">{isArabic ? 'التقييم' : 'Rating'}</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{product.rating.toFixed(1)} / 5</span>
                     </div>
                     <div className={`flex justify-between py-2 ${isArabic ? 'flex-row-reverse' : ''}`}>
-                      <span className="text-gray-400">{isArabic ? 'المبيعات' : 'Sales'}</span>
-                      <span className="text-gray-700 font-medium">{product.salesCount}</span>
+                      <span className="text-gray-400 dark:text-gray-500">{isArabic ? 'المبيعات' : 'Sales'}</span>
+                      <span className="text-gray-700 dark:text-gray-300 font-medium">{product.salesCount}</span>
                     </div>
                   </div>
                 )}
@@ -550,13 +550,13 @@ export default function ProductPage() {
                 <div className="space-y-5 pt-2">
                   {variantsLoading ? (
                     <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-5 w-5 animate-spin text-gray-400" />
+                      <Loader2 className="h-5 w-5 animate-spin text-gray-400 dark:text-gray-500" />
                     </div>
                   ) : (
                     variants.map((variant) => (
                       <div key={variant.id}>
                         {/* Label */}
-                        <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 mb-3">
+                        <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 dark:text-gray-400 mb-3">
                           {isArabic ? variant.nameAr : variant.name}
                         </p>
                         
@@ -571,8 +571,8 @@ export default function ProductPage() {
                                   onClick={() => handleOptionSelect(variant.id, option.id)}
                                   className={`w-8 h-8 rounded-full border-2 transition-all ${
                                     isSelected 
-                                      ? 'border-gray-800 scale-110' 
-                                      : 'border-gray-200 hover:border-gray-400'
+                                      ? 'border-gray-800 dark:border-gray-200 scale-110' 
+                                      : 'border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500'
                                   }`}
                                   title={isArabic ? option.valueAr : option.value}
                                 >
@@ -595,8 +595,8 @@ export default function ProductPage() {
                                   onClick={() => handleOptionSelect(variant.id, option.id)}
                                   className={`w-10 h-10 rounded-sm border-2 text-sm font-medium transition-all ${
                                     isSelected
-                                      ? 'border-gray-800 bg-white text-gray-800 shadow-sm'
-                                      : 'border-gray-200 bg-[#ffffff] text-gray-500 hover:border-gray-400 hover:text-gray-700'
+                                      ? 'border-gray-800 dark:border-gray-200 bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-100 shadow-sm dark:shadow-gray-900/50'
+                                      : 'border-gray-200 dark:border-gray-700 bg-[#ffffff] dark:bg-gray-900 text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
                                   }`}
                                 >
                                   {isArabic ? option.valueAr : option.value}
@@ -611,7 +611,7 @@ export default function ProductPage() {
 
                   {/* SKU + Stock info */}
                   {selectedSKU && (
-                    <div className="flex items-center justify-between text-xs text-gray-400">
+                    <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                       <span>SKU: {selectedSKU.sku}</span>
                       <span className={currentStock > 0 ? 'text-green-600' : 'text-red-500'}>
                         {currentStock > 0 
@@ -631,26 +631,26 @@ export default function ProductPage() {
 
               {/* ═══ Quantity ═══ */}
               <div>
-                <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 mb-3">
+                <p className="text-xs font-semibold tracking-widest uppercase text-gray-500 dark:text-gray-400 mb-3">
                   {isArabic ? 'الكمية' : 'Quantity'}
                 </p>
                 <div className={`flex items-center gap-3 ${isArabic ? 'flex-row-reverse' : ''}`}>
                   <button
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     disabled={quantity <= 1}
-                    className="h-10 w-10 border border-gray-200 rounded-sm flex items-center justify-center text-gray-500 hover:border-gray-400 disabled:opacity-30 transition-colors"
+                    className="h-10 w-10 border border-gray-200 dark:border-gray-700 rounded-sm flex items-center justify-center text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-30 transition-colors"
                   >
                     <Minus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="w-10 text-center font-bold text-gray-800">{quantity}</span>
+                  <span className="w-10 text-center font-bold text-gray-800 dark:text-gray-100">{quantity}</span>
                   <button
                     onClick={() => setQuantity(Math.min(currentStock, quantity + 1))}
                     disabled={quantity >= currentStock}
-                    className="h-10 w-10 border border-gray-200 rounded-sm flex items-center justify-center text-gray-500 hover:border-gray-400 disabled:opacity-30 transition-colors"
+                    className="h-10 w-10 border border-gray-200 dark:border-gray-700 rounded-sm flex items-center justify-center text-gray-500 dark:text-gray-400 hover:border-gray-400 dark:hover:border-gray-500 disabled:opacity-30 transition-colors"
                   >
                     <Plus className="h-3.5 w-3.5" />
                   </button>
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-gray-400 dark:text-gray-500">
                     ({currentStock} {t('inStock', language)})
                   </span>
                 </div>
@@ -683,7 +683,7 @@ export default function ProductPage() {
                 </Button>
                 <Button
                   variant="outline"
-                  className={`h-12 flex-1 rounded-sm text-xs font-semibold tracking-widest uppercase border-2 border-emerald-500 text-emerald-600 bg-emerald-50 hover:bg-emerald-100 transition-all`}
+                  className={`h-12 flex-1 rounded-sm text-xs font-semibold tracking-widest uppercase border-2 border-emerald-500 text-emerald-600 bg-emerald-50 dark:bg-emerald-900/30 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 transition-all`}
                   onClick={handleBuyNow}
                   disabled={(product.hasVariants && !selectedSKU) || currentStock === 0}
                 >
@@ -700,7 +700,7 @@ export default function ProductPage() {
                   { icon: Shield, text: isArabic ? 'ضمان أصلي' : 'Authentic' },
                   { icon: RotateCcw, text: isArabic ? 'إرجاع مجاني' : 'Free Returns' },
                 ].map((f, i) => (
-                  <div key={i} className={`flex items-center gap-2 text-xs text-gray-400 ${isArabic ? 'flex-row-reverse justify-end' : ''}`}>
+                  <div key={i} className={`flex items-center gap-2 text-xs text-gray-400 dark:text-gray-500 ${isArabic ? 'flex-row-reverse justify-end' : ''}`}>
                     <f.icon className="h-4 w-4 shrink-0" />
                     <span>{f.text}</span>
                   </div>
@@ -714,8 +714,8 @@ export default function ProductPage() {
         {relatedProducts.length > 0 && (
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 pb-10">
             <div className={`flex items-center justify-between mb-6 ${isArabic ? 'flex-row-reverse' : ''}`}>
-              <h2 className="text-lg font-bold text-gray-800">{t('relatedProducts', language)}</h2>
-              <Link href="/" className="text-xs text-gray-500 hover:text-gray-800 tracking-wider uppercase">
+              <h2 className="text-lg font-bold text-gray-800 dark:text-gray-100">{t('relatedProducts', language)}</h2>
+              <Link href="/" className="text-xs text-gray-500 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-100 tracking-wider uppercase">
                 {t('viewAll', language)} →
               </Link>
             </div>

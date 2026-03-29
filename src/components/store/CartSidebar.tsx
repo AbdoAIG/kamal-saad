@@ -182,7 +182,7 @@ export function CartSidebar() {
 
               {/* Payment Methods Preview */}
               <div className="flex items-center justify-center gap-2 py-2">
-                <span className="text-xs text-gray-500">{isArabic ? 'طرق الدفع:' : 'Payment:'}</span>
+                <span className="text-xs text-gray-500 dark:text-gray-400">{isArabic ? 'طرق الدفع:' : 'Payment:'}</span>
                 <div className="flex items-center gap-1">
                   <div className="h-6 px-2 bg-blue-100 dark:bg-blue-900/30 rounded text-[10px] font-bold text-blue-600 flex items-center">
                     Paymob
