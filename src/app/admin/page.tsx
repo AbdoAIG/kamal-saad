@@ -2863,16 +2863,24 @@ function PartnersManagement() {
 
 // Settings Page Component
 function SettingsPage() {
+  const [activeSettingsTab, setActiveSettingsTab] = useState<'general' | 'contact' | 'content'>('general');
   const [settings, setSettings] = useState({
     storeName: 'كمال سعد',
     storeNameEn: 'Kamal Saad',
     phone: '01234567890',
+    phone2: '',
     email: 'info@kamalsaad.com',
     address: 'القاهرة، مصر',
     facebook: '',
     instagram: '',
     twitter: '',
-    youtube: ''
+    youtube: '',
+    whatsapp: '',
+    workingHoursWeekdays: 'السبت - الخميس: 9:00 صباحاً - 9:00 مساءً',
+    workingHoursFriday: 'الجمعة: 2:00 مساءً - 9:00 مساءً',
+    mapEmbedUrl: '',
+    terms_content: '',
+    privacy_content: '',
   });
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -2895,12 +2903,19 @@ function SettingsPage() {
           storeName: data.settings.storeName || prev.storeName,
           storeNameEn: data.settings.storeNameEn || prev.storeNameEn,
           phone: data.settings.phone || prev.phone,
+          phone2: data.settings.phone2 || prev.phone2,
           email: data.settings.email || prev.email,
           address: data.settings.address || prev.address,
           facebook: data.settings.facebook || '',
           instagram: data.settings.instagram || '',
           twitter: data.settings.twitter || '',
           youtube: data.settings.youtube || '',
+          whatsapp: data.settings.whatsapp || '',
+          workingHoursWeekdays: data.settings.workingHoursWeekdays || prev.workingHoursWeekdays,
+          workingHoursFriday: data.settings.workingHoursFriday || prev.workingHoursFriday,
+          mapEmbedUrl: data.settings.mapEmbedUrl || '',
+          terms_content: data.settings.terms_content || '',
+          privacy_content: data.settings.privacy_content || '',
         }));
       }
     } catch (error) {
@@ -2922,12 +2937,19 @@ function SettingsPage() {
             { key: 'storeName', value: settings.storeName, group: 'store' },
             { key: 'storeNameEn', value: settings.storeNameEn, group: 'store' },
             { key: 'phone', value: settings.phone, group: 'contact' },
+            { key: 'phone2', value: settings.phone2, group: 'contact' },
             { key: 'email', value: settings.email, group: 'contact' },
             { key: 'address', value: settings.address, group: 'contact' },
             { key: 'facebook', value: settings.facebook, group: 'social' },
             { key: 'instagram', value: settings.instagram, group: 'social' },
             { key: 'twitter', value: settings.twitter, group: 'social' },
             { key: 'youtube', value: settings.youtube, group: 'social' },
+            { key: 'whatsapp', value: settings.whatsapp, group: 'social' },
+            { key: 'workingHoursWeekdays', value: settings.workingHoursWeekdays, group: 'contact' },
+            { key: 'workingHoursFriday', value: settings.workingHoursFriday, group: 'contact' },
+            { key: 'mapEmbedUrl', value: settings.mapEmbedUrl, group: 'contact' },
+            { key: 'terms_content', value: settings.terms_content, group: 'content' },
+            { key: 'privacy_content', value: settings.privacy_content, group: 'content' },
           ]
         })
       });
@@ -2955,122 +2977,304 @@ function SettingsPage() {
     );
   }
 
+  const settingsTabs = [
+    { key: 'general' as const, label: 'عام', icon: Store },
+    { key: 'contact' as const, label: 'خدمة العملاء', icon: Phone },
+    { key: 'content' as const, label: 'الشروط والخصوصية', icon: FileText },
+  ];
+
   return (
     <div className="space-y-6">
       <h2 className="text-xl font-bold text-gray-800">الإعدادات</h2>
 
       {message && (
-        <div className={`p-4 rounded-xl ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+        <div className={`p-4 rounded-xl flex items-center gap-2 ${message.type === 'success' ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+          {message.type === 'success' ? <CheckCircle className="h-5 w-5" /> : <AlertCircle className="h-5 w-5" />}
           {message.text}
         </div>
       )}
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>معلومات المتجر</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>اسم المتجر بالعربية</Label>
-              <Input 
-                value={settings.storeName} 
-                onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>اسم المتجر بالإنجليزية</Label>
-              <Input 
-                value={settings.storeNameEn} 
-                onChange={(e) => setSettings({ ...settings, storeNameEn: e.target.value })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>معلومات الاتصال</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>رقم الهاتف</Label>
-              <Input 
-                value={settings.phone} 
-                onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>البريد الإلكتروني</Label>
-              <Input 
-                type="email"
-                value={settings.email} 
-                onChange={(e) => setSettings({ ...settings, email: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>العنوان</Label>
-              <Input 
-                value={settings.address} 
-                onChange={(e) => setSettings({ ...settings, address: e.target.value })}
-              />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="shadow-lg">
-          <CardHeader>
-            <CardTitle>وسائل التواصل</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label>فيسبوك</Label>
-              <Input 
-                placeholder="https://facebook.com/..."
-                value={settings.facebook} 
-                onChange={(e) => setSettings({ ...settings, facebook: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>انستجرام</Label>
-              <Input 
-                placeholder="https://instagram.com/..."
-                value={settings.instagram} 
-                onChange={(e) => setSettings({ ...settings, instagram: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>تويتر (X)</Label>
-              <Input 
-                placeholder="https://x.com/..."
-                value={settings.twitter} 
-                onChange={(e) => setSettings({ ...settings, twitter: e.target.value })}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>يوتيوب</Label>
-              <Input 
-                placeholder="https://youtube.com/..."
-                value={settings.youtube} 
-                onChange={(e) => setSettings({ ...settings, youtube: e.target.value })}
-              />
-            </div>
-
-          </CardContent>
-        </Card>
+      {/* Settings Tabs */}
+      <div className="flex gap-2 bg-gray-100 rounded-xl p-1">
+        {settingsTabs.map((tab) => (
+          <button
+            key={tab.key}
+            onClick={() => setActiveSettingsTab(tab.key)}
+            className={`flex items-center gap-2 flex-1 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              activeSettingsTab === tab.key
+                ? 'bg-white text-emerald-700 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
       </div>
 
-      <Button 
-        onClick={handleSave} 
-        disabled={saving}
-        className="bg-emerald-600 hover:bg-emerald-700"
-      >
-        {saving ? (
-          <><Loader2 className="h-4 w-4 animate-spin ml-2" /> جاري الحفظ...</>
-        ) : (
-          'حفظ الإعدادات'
-        )}
-      </Button>
+      {/* General Tab */}
+      {activeSettingsTab === 'general' && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Store className="h-5 w-5 text-emerald-600" />
+                معلومات المتجر
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>اسم المتجر بالعربية</Label>
+                <Input 
+                  value={settings.storeName} 
+                  onChange={(e) => setSettings({ ...settings, storeName: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>اسم المتجر بالإنجليزية</Label>
+                <Input 
+                  value={settings.storeNameEn} 
+                  onChange={(e) => setSettings({ ...settings, storeNameEn: e.target.value })}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <div className="h-5 w-5 bg-blue-100 rounded flex items-center justify-center">
+                  <span className="text-sm">🌐</span>
+                </div>
+                وسائل التواصل الاجتماعي
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>فيسبوك</Label>
+                <Input 
+                  placeholder="https://facebook.com/..."
+                  value={settings.facebook} 
+                  onChange={(e) => setSettings({ ...settings, facebook: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>انستجرام</Label>
+                <Input 
+                  placeholder="https://instagram.com/..."
+                  value={settings.instagram} 
+                  onChange={(e) => setSettings({ ...settings, instagram: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>واتساب (رقم الهاتف)</Label>
+                <Input 
+                  placeholder="+201001234567"
+                  value={settings.whatsapp} 
+                  onChange={(e) => setSettings({ ...settings, whatsapp: e.target.value })}
+                  dir="ltr"
+                />
+                <p className="text-xs text-gray-400">أدخل رقم الهاتف مع رمز الدولة بدون مسافات</p>
+              </div>
+              <div className="space-y-2">
+                <Label>تويتر (X)</Label>
+                <Input 
+                  placeholder="https://x.com/..."
+                  value={settings.twitter} 
+                  onChange={(e) => setSettings({ ...settings, twitter: e.target.value })}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>يوتيوب</Label>
+                <Input 
+                  placeholder="https://youtube.com/..."
+                  value={settings.youtube} 
+                  onChange={(e) => setSettings({ ...settings, youtube: e.target.value })}
+                  dir="ltr"
+                />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Contact / Customer Service Tab */}
+      {activeSettingsTab === 'contact' && (
+        <div className="grid lg:grid-cols-2 gap-6">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Phone className="h-5 w-5 text-emerald-600" />
+                معلومات الاتصال
+              </CardTitle>
+              <p className="text-sm text-gray-500">هذه المعلومات ستظهر في صفحة اتصل بنا</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>رقم الهاتف الرئيسي</Label>
+                <Input 
+                  value={settings.phone} 
+                  onChange={(e) => setSettings({ ...settings, phone: e.target.value })}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>رقم هاتف إضافي (اختياري)</Label>
+                <Input 
+                  placeholder="+20 2 1234 5678"
+                  value={settings.phone2} 
+                  onChange={(e) => setSettings({ ...settings, phone2: e.target.value })}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>البريد الإلكتروني</Label>
+                <Input 
+                  type="email"
+                  value={settings.email} 
+                  onChange={(e) => setSettings({ ...settings, email: e.target.value })}
+                  dir="ltr"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>العنوان</Label>
+                <Textarea 
+                  value={settings.address} 
+                  onChange={(e) => setSettings({ ...settings, address: e.target.value })}
+                  rows={3}
+                />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-emerald-600" />
+                ساعات العمل والخريطة
+              </CardTitle>
+              <p className="text-sm text-gray-500">تحكم في ساعات العمل وعرض الخريطة</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>ساعات العمل (أيام الأسبوع)</Label>
+                <Input 
+                  placeholder="السبت - الخميس: 9:00 صباحاً - 9:00 مساءً"
+                  value={settings.workingHoursWeekdays} 
+                  onChange={(e) => setSettings({ ...settings, workingHoursWeekdays: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>ساعات العمل (الجمعة)</Label>
+                <Input 
+                  placeholder="الجمعة: 2:00 مساءً - 9:00 مساءً"
+                  value={settings.workingHoursFriday} 
+                  onChange={(e) => setSettings({ ...settings, workingHoursFriday: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <MapPin className="h-4 w-4 text-emerald-600" />
+                  رابط خريطة جوجل المضمنة
+                </Label>
+                <Textarea 
+                  placeholder='الصق كود iframe من Google Maps هنا. مثال: &lt;iframe src="https://www.google.com/maps/embed?..."&gt;&lt;/iframe&gt;'
+                  value={settings.mapEmbedUrl} 
+                  onChange={(e) => setSettings({ ...settings, mapEmbedUrl: e.target.value })}
+                  rows={4}
+                  dir="ltr"
+                  className="text-xs font-mono"
+                />
+                <p className="text-xs text-gray-400">
+                  لل获取 رابط التضمين: افتح Google Maps ← اختر الموقع ← شارك ← تضمين خريطة ← نسخ كود HTML
+                </p>
+                {settings.mapEmbedUrl && (
+                  <div className="mt-2 p-3 bg-gray-50 rounded-lg border">
+                    <p className="text-xs text-gray-500 mb-2">معاينة الخريطة:</p>
+                    <div 
+                      className="h-[150px] rounded overflow-hidden"
+                      dangerouslySetInnerHTML={{ __html: settings.mapEmbedUrl.replace(/width="[^"]*"/, 'width="100%"').replace(/height="[^"]*"/, 'height="150"') }}
+                    />
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Content Tab (Terms & Privacy) */}
+      {activeSettingsTab === 'content' && (
+        <div className="space-y-6">
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="h-5 w-5 text-emerald-600" />
+                شروط وأحكام الاستخدام
+              </CardTitle>
+              <p className="text-sm text-gray-500">استخدم تنسيق Markdown للنص. اتركه فارغاً لاستخدام النص الافتراضي.</p>
+            </CardHeader>
+            <CardContent>
+              <Textarea 
+                value={settings.terms_content} 
+                onChange={(e) => setSettings({ ...settings, terms_content: e.target.value })}
+                rows={16}
+                placeholder="# شروط وأحكام الاستخدام&#10;&#10;## المقدمة&#10;مرحباً بكم في موقع كمال سعد...&#10;&#10;## 1. التعريفات&#10;- **الموقع**: ...&#10;- **المستخدم**: ..."
+                className="font-mono text-sm"
+              />
+              <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+                <span>دعم التنسيق:</span>
+                <code className="bg-gray-100 px-2 py-0.5 rounded"># عنوان</code>
+                <code className="bg-gray-100 px-2 py-0.5 rounded">## عنوان فرعي</code>
+                <code className="bg-gray-100 px-2 py-0.5 rounded">**نص عريض**</code>
+                <code className="bg-gray-100 px-2 py-0.5 rounded">- قائمة</code>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-lg">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Shield className="h-5 w-5 text-emerald-600" />
+                سياسة الخصوصية
+              </CardTitle>
+              <p className="text-sm text-gray-500">استخدم تنسيق Markdown للنص. اتركه فارغاً لاستخدام النص الافتراضي.</p>
+            </CardHeader>
+            <CardContent>
+              <Textarea 
+                value={settings.privacy_content} 
+                onChange={(e) => setSettings({ ...settings, privacy_content: e.target.value })}
+                rows={16}
+                placeholder="# سياسة الخصوصية&#10;&#10;## المقدمة&#10;في كمال سعد، نحترم خصوصيتك...&#10;&#10;## 1. المعلومات التي نجمعها&#10;- **الاسم والبريد الإلكتروني**: ..."
+                className="font-mono text-sm"
+              />
+              <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
+                <span>دعم التنسيق:</span>
+                <code className="bg-gray-100 px-2 py-0.5 rounded"># عنوان</code>
+                <code className="bg-gray-100 px-2 py-0.5 rounded">## عنوان فرعي</code>
+                <code className="bg-gray-100 px-2 py-0.5 rounded">**نص عريض**</code>
+                <code className="bg-gray-100 px-2 py-0.5 rounded">- قائمة</code>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      <div className="flex items-center gap-4">
+        <Button 
+          onClick={handleSave} 
+          disabled={saving}
+          className="bg-emerald-600 hover:bg-emerald-700"
+        >
+          {saving ? (
+            <><Loader2 className="h-4 w-4 animate-spin ml-2" /> جاري الحفظ...</>
+          ) : (
+            'حفظ الإعدادات'
+          )}
+        </Button>
+        {saving && <span className="text-sm text-gray-500">جاري حفظ جميع الإعدادات...</span>}
+      </div>
     </div>
   );
 }

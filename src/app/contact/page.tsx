@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
   MapPin, Phone, Mail, Clock, Send, Facebook, Instagram, MessageCircle,
-  Loader2, CheckCircle2, AlertCircle, ArrowLeft
+  Loader2, CheckCircle2, AlertCircle, ArrowLeft, ExternalLink
 } from 'lucide-react';
 import { Header } from '@/components/store/Header';
 import { Footer } from '@/components/store/Footer';
@@ -162,7 +162,17 @@ export default function ContactPage() {
   // Override contact info from settings
   const displayAddress = settings.address || t.addressValue;
   const displayPhone = settings.phone || t.phoneValue1;
+  const displayPhone2 = settings.phone2 || '';
   const displayEmail = settings.email || t.emailValue;
+
+  // Working hours from settings - parse the full string from admin
+  const workingHoursWeekdays = settings.workingHoursWeekdays || 
+    `${t.workingHoursWeekdays}: ${t.workingHoursWeekdaysTime}`;
+  const workingHoursFriday = settings.workingHoursFriday || 
+    `${t.workingHoursFriday}: ${t.workingHoursFridayTime}`;
+
+  // Map embed URL from settings
+  const mapEmbedUrl = settings.mapEmbedUrl || '';
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -532,7 +542,22 @@ export default function ContactPage() {
                       </div>
                       <div className={isArabic ? 'text-right' : 'text-left'}>
                         <p className="font-semibold text-gray-900 dark:text-white">{t.phoneLabel2}</p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">{displayPhone}</p>
+                        <a 
+                          href={`tel:${displayPhone.replace(/\s/g, '')}`}
+                          className="text-gray-600 dark:text-gray-300 text-sm hover:text-teal-600 dark:hover:text-teal-400 transition-colors block"
+                          dir="ltr"
+                        >
+                          {displayPhone}
+                        </a>
+                        {displayPhone2 && (
+                          <a 
+                            href={`tel:${displayPhone2.replace(/\s/g, '')}`}
+                            className="text-gray-600 dark:text-gray-300 text-sm hover:text-teal-600 dark:hover:text-teal-400 transition-colors block mt-1"
+                            dir="ltr"
+                          >
+                            {displayPhone2}
+                          </a>
+                        )}
                       </div>
                     </div>
 
@@ -543,7 +568,13 @@ export default function ContactPage() {
                       </div>
                       <div className={isArabic ? 'text-right' : 'text-left'}>
                         <p className="font-semibold text-gray-900 dark:text-white">{t.emailLabel2}</p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">{displayEmail}</p>
+                        <a 
+                          href={`mailto:${displayEmail}`}
+                          className="text-gray-600 dark:text-gray-300 text-sm hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+                          dir="ltr"
+                        >
+                          {displayEmail}
+                        </a>
                       </div>
                     </div>
 
@@ -554,12 +585,8 @@ export default function ContactPage() {
                       </div>
                       <div className={isArabic ? 'text-right' : 'text-left'}>
                         <p className="font-semibold text-gray-900 dark:text-white">{t.workingHoursTitle}</p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">
-                          {t.workingHoursWeekdays}: {t.workingHoursWeekdaysTime}
-                        </p>
-                        <p className="text-gray-600 dark:text-gray-300 text-sm">
-                          {t.workingHoursFriday}: {t.workingHoursFridayTime}
-                        </p>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">{workingHoursWeekdays}</p>
+                        <p className="text-gray-600 dark:text-gray-300 text-sm">{workingHoursFriday}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -607,25 +634,38 @@ export default function ContactPage() {
                 </CardHeader>
                 <CardContent className="p-0">
                   <div className="relative h-[400px] w-full bg-gray-200 dark:bg-gray-700">
-                    {/* Static Map Image - Using a placeholder map */}
-                    <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-teal-100 to-cyan-100 dark:from-gray-700 dark:to-gray-800">
-                      <div className="text-center p-8">
-                        <MapPin className="h-16 w-16 text-teal-600 dark:text-teal-400 mx-auto mb-4" />
-                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-                          {t.addressLabel}
-                        </h3>
-                        <p className="text-gray-600 dark:text-gray-300 mb-6">{displayAddress}</p>
-                        <a
-                          href="https://maps.google.com/?q=30.0444,31.2357"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
-                        >
-                          <MapPin className="h-5 w-5" />
-                          {t.openInMaps}
-                        </a>
+                    {mapEmbedUrl ? (
+                      /* Google Maps Embed from admin settings */
+                      <div 
+                        className="absolute inset-0"
+                        dangerouslySetInnerHTML={{ 
+                          __html: mapEmbedUrl
+                            .replace(/width="[^"]*"/, 'width="100%"')
+                            .replace(/height="[^"]*"/, 'height="100%"')
+                            .replace(/style="[^"]*"/, 'style="border:0; width:100%; height:100%;"')
+                        }}
+                      />
+                    ) : (
+                      /* Static placeholder when no map embed is set */
+                      <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-teal-100 to-cyan-100 dark:from-gray-700 dark:to-gray-800">
+                        <div className="text-center p-8">
+                          <MapPin className="h-16 w-16 text-teal-600 dark:text-teal-400 mx-auto mb-4" />
+                          <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
+                            {t.addressLabel}
+                          </h3>
+                          <p className="text-gray-600 dark:text-gray-300 mb-6">{displayAddress}</p>
+                          <a
+                            href={`https://maps.google.com/?q=${encodeURIComponent(displayAddress)}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300"
+                          >
+                            <ExternalLink className="h-5 w-5" />
+                            {t.openInMaps}
+                          </a>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>

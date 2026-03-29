@@ -347,8 +347,8 @@ For any privacy-related inquiries, contact us via the Contact Us page.
         {/* Terms */}
         <section className="py-12">
           <div className="container mx-auto px-4 max-w-4xl">
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-10">
+            <motion.div id="terms" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-10 scroll-mt-24">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b dark:border-gray-700">
                 <div className="h-10 w-10 bg-teal-100 dark:bg-teal-900/30 rounded-xl flex items-center justify-center">
                   <FileText className="h-5 w-5 text-teal-600 dark:text-teal-400" />
@@ -359,8 +359,8 @@ For any privacy-related inquiries, contact us via the Contact Us page.
             </motion.div>
 
             {/* Privacy */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-10 mt-8">
+            <motion.div id="privacy" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+              className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6 md:p-10 mt-8 scroll-mt-24">
               <div className="flex items-center gap-3 mb-6 pb-4 border-b dark:border-gray-700">
                 <div className="h-10 w-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
                   <Shield className="h-5 w-5 text-blue-600 dark:text-blue-400" />

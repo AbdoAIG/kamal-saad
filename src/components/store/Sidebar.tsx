@@ -67,7 +67,7 @@ export function Sidebar({ isOpen, onClose, categories, selectedCategory, onCateg
     { href: '#', icon: ShoppingBag, label: isArabic ? 'تتبع الطلب' : 'Track Order' },
     { href: '#', icon: Truck, label: isArabic ? 'الشحن والتوصيل' : 'Shipping' },
     { href: '#', icon: HelpCircle, label: isArabic ? 'الأسئلة الشائعة' : 'FAQ' },
-    { href: '#', icon: Phone, label: isArabic ? 'اتصل بنا' : 'Contact Us' },
+    { href: '/contact', icon: Phone, label: isArabic ? 'اتصل بنا' : 'Contact Us' },
   ];
 
   const handleCategoryClick = (categoryId: string | null) => {
@@ -215,10 +215,12 @@ export function Sidebar({ isOpen, onClose, categories, selectedCategory, onCateg
                         : 'Contact our support team'
                       }
                     </p>
-                    <Button className="w-full bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-xl">
-                      <Phone className="h-4 w-4 mr-2" />
-                      {isArabic ? 'اتصل بنا' : 'Contact Us'}
-                    </Button>
+                    <Link href="/contact" onClick={onClose}>
+                      <Button className="w-full bg-gradient-to-l from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white rounded-xl">
+                        <Phone className="h-4 w-4 mr-2" />
+                        {isArabic ? 'اتصل بنا' : 'Contact Us'}
+                      </Button>
+                    </Link>
                   </div>
                 </div>
               </div>
@@ -226,9 +228,9 @@ export function Sidebar({ isOpen, onClose, categories, selectedCategory, onCateg
               {/* Footer */}
               <div className="p-4 border-t dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
                 <div className="flex items-center justify-center gap-4 text-sm text-gray-500 dark:text-gray-400">
-                  <Link href="#" className="hover:text-teal-600">{isArabic ? 'سياسة الخصوصية' : 'Privacy'}</Link>
+                  <Link href="/terms#privacy" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">{isArabic ? 'سياسة الخصوصية' : 'Privacy'}</Link>
                   <span>•</span>
-                  <Link href="#" className="hover:text-teal-600">{isArabic ? 'الشروط' : 'Terms'}</Link>
+                  <Link href="/terms#terms" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">{isArabic ? 'الشروط' : 'Terms'}</Link>
                 </div>
               </div>
             </div>
