@@ -363,6 +363,7 @@ model Banner {
   link         String?
   buttonText   String?
   buttonTextAr String?
+  type         String   @default("hero")
   active       Boolean  @default(true)
   order        Int      @default(0)
   createdAt    DateTime @default(now())

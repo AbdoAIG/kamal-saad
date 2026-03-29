@@ -26,7 +26,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { title, titleAr, subtitle, subtitleAr, image, link, buttonText, buttonTextAr, active, order } = body;
+    const { title, titleAr, subtitle, subtitleAr, image, link, buttonText, buttonTextAr, type, active, order } = body;
     
     const banner = await db.banner.create({
       data: {
@@ -38,6 +38,7 @@ export async function POST(request: Request) {
         link,
         buttonText,
         buttonTextAr,
+        type: type || 'hero',
         active: active !== undefined ? active : true,
         order: order || 0
       }
@@ -60,7 +61,7 @@ export async function POST(request: Request) {
 export async function PUT(request: Request) {
   try {
     const body = await request.json();
-    const { id, title, titleAr, subtitle, subtitleAr, image, link, buttonText, buttonTextAr, active, order } = body;
+    const { id, title, titleAr, subtitle, subtitleAr, image, link, buttonText, buttonTextAr, type, active, order } = body;
     
     const banner = await db.banner.update({
       where: { id },
@@ -73,6 +74,7 @@ export async function PUT(request: Request) {
         link,
         buttonText,
         buttonTextAr,
+        type,
         active,
         order
       }

@@ -10,7 +10,7 @@ import { PartnersMarquee } from '@/components/store/PartnersMarquee';
 import { CartSidebar } from '@/components/store/CartSidebar';
 import { AuthModal } from '@/components/store/AuthModal';
 import { ProductCard } from '@/components/store/ProductCard';
-import { PromotionalBanner } from '@/components/store/PromotionalBanner';
+import { HeroBanner, PromoBannersSection } from '@/components/store/PromotionalBanner';
 import { Sidebar } from '@/components/store/Sidebar';
 import { FavoritesSidebar } from '@/components/store/FavoritesSidebar';
 import { Button } from '@/components/ui/button';
@@ -181,7 +181,7 @@ function HomePageContent() {
       
       <main className="flex-1">
         {/* Hero Banner Slider */}
-        <PromotionalBanner isHero={true} />
+        <HeroBanner />
 
         {/* Categories Section */}
         <section className="py-6 bg-white dark:bg-gray-800 border-b dark:border-gray-700">
@@ -217,10 +217,8 @@ function HomePageContent() {
           </div>
         </section>
 
-        {/* Promotional Banner */}
-        <div className="container mx-auto px-4 py-6">
-          <PromotionalBanner isHero={false} />
-        </div>
+        {/* Promotional Banners - Horizontal + Vertical */}
+        <PromoBannersSection />
 
         {/* Products Section */}
         <section id="products" className="py-6 bg-white dark:bg-gray-800">

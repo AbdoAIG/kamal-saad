@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
-import { useStore, t } from '@/store/useStore';
+import { ChevronLeft, ChevronRight, ExternalLink, ArrowLeft } from 'lucide-react';
+import { useStore } from '@/store/useStore';
 import { Button } from '@/components/ui/button';
 
 interface Banner {
@@ -16,468 +16,383 @@ interface Banner {
   link: string | null;
   buttonText: string | null;
   buttonTextAr: string | null;
+  type: string;
   active: boolean;
   order: number;
-  position?: number;
 }
 
-// Default hero banners - Updated with new text
-const defaultHeroBanners = {
-  ar: [
-    {
-      id: 'hero-1',
-      title: 'كل ما تحتاجه للمدرسة والمكتب',
-      subtitle: 'أفضل المنتجات المدرسية والمكتبية بأسعار مناسبة',
-      gradient: 'from-teal-600 via-cyan-600 to-blue-600',
-      features: ['توصيل سريع', 'ضمان الجودة', 'دفع آمن', 'دعم متواصل'],
-      stats: { products: '500+', categories: '6' }
-    },
-    {
-      id: 'hero-2',
-      title: 'عروض العودة للمدارس',
-      subtitle: 'خصم 30%',
-      gradient: 'from-blue-600 via-indigo-600 to-purple-600',
-      features: ['خصومات حصرية', 'توصيل سريع'],
-      stats: { discount: '30%', delivery: 'خصم' }
-    },
-    {
-      id: 'hero-3',
-      title: 'توصيل مجاني',
-      subtitle: 'للطلبات فوق 1000 جنيه',
-      gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
-      features: ['توصيل سريع', 'دفع عند الاستلام'],
-      stats: { minOrder: '1000 ج.م', delivery: 'مجاني' }
-    },
-  ],
-  en: [
-    {
-      id: 'hero-1',
-      title: 'Everything You Need for School & Office',
-      subtitle: 'Best school and office supplies at great prices',
-      gradient: 'from-teal-600 via-cyan-600 to-blue-600',
-      features: ['Fast Delivery', 'Quality Guarantee', 'Secure Payment', '24/7 Support'],
-      stats: { products: '500+', categories: '6' }
-    },
-    {
-      id: 'hero-2',
-      title: 'Back to School Offers',
-      subtitle: '30% Discount',
-      gradient: 'from-blue-600 via-indigo-600 to-purple-600',
-      features: ['Exclusive Discounts', 'Fast Delivery'],
-      stats: { discount: '30%', delivery: 'Discount' }
-    },
-    {
-      id: 'hero-3',
-      title: 'Free Delivery',
-      subtitle: 'On orders over 1000 EGP',
-      gradient: 'from-emerald-600 via-teal-600 to-cyan-600',
-      features: ['Fast Delivery', 'Cash on Delivery'],
-      stats: { minOrder: '1000 EGP', delivery: 'Free' }
-    },
-  ]
-};
-
-interface HeroBannerProps {
-  isHero?: boolean;
-  position?: 1 | 2; // Position 1 = Hero section, Position 2 = Middle of page
-}
-
-export function PromotionalBanner({ isHero = false, position = 1 }: HeroBannerProps) {
-  const [currentBanner, setCurrentBanner] = useState(0);
+// ============================================================
+// HERO BANNER SLIDER - Full-width professional slider
+// ============================================================
+export function HeroBanner() {
+  const [current, setCurrent] = useState(0);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
   const { language } = useStore();
   const isArabic = language === 'ar';
 
-  // Fetch banners from API filtered by position
   useEffect(() => {
     const fetchBanners = async () => {
       try {
         const res = await fetch('/api/banners');
         const data = await res.json();
-        if (data.success && data.data && data.data.length > 0) {
-          // Filter banners by position (order field: 1 = hero, 2 = middle)
-          const positionBanners = data.data.filter((b: Banner) => {
-            // Banner order 1-3 = position 1 (hero), order 4-6 = position 2 (middle)
-            if (position === 1) {
-              return b.active && b.order >= 1 && b.order <= 3;
-            } else {
-              return b.active && b.order >= 4 && b.order <= 6;
-            }
-          });
-          if (positionBanners.length > 0) {
-            setBanners(positionBanners);
-          }
+        if (data.success && data.data) {
+          const heroBanners = data.data
+            .filter((b: Banner) => b.active && b.type === 'hero')
+            .sort((a: Banner, b: Banner) => a.order - b.order);
+          if (heroBanners.length > 0) setBanners(heroBanners);
         }
       } catch (error) {
-        console.error('Error fetching banners:', error);
+        console.error('Error fetching hero banners:', error);
       } finally {
         setLoading(false);
       }
     };
     fetchBanners();
-  }, [position]);
+  }, []);
 
-  // Auto-rotate banners every 5 seconds
+  // Auto-rotate
   useEffect(() => {
-    const displayBanners = banners.length > 0 ? banners : defaultHeroBanners[isArabic ? 'ar' : 'en'];
-    if (displayBanners.length <= 1) return;
-    
+    if (isPaused || banners.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentBanner((prev) => (prev + 1) % displayBanners.length);
+      setCurrent((prev) => (prev + 1) % banners.length);
     }, 5000);
-    
     return () => clearInterval(interval);
-  }, [banners.length, isArabic]);
+  }, [isPaused, banners.length]);
 
-  const nextBanner = () => {
-    const displayBanners = banners.length > 0 ? banners : defaultHeroBanners[isArabic ? 'ar' : 'en'];
-    setCurrentBanner((prev) => (prev + 1) % displayBanners.length);
+  const goTo = useCallback((index: number) => setCurrent(index), []);
+  const next = useCallback(() => setCurrent((prev) => (prev + 1) % banners.length), [banners.length]);
+  const prev = useCallback(() => setCurrent((prev) => (prev - 1 + banners.length) % banners.length), [banners.length]);
+
+  // Default fallback banner
+  const defaultBanner = {
+    title: isArabic ? 'كمال سعد للمستلزمات المكتبية والمدرسية' : 'Kamal Saad Office & School Supplies',
+    subtitle: isArabic ? 'أفضل المنتجات بأفضل الأسعار' : 'Best Products at Best Prices',
+    gradient: true,
   };
 
-  const prevBanner = () => {
-    const displayBanners = banners.length > 0 ? banners : defaultHeroBanners[isArabic ? 'ar' : 'en'];
-    setCurrentBanner((prev) => (prev - 1 + displayBanners.length) % displayBanners.length);
-  };
-  
-  const hasCustomBanners = banners.length > 0;
-  const displayBanners = hasCustomBanners ? banners : defaultHeroBanners[isArabic ? 'ar' : 'en'];
+  const hasBanners = banners.length > 0;
+  const items = hasBanners ? banners : [defaultBanner as any];
+  const activeBanner = hasBanners ? banners[current] : null;
 
-  if (displayBanners.length === 0) return null;
-
-  const currentBannerData = displayBanners[currentBanner];
-  
-  // Get banner content
-  const title = hasCustomBanners 
-    ? (isArabic ? (currentBannerData as Banner).titleAr || (currentBannerData as Banner).title : (currentBannerData as Banner).title)
-    : (currentBannerData as any).title;
-  const subtitle = hasCustomBanners
-    ? (isArabic ? (currentBannerData as Banner).subtitleAr || (currentBannerData as Banner).subtitle : (currentBannerData as Banner).subtitle)
-    : (currentBannerData as any).subtitle;
-  const buttonText = hasCustomBanners
-    ? (isArabic ? (currentBannerData as Banner).buttonTextAr || (currentBannerData as Banner).buttonText : (currentBannerData as Banner).buttonText)
-    : (isArabic ? 'تسوق الآن' : 'Shop Now');
-  const link = hasCustomBanners ? (currentBannerData as Banner).link : null;
-  const bannerImage = hasCustomBanners ? (currentBannerData as Banner).image : null;
-  const gradient = hasCustomBanners 
-    ? 'from-teal-600 via-cyan-600 to-blue-600' 
-    : (currentBannerData as any).gradient;
-  const features = hasCustomBanners ? [] : (currentBannerData as any).features || [];
-  const stats = hasCustomBanners ? null : (currentBannerData as any).stats;
-
-  // Hero Banner Style
-  if (isHero) {
+  if (loading) {
     return (
-      <div 
-        className={`relative overflow-hidden ${isArabic ? 'rtl' : 'ltr'}`}
-        dir={isArabic ? 'rtl' : 'ltr'}
-      >
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentBanner}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, ease: 'easeInOut' }}
-            className={`relative ${bannerImage ? '' : `bg-gradient-to-l ${gradient}`} min-h-[300px] md:min-h-[400px] lg:min-h-[450px] flex items-center`}
-          >
-            {/* Banner Image Background */}
-            {bannerImage && (
-              <>
-                <img 
-                  src={bannerImage} 
-                  alt={title}
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-l from-black/70 via-black/50 to-black/30" />
-              </>
-            )}
-            
-            {/* Background decorations */}
-            {!bannerImage && (
-              <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-                <div className="absolute bottom-0 left-0 w-[300px] h-[300px] bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-                <div className="absolute top-1/2 left-1/2 w-[200px] h-[200px] bg-white/5 rounded-full -translate-x-1/2 -translate-y-1/2" />
-              </div>
-            )}
+      <div className="w-full h-[280px] md:h-[400px] lg:h-[480px] bg-gray-200 dark:bg-gray-800 animate-pulse" />
+    );
+  }
 
-            <div className="container mx-auto px-4 relative z-10">
-              <div className={`flex flex-col items-center text-center max-w-3xl mx-auto ${isArabic ? 'rtl' : 'ltr'}`}>
-                {/* Subtitle */}
-                {subtitle && (
-                  <motion.div
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.1 }}
-                    className="inline-flex items-center gap-2 bg-yellow-400 text-gray-900 px-4 py-2 rounded-full text-sm font-bold mb-4 md:mb-6"
-                  >
-                    <span className="animate-pulse">✨</span>
-                    {subtitle}
-                  </motion.div>
-                )}
-                
-                {/* Title */}
-                <motion.h1
-                  initial={{ y: 30, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 md:mb-6 drop-shadow-lg leading-tight"
-                >
-                  {title}
-                </motion.h1>
-                
-                {/* Stats */}
-                {stats && (
-                  <motion.div
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.3 }}
-                    className="flex items-center justify-center gap-6 md:gap-8 mb-6"
-                  >
-                    {Object.entries(stats).map(([key, value]) => (
-                      <div key={key} className="text-center">
-                        <p className="text-2xl md:text-3xl font-bold text-white">{value}</p>
-                        <p className="text-xs md:text-sm text-white/70">
-                          {isArabic ? 
-                            (key === 'products' ? 'منتج' : key === 'categories' ? 'أقسام' : key === 'discount' ? 'خصم' : key === 'delivery' ? 'توصيل' : key === 'minOrder' ? 'الحد الأدنى' : key) :
-                            key.charAt(0).toUpperCase() + key.slice(1)
-                          }
-                        </p>
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-                
-                {/* CTA Button */}
-                <motion.div
-                  initial={{ y: 30, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="mb-6"
-                >
-                  {link ? (
-                    <a href={link} target="_blank" rel="noopener noreferrer">
-                      <Button 
-                        size="lg" 
-                        className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-6 md:px-10 py-4 md:py-6 text-base md:text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105 gap-2"
-                      >
-                        {buttonText}
+  return (
+    <div
+      className="relative w-full h-[280px] md:h-[400px] lg:h-[480px] overflow-hidden"
+      dir={isArabic ? 'rtl' : 'ltr'}
+      onMouseEnter={() => setIsPaused(true)}
+      onMouseLeave={() => setIsPaused(false)}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={current}
+          initial={{ opacity: 0, scale: 1.05 }}
+          animate={{ opacity: 1, scale: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.7, ease: 'easeInOut' }}
+          className="absolute inset-0"
+        >
+          {activeBanner?.image ? (
+            <>
+              <img
+                src={activeBanner.image}
+                alt={isArabic ? activeBanner.titleAr : activeBanner.title}
+                className="absolute inset-0 w-full h-full object-cover object-center"
+              />
+              {/* Gradient overlays for text readability */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-black/10" />
+              <div className={`absolute inset-0 bg-gradient-to-r ${isArabic ? 'from-black/60 via-transparent to-transparent' : 'from-transparent via-transparent to-black/60'}`} />
+            </>
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-l from-teal-700 via-cyan-600 to-teal-500" />
+          )}
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Content */}
+      <div className="absolute inset-0 flex items-center z-10">
+        <div className="container mx-auto px-4">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={current}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.5, delay: 0.2 }}
+              className="max-w-2xl"
+            >
+              {activeBanner?.subtitle && (
+                <span className="inline-flex items-center gap-2 bg-white/20 backdrop-blur-md text-white px-4 py-1.5 rounded-full text-sm font-semibold mb-4 border border-white/10">
+                  <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full animate-pulse" />
+                  {isArabic ? activeBanner.subtitleAr || activeBanner.subtitle : activeBanner.subtitle}
+                </span>
+              )}
+              <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-5 leading-tight drop-shadow-xl">
+                {activeBanner
+                  ? (isArabic ? activeBanner.titleAr : activeBanner.title)
+                  : defaultBanner.title}
+              </h1>
+              {activeBanner?.buttonText && (
+                <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.98 }}>
+                  {activeBanner.link ? (
+                    <a href={activeBanner.link} target="_blank" rel="noopener noreferrer">
+                      <Button className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-7 py-5 text-base rounded-xl shadow-2xl transition-all gap-2">
+                        {isArabic ? activeBanner.buttonTextAr || activeBanner.buttonText : activeBanner.buttonText}
                         <ExternalLink className="w-4 h-4" />
                       </Button>
                     </a>
                   ) : (
                     <a href="#products">
-                      <Button 
-                        size="lg" 
-                        className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-6 md:px-10 py-4 md:py-6 text-base md:text-lg rounded-xl shadow-xl hover:shadow-2xl transition-all duration-300 hover:scale-105"
-                      >
-                        {buttonText}
+                      <Button className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-7 py-5 text-base rounded-xl shadow-2xl transition-all">
+                        {isArabic ? activeBanner.buttonTextAr || activeBanner.buttonText : activeBanner.buttonText}
                       </Button>
                     </a>
                   )}
                 </motion.div>
-                
-                {/* Features */}
-                {features.length > 0 && (
-                  <motion.div
-                    initial={{ y: 30, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    transition={{ delay: 0.5 }}
-                    className="flex flex-wrap justify-center gap-3 md:gap-4"
-                  >
-                    {features.map((feature: string, idx: number) => (
-                      <div key={idx} className="flex items-center gap-2 bg-white/10 backdrop-blur-sm text-white px-3 md:px-4 py-2 rounded-full text-xs md:text-sm font-medium">
-                        {feature}
-                      </div>
-                    ))}
-                  </motion.div>
-                )}
-              </div>
-            </div>
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Navigation Arrows */}
-        {displayBanners.length > 1 && (
-          <>
-            <button
-              onClick={prevBanner}
-              className="absolute left-2 md:left-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2 md:p-3 rounded-full transition-all duration-300 hover:scale-110 z-20"
-            >
-              <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />
-            </button>
-            <button
-              onClick={nextBanner}
-              className="absolute right-2 md:right-4 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2 md:p-3 rounded-full transition-all duration-300 hover:scale-110 z-20"
-            >
-              <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />
-            </button>
-
-            {/* Dots Navigation */}
-            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
-              {displayBanners.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setCurrentBanner(index)}
-                  className={`transition-all duration-300 rounded-full ${
-                    index === currentBanner 
-                      ? 'w-6 md:w-8 h-2 md:h-3 bg-white' 
-                      : 'w-2 md:w-3 h-2 md:h-3 bg-white/50 hover:bg-white/70'
-                  }`}
-                />
-              ))}
-            </div>
-          </>
-        )}
-
-        {/* Progress Bar */}
-        {displayBanners.length > 1 && (
-          <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20 z-20">
-            <motion.div
-              key={currentBanner}
-              initial={{ width: '0%' }}
-              animate={{ width: '100%' }}
-              transition={{ duration: 5, ease: 'linear' }}
-              className="h-full bg-white/80"
-            />
-          </div>
-        )}
+              )}
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
-    );
-  }
-
-  // Regular Banner Style (smaller, for middle of page)
-  return (
-    <div 
-      className={`relative overflow-hidden rounded-xl md:rounded-2xl shadow-lg ${isArabic ? 'rtl' : 'ltr'}`}
-      dir={isArabic ? 'rtl' : 'ltr'}
-    >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentBanner}
-          initial={{ opacity: 0, x: isArabic ? -50 : 50 }}
-          animate={{ opacity: 1, x: 0 }}
-          exit={{ opacity: 0, x: isArabic ? 50 : -50 }}
-          transition={{ duration: 0.4, ease: 'easeInOut' }}
-          className={`relative ${bannerImage ? '' : `bg-gradient-to-l ${gradient}`} p-4 md:p-6 min-h-[120px] md:min-h-[180px] flex items-center`}
-        >
-          {bannerImage && (
-            <>
-              <img 
-                src={bannerImage} 
-                alt={title}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-l from-black/60 via-black/40 to-transparent" />
-            </>
-          )}
-          
-          {!bannerImage && (
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full -translate-y-1/2 translate-x-1/2" />
-              <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full translate-y-1/2 -translate-x-1/2" />
-            </div>
-          )}
-
-          <div className="container mx-auto relative z-10">
-            <div className="flex flex-col items-center text-center">
-              {subtitle && (
-                <motion.span
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                  className="inline-flex items-center gap-1 bg-yellow-400 text-gray-900 px-3 py-1 rounded-full text-xs font-bold mb-2"
-                >
-                  <span>✨</span>
-                  {subtitle}
-                </motion.span>
-              )}
-              
-              <motion.h2
-                initial={{ y: 10, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                className="text-lg md:text-xl lg:text-2xl font-bold text-white mb-3 drop-shadow-lg"
-              >
-                {title}
-              </motion.h2>
-              
-              {buttonText && (
-                <motion.div
-                  initial={{ y: 10, opacity: 0 }}
-                  animate={{ y: 0, opacity: 1 }}
-                >
-                  {link ? (
-                    <a href={link} target="_blank" rel="noopener noreferrer">
-                      <Button 
-                        size="sm"
-                        className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-4 py-2 text-sm rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 gap-1"
-                      >
-                        {buttonText}
-                        <ExternalLink className="w-3 h-3" />
-                      </Button>
-                    </a>
-                  ) : (
-                    <a href="#products">
-                      <Button 
-                        size="sm"
-                        className="bg-white text-gray-900 hover:bg-gray-100 font-bold px-4 py-2 text-sm rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
-                      >
-                        {buttonText}
-                      </Button>
-                    </a>
-                  )}
-                </motion.div>
-              )}
-            </div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
 
       {/* Navigation Arrows */}
-      {displayBanners.length > 1 && (
+      {items.length > 1 && (
         <>
           <button
-            onClick={prevBanner}
-            className="absolute left-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2 rounded-full transition-all duration-300 hover:scale-110 z-20"
+            onClick={prev}
+            className={`absolute top-1/2 -translate-y-1/2 z-20 bg-white/10 hover:bg-white/25 backdrop-blur-md text-white p-2.5 rounded-full transition-all duration-300 hover:scale-110 border border-white/10 ${isArabic ? 'right-3 md:right-5' : 'left-3 md:left-5'}`}
           >
-            <ChevronLeft className="w-4 h-4" />
+            {isArabic ? <ChevronRight className="w-5 h-5 md:w-6 md:h-6" /> : <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />}
           </button>
           <button
-            onClick={nextBanner}
-            className="absolute right-2 top-1/2 -translate-y-1/2 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white p-2 rounded-full transition-all duration-300 hover:scale-110 z-20"
+            onClick={next}
+            className={`absolute top-1/2 -translate-y-1/2 z-20 bg-white/10 hover:bg-white/25 backdrop-blur-md text-white p-2.5 rounded-full transition-all duration-300 hover:scale-110 border border-white/10 ${isArabic ? 'left-3 md:left-5' : 'right-3 md:right-5'}`}
           >
-            <ChevronRight className="w-4 h-4" />
+            {isArabic ? <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" /> : <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />}
           </button>
+        </>
+      )}
 
-          {/* Dots */}
-          <div className="absolute bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-1 z-20">
-            {displayBanners.map((_, index) => (
+      {/* Dots + Progress */}
+      {items.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex flex-col items-center gap-2">
+          <div className="flex items-center gap-2">
+            {items.map((_, index) => (
               <button
                 key={index}
-                onClick={() => setCurrentBanner(index)}
+                onClick={() => goTo(index)}
                 className={`transition-all duration-300 rounded-full ${
-                  index === currentBanner 
-                    ? 'w-5 h-2 bg-white' 
-                    : 'w-2 h-2 bg-white/50 hover:bg-white/70'
+                  index === current
+                    ? 'w-7 h-2.5 bg-white shadow-lg'
+                    : 'w-2.5 h-2.5 bg-white/40 hover:bg-white/60'
                 }`}
               />
             ))}
           </div>
-        </>
-      )}
-
-      {/* Progress Bar */}
-      {displayBanners.length > 1 && (
-        <div className="absolute bottom-0 left-0 right-0 h-1 bg-black/20 z-20">
-          <motion.div
-            key={currentBanner}
-            initial={{ width: '0%' }}
-            animate={{ width: '100%' }}
-            transition={{ duration: 5, ease: 'linear' }}
-            className="h-full bg-white/80"
-          />
+          {/* Progress bar */}
+          <div className="w-20 h-0.5 bg-white/20 rounded-full overflow-hidden">
+            <motion.div
+              key={current}
+              initial={{ width: '0%' }}
+              animate={{ width: isPaused ? undefined : '100%' }}
+              transition={{ duration: 5, ease: 'linear' }}
+              className="h-full bg-white/70 rounded-full"
+            />
+          </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ============================================================
+// SINGLE BANNER CARD - Used for horizontal and vertical banners
+// ============================================================
+function BannerCard({
+  banner,
+  variant = 'horizontal',
+  isArabic,
+}: {
+  banner: Banner;
+  variant: 'horizontal' | 'vertical';
+  isArabic: boolean;
+}) {
+  const title = isArabic ? banner.titleAr : banner.title;
+  const subtitle = isArabic ? (banner.subtitleAr || banner.subtitle) : banner.subtitle;
+  const buttonText = isArabic ? (banner.buttonTextAr || banner.buttonText) : banner.buttonText;
+
+  const isVertical = variant === 'vertical';
+
+  return (
+    <motion.a
+      href={banner.link || '#products'}
+      target={banner.link ? '_blank' : undefined}
+      rel={banner.link ? 'noopener noreferrer' : undefined}
+      whileHover={{ scale: 1.02, y: -4 }}
+      transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+      className={`relative overflow-hidden rounded-2xl shadow-lg group block cursor-pointer ${
+        isVertical
+          ? 'h-[280px] md:h-[400px] lg:h-[480px]'
+          : 'h-[180px] md:h-[220px] lg:h-[260px]'
+      }`}
+    >
+      {/* Image - auto-resizes to fill container */}
+      <img
+        src={banner.image}
+        alt={title}
+        className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-110"
+      />
+
+      {/* Gradient Overlay */}
+      <div className={`absolute inset-0 ${
+        isVertical
+          ? 'bg-gradient-to-t from-black/80 via-black/30 to-transparent'
+          : 'bg-gradient-to-r from-black/70 via-black/40 to-transparent'
+      }`} />
+
+      {/* Content */}
+      <div className={`absolute inset-0 flex flex-col justify-end p-5 md:p-6 ${isVertical ? 'items-center text-center' : ''}`}>
+        {subtitle && (
+          <span className={`inline-flex self-start items-center gap-1.5 bg-white/20 backdrop-blur-md text-white px-3 py-1 rounded-full text-xs font-semibold mb-2 border border-white/10 ${isVertical ? 'self-center' : ''}`}>
+            <span className="w-1.5 h-1.5 bg-yellow-400 rounded-full" />
+            {subtitle}
+          </span>
+        )}
+        <h3 className={`text-white font-bold drop-shadow-lg mb-2 leading-snug ${
+          isVertical ? 'text-lg md:text-xl' : 'text-base md:text-lg lg:text-xl'
+        }`}>
+          {title}
+        </h3>
+        {buttonText && (
+          <span className={`inline-flex items-center gap-1.5 bg-white text-gray-900 font-semibold px-4 py-2 rounded-lg text-xs md:text-sm shadow-lg transition-all group-hover:shadow-xl group-hover:scale-105 self-start ${isVertical ? 'self-center mt-1' : ''}`}>
+            {buttonText}
+            <ArrowLeft className={`w-3.5 h-3.5 transition-transform group-hover:${isArabic ? 'translate-x-1' : '-translate-x-1'}`} />
+          </span>
+        )}
+      </div>
+    </motion.a>
+  );
+}
+
+// ============================================================
+// PROMO BANNERS SECTION - Grid of horizontal + vertical banners
+// ============================================================
+export function PromoBannersSection() {
+  const [horizontalBanners, setHorizontalBanners] = useState<Banner[]>([]);
+  const [verticalBanners, setVerticalBanners] = useState<Banner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { language } = useStore();
+  const isArabic = language === 'ar';
+
+  useEffect(() => {
+    const fetchBanners = async () => {
+      try {
+        const res = await fetch('/api/banners');
+        const data = await res.json();
+        if (data.success && data.data) {
+          const promoBanners = data.data.filter((b: Banner) => b.active);
+          setHorizontalBanners(
+            promoBanners
+              .filter((b: Banner) => b.type === 'horizontal')
+              .sort((a: Banner, b: Banner) => a.order - b.order)
+          );
+          setVerticalBanners(
+            promoBanners
+              .filter((b: Banner) => b.type === 'vertical')
+              .sort((a: Banner, b: Banner) => a.order - b.order)
+          );
+        }
+      } catch (error) {
+        console.error('Error fetching promo banners:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBanners();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="container mx-auto px-4 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="lg:col-span-2 h-[220px] bg-gray-200 dark:bg-gray-800 rounded-2xl animate-pulse" />
+          <div className="h-[280px] bg-gray-200 dark:bg-gray-800 rounded-2xl animate-pulse" />
+        </div>
+      </div>
+    );
+  }
+
+  // Show default banners if none exist
+  const hasAny = horizontalBanners.length > 0 || verticalBanners.length > 0;
+  if (!hasAny) return null;
+
+  return (
+    <div className="container mx-auto px-4 py-6" dir={isArabic ? 'rtl' : 'ltr'}>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Horizontal Banner */}
+        {horizontalBanners.length > 0 && (
+          <div className="lg:col-span-2">
+            <BannerCard
+              banner={horizontalBanners[0]}
+              variant="horizontal"
+              isArabic={isArabic}
+            />
+          </div>
+        )}
+
+        {/* Vertical Banner */}
+        {verticalBanners.length > 0 && (
+          <div className="lg:col-span-1">
+            <BannerCard
+              banner={verticalBanners[0]}
+              variant="vertical"
+              isArabic={isArabic}
+            />
+          </div>
+        )}
+
+        {/* If no horizontal but have vertical, show vertical as full width */}
+        {horizontalBanners.length === 0 && verticalBanners.length > 0 && (
+          <div className="lg:col-span-2">
+            <BannerCard
+              banner={verticalBanners[0]}
+              variant="horizontal"
+              isArabic={isArabic}
+            />
+          </div>
+        )}
+
+        {/* If no vertical but have horizontal, show horizontal as full width */}
+        {verticalBanners.length === 0 && horizontalBanners.length > 0 && (
+          <div className="lg:col-span-1">
+            <BannerCard
+              banner={horizontalBanners[1] || horizontalBanners[0]}
+              variant="vertical"
+              isArabic={isArabic}
+            />
+          </div>
+        )}
+
+        {/* Additional banners row */}
+        {horizontalBanners.length > 1 && (
+          <div className="lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+            {horizontalBanners.slice(1).map((banner) => (
+              <BannerCard
+                key={banner.id}
+                banner={banner}
+                variant="horizontal"
+                isArabic={isArabic}
+              />
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
