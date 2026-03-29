@@ -140,16 +140,69 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Step 6: Determine user ID - allow order if either auth system or body provides userId
-    const userId = body.userId || user?.id;
+    // Step 6: Determine user ID
+    // CRITICAL: Prefer server-side auth (cookies/session) over client-side body.userId
+    // because body.userId comes from Zustand store which can be stale/invalid
+    let userId = user?.id || body.userId;
     
     if (!userId) {
-      console.error('[Orders API] No userId found. body.userId:', body.userId, 'auth user:', user?.id);
+      console.error('[Orders API] No userId found. auth user:', user?.id, 'body.userId:', body.userId);
       return NextResponse.json(
-        { success: false, error: 'يجب تسجيل الدخول لإتمام الطلب' },
+        { success: false, error: 'يجب تسجيل الدخول لإتمام الطلب', code: 'LOGIN_REQUIRED' },
         { status: 401 }
       );
     }
+
+    // Step 6b: Verify the userId actually exists in the database
+    // This prevents the foreign key constraint violation
+    try {
+      const existingUser = await db.user.findUnique({
+        where: { id: userId },
+        select: { id: true, isActive: true }
+      });
+      
+      if (!existingUser) {
+        console.error('[Orders API] userId does NOT exist in DB:', userId, 
+          '(body.userId:', body.userId, ', auth user:', user?.id, ')');
+        
+        // If body.userId is invalid but auth user is valid, use auth user
+        if (user?.id && user.id !== userId) {
+          const authUserExists = await db.user.findUnique({
+            where: { id: user.id },
+            select: { id: true, isActive: true }
+          });
+          if (authUserExists) {
+            console.log('[Orders API] Falling back to auth user ID:', user.id);
+            userId = user.id;
+          } else {
+            return NextResponse.json(
+              { success: false, error: 'بيانات المستخدم غير صالحة، يرجى تسجيل الدخول من جديد', code: 'INVALID_USER' },
+              { status: 401 }
+            );
+          }
+        } else {
+          return NextResponse.json(
+            { success: false, error: 'بيانات المستخدم غير صالحة، يرجى تسجيل الدخول من جديد', code: 'INVALID_USER' },
+            { status: 401 }
+          );
+        }
+      }
+      
+      if (!existingUser.isActive) {
+        return NextResponse.json(
+          { success: false, error: 'الحساب غير مفعل، يرجى التواصل مع الدعم', code: 'ACCOUNT_DISABLED' },
+          { status: 403 }
+        );
+      }
+    } catch (dbCheckError) {
+      console.error('[Orders API] Error verifying user:', dbCheckError);
+      return NextResponse.json(
+        { success: false, error: 'خطأ في التحقق من بيانات المستخدم', code: 'DB_ERROR' },
+        { status: 500 }
+      );
+    }
+
+    console.log('[Orders API] Verified userId:', userId, '(source:', user?.id === userId ? 'auth' : 'body', ')');
 
     // Step 7: Fetch all products and SKUs in parallel (FIX N+1)
     const productIds = [...new Set(items.map((item: any) => item.productId))];

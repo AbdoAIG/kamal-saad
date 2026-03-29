@@ -277,23 +277,36 @@ export default function CheckoutPage() {
       if (!orderResult.success) {
         setIsLoading(false);
         const errorMsg = orderResult.error || (isArabic ? 'فشل في إنشاء الطلب' : 'Failed to create order');
-        const errorDetails = orderResult.details || '';
+        const errorCode = orderResult.code || '';
         
         // Show user-friendly error based on type
-        if (orderResponse.status === 401) {
+        if (orderResponse.status === 401 || errorCode === 'INVALID_USER') {
           toast({
-            title: isArabic ? 'يجب تسجيل الدخول' : 'Login Required',
-            description: isArabic ? 'يرجى تسجيل الدخول لإتمام الطلب' : 'Please login to complete your order',
+            title: isArabic ? 'يرجى تسجيل الدخول من جديد' : 'Please Re-login',
+            description: isArabic 
+              ? 'انتهت صلاحية الجلسة أو بيانات المستخدم غير صالحة. يرجى تسجيل الدخول من جديد' 
+              : 'Your session expired or user data is invalid. Please login again.',
             variant: 'destructive',
           });
-          // Open login modal after a delay
+          // Clear stale user data and open login modal
+          const { logout, setUser, setUserId } = useStore.getState();
+          logout();
           setTimeout(() => setAuthModalOpen(true, 'login'), 1000);
+          return;
+        }
+        
+        if (errorCode === 'ACCOUNT_DISABLED') {
+          toast({
+            title: isArabic ? 'حساب معطل' : 'Account Disabled',
+            description: isArabic ? errorMsg : errorMsg,
+            variant: 'destructive',
+          });
           return;
         }
 
         toast({
           title: isArabic ? 'خطأ في إنشاء الطلب' : 'Order Creation Error',
-          description: `${errorMsg}${errorDetails ? `\n${errorDetails}` : ''}`,
+          description: errorMsg,
           variant: 'destructive',
         });
         return;
