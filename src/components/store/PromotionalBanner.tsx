@@ -23,49 +23,33 @@ interface Banner {
 // ============================================================
 // HOTSPOT - Invisible clickable zone on the image
 // ============================================================
-function Hotspot({ banner, isArabic }: { banner: Banner; isArabic: boolean }) {
+function Hotspot({ banner }: { banner: Banner }) {
   const { hotspotX, hotspotY, hotspotW, hotspotH, link } = banner;
-
-  // If no hotspot configured, no hotspot to render
   if (!hotspotW || !hotspotH || !link) return null;
 
-  // Convert percentage coordinates to CSS positioning
-  const style: React.CSSProperties = {
-    position: 'absolute',
-    left: `${hotspotX}%`,
-    top: `${hotspotY}%`,
-    width: `${hotspotW}%`,
-    height: `${hotspotH}%`,
-    cursor: 'pointer',
-    zIndex: 20,
-    background: 'transparent',
-    borderRadius: '8px',
-    transition: 'background 0.2s ease',
-  };
-
   const isExternal = link.startsWith('http');
-
   const handleClick = () => {
-    if (isExternal) {
-      window.open(link, '_blank', 'noopener,noreferrer');
-    } else {
-      window.location.href = link;
-    }
+    if (isExternal) window.open(link, '_blank', 'noopener,noreferrer');
+    else window.location.href = link;
   };
 
   return (
     <div
-      style={style}
+      style={{
+        position: 'absolute',
+        left: `${hotspotX}%`,
+        top: `${hotspotY}%`,
+        width: `${hotspotW}%`,
+        height: `${hotspotH}%`,
+        cursor: 'pointer',
+        zIndex: 20,
+        borderRadius: '8px',
+      }}
       onClick={handleClick}
-      onMouseEnter={(e) => {
-        (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.08)';
-      }}
-      onMouseLeave={(e) => {
-        (e.currentTarget as HTMLDivElement).style.background = 'transparent';
-      }}
+      onMouseEnter={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'rgba(255,255,255,0.06)'; }}
+      onMouseLeave={(e) => { (e.currentTarget as HTMLDivElement).style.background = 'transparent'; }}
       role="button"
       tabIndex={0}
-      aria-label={isArabic ? banner.titleAr : banner.title}
       onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') handleClick(); }}
     />
   );
@@ -88,51 +72,57 @@ export function HeroBanner({ banners }: { banners: Banner[] }) {
 
   if (banners.length === 0) return null;
   const b = banners[current];
-  const h = b.height > 0 ? b.height : undefined;
-  const w = b.width > 0 ? b.width : undefined;
+  const h = b.height > 0 ? b.height : 0;
+  const w = b.width > 0 ? b.width : 0;
 
   return (
     <div
-      className={`relative w-full ${h ? '' : 'h-[260px] md:h-[380px] lg:h-[460px]'} overflow-hidden`}
+      className="relative w-full overflow-hidden"
       dir={isArabic ? 'rtl' : 'ltr'}
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      style={h ? { height: `${h}px`, maxWidth: w ? `${w}px` : undefined, margin: w ? '0 auto' : undefined } : undefined}
+      style={{
+        height: h > 0 ? `${h}px` : undefined,
+        maxHeight: h > 0 ? undefined : '460px',
+        minHeight: h > 0 ? undefined : '200px',
+      }}
     >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={b.id}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.6 }}
-          className="absolute inset-0"
-        >
-          <img
-            src={b.image}
-            alt={isArabic ? b.titleAr : b.title}
-            className="absolute inset-0 w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10" />
-        </motion.div>
-      </AnimatePresence>
+      {/* Fallback: use class-based heights when no custom height */}
+      <div className={`absolute inset-0 ${h === 0 ? 'h-[260px] sm:h-[340px] md:h-[380px] lg:h-[460px]' : ''}`}>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={b.id}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.6 }}
+            className="absolute inset-0"
+          >
+            {/* Image - always covers the container */}
+            <img
+              src={b.image}
+              alt={isArabic ? b.titleAr : b.title}
+              className="w-full h-full object-cover object-center"
+              loading={current === 0 ? 'eager' : 'lazy'}
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none" />
+          </motion.div>
+        </AnimatePresence>
+      </div>
 
-      {/* Hotspot - invisible clickable zone on the image */}
-      <Hotspot banner={b} isArabic={isArabic} />
+      <Hotspot banner={b} />
 
       {banners.length > 1 && (
         <>
           <button
             onClick={() => setCurrent(p => (p - 1 + banners.length) % banners.length)}
             className={`absolute top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-white/25 backdrop-blur-md text-white p-2.5 rounded-full transition-all hover:scale-110 border border-white/10 ${isArabic ? 'right-3 md:right-5' : 'left-3 md:left-5'}`}
-            aria-label="Previous slide"
           >
             {isArabic ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
           </button>
           <button
             onClick={() => setCurrent(p => (p + 1) % banners.length)}
             className={`absolute top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-white/25 backdrop-blur-md text-white p-2.5 rounded-full transition-all hover:scale-110 border border-white/10 ${isArabic ? 'left-3 md:left-5' : 'right-3 md:right-5'}`}
-            aria-label="Next slide"
           >
             {isArabic ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
           </button>
@@ -142,7 +132,6 @@ export function HeroBanner({ banners }: { banners: Banner[] }) {
                 key={i}
                 onClick={() => setCurrent(i)}
                 className={`transition-all rounded-full ${i === current ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/60'}`}
-                aria-label={`Go to slide ${i + 1}`}
               />
             ))}
           </div>
@@ -153,63 +142,45 @@ export function HeroBanner({ banners }: { banners: Banner[] }) {
 }
 
 // ============================================================
-// PROMO CARD - Single banner card with hotspot
+// PROMO CARD
 // ============================================================
 function PromoCard({ banner, isArabic }: { banner: Banner; isArabic: boolean }) {
-  const h = banner.height > 0 ? banner.height : 260;
-  const w = banner.width > 0 ? banner.width : undefined;
+  const h = banner.height > 0 ? banner.height : 220;
 
   return (
     <motion.div
       whileHover={{ scale: 1.01, y: -2 }}
       transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       className="relative overflow-hidden rounded-2xl shadow-lg group"
-      style={{
-        height: `${h}px`,
-        maxWidth: w ? `${w}px` : undefined,
-        margin: w ? '0 auto' : undefined,
-      }}
+      style={{ height: `${h}px` }}
     >
       <img
         src={banner.image}
         alt={isArabic ? banner.titleAr : banner.title}
-        className="absolute inset-0 w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
+        className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]"
         loading="lazy"
       />
-
-      {/* Subtle gradient overlay */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
-
-      {/* Hotspot - invisible clickable zone on the image */}
-      <Hotspot banner={banner} isArabic={isArabic} />
+      <Hotspot banner={banner} />
     </motion.div>
   );
 }
 
 // ============================================================
-// PROMO SECTION - Grid layout for non-hero banners
+// PROMO SECTION
 // ============================================================
 function PromoSection({ banners, isArabic }: { banners: Banner[]; isArabic: boolean }) {
   if (banners.length === 0) return null;
-
-  // Determine grid layout based on banner count
-  const getGridClass = () => {
-    if (banners.length === 1) return 'grid-cols-1';
-    if (banners.length === 2) return 'grid-cols-1 sm:grid-cols-2';
-    return 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
-  };
-
+  const cols = banners.length === 1 ? 'grid-cols-1' : banners.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
   return (
-    <div className={`grid ${getGridClass()} gap-4`}>
-      {banners.map(b => (
-        <PromoCard key={b.id} banner={b} isArabic={isArabic} />
-      ))}
+    <div className={`grid ${cols} gap-4`}>
+      {banners.map(b => <PromoCard key={b.id} banner={b} isArabic={isArabic} />)}
     </div>
   );
 }
 
 // ============================================================
-// MAIN - Fetches & renders all banner sections
+// MAIN
 // ============================================================
 export function BannerSections() {
   const [banners, setBanners] = useState<Banner[]>([]);
@@ -222,23 +193,18 @@ export function BannerSections() {
       const res = await fetch('/api/banners');
       const data = await res.json();
       if (data.success) setBanners(data.data);
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
   }, []);
 
-  useEffect(() => {
-    fetchBanners();
-  }, [fetchBanners]);
+  useEffect(() => { fetchBanners(); }, [fetchBanners]);
 
   const heroBanners = banners.filter(b => b.section === 'hero').sort((a, b) => a.order - b.order);
   const belowCat = banners.filter(b => b.section === 'below-categories').sort((a, b) => a.order - b.order);
   const betweenProd = banners.filter(b => b.section === 'between-products').sort((a, b) => a.order - b.order);
   const aboveFooter = banners.filter(b => b.section === 'above-footer').sort((a, b) => a.order - b.order);
 
-  if (loading) return <div className="w-full h-[260px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-none" />;
+  if (loading) return <div className="w-full h-[260px] bg-gray-200 dark:bg-gray-800 animate-pulse" />;
   if (banners.length === 0) return null;
 
   return (

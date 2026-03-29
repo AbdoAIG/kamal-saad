@@ -3283,8 +3283,11 @@ function SettingsPage() {
 function BannersManagement() {
   const [banners, setBanners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [viewMode, setViewMode] = useState<'visual' | 'list'>('visual');
   const [showForm, setShowForm] = useState(false);
   const [editingBanner, setEditingBanner] = useState<any>(null);
+  const [dragOverSection, setDragOverSection] = useState<string | null>(null);
+  const [draggedBannerId, setDraggedBannerId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     title: '', titleAr: '', subtitle: '', subtitleAr: '',
     image: '', link: '',
@@ -3305,6 +3308,37 @@ function BannersManagement() {
     try { const r = await fetch('/api/banners'); const d = await r.json(); if (d.success) setBanners(d.data); }
     catch (e) { console.error(e); } finally { setLoading(false); }
   };
+
+  // Update banner section (for drag & drop)
+  const moveBannerToSection = async (bannerId: string, newSection: string) => {
+    const banner = banners.find(b => b.id === bannerId);
+    if (!banner || banner.section === newSection) return;
+    try {
+      await fetch('/api/banners', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: bannerId, section: newSection })
+      });
+      fetchBanners();
+    } catch (e) { console.error(e); }
+  };
+
+  // Swap order (move up/down within visual view)
+  const reorderBanner = async (bannerId: string, direction: 'up' | 'down') => {
+    const banner = banners.find(b => b.id === bannerId);
+    if (!banner) return;
+    const sameSection = banners.filter(b => b.section === banner.section).sort((a, b) => a.order - b.order);
+    const idx = sameSection.findIndex(b => b.id === bannerId);
+    const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+    if (swapIdx < 0 || swapIdx >= sameSection.length) return;
+    const swapBanner = sameSection[swapIdx];
+    try {
+      await fetch('/api/banners', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: banner.id, order: swapBanner.order }) });
+      await fetch('/api/banners', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: swapBanner.id, order: banner.order }) });
+      fetchBanners();
+    } catch (e) { console.error(e); }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -3333,23 +3367,18 @@ function BannersManagement() {
     setEditingBanner(banner); setShowForm(true);
   };
   const resetForm = () => {
-    setFormData({
-      title: '', titleAr: '', subtitle: '', subtitleAr: '',
-      image: '', link: '',
-      section: 'hero', width: 0, height: 0,
-      hotspotX: 0, hotspotY: 0, hotspotW: 0, hotspotH: 0,
-      active: true, order: 0
-    });
-    setEditingBanner(null); setShowForm(false);
-    setIsDrawing(false);
+    setFormData({ title: '', titleAr: '', subtitle: '', subtitleAr: '', image: '', link: '', section: 'hero', width: 0, height: 0, hotspotX: 0, hotspotY: 0, hotspotW: 0, hotspotH: 0, active: true, order: 0 });
+    setEditingBanner(null); setShowForm(false); setIsDrawing(false);
   };
 
-  const sections: Record<string, { label: string; icon: string }> = {
-    'hero': { label: 'شريط البطل', icon: '🖼️' },
-    'below-categories': { label: 'أسفل الأقسام', icon: '📐' },
-    'between-products': { label: 'بين المنتجات', icon: '📦' },
-    'above-footer': { label: 'فوق الفوتر', icon: '📌' },
+  const sections: Record<string, { label: string; icon: string; color: string }> = {
+    'hero': { label: 'شريط البطل', icon: '🖼️', color: 'border-purple-400 bg-purple-50' },
+    'below-categories': { label: 'أسفل الأقسام', icon: '📐', color: 'border-blue-400 bg-blue-50' },
+    'between-products': { label: 'بين المنتجات', icon: '📦', color: 'border-amber-400 bg-amber-50' },
+    'above-footer': { label: 'فوق الفوتر', icon: '📌', color: 'border-rose-400 bg-rose-50' },
   };
+
+  const sectionKeys = ['hero', 'below-categories', 'between-products', 'above-footer'];
 
   const linkExamples = [
     { label: 'المنتجات', value: '#products' },
@@ -3359,9 +3388,7 @@ function BannersManagement() {
     { label: 'خارجي', value: 'https://' },
   ];
 
-  // ============================================================
-  // HOTSPOT DRAWING on image
-  // ============================================================
+  // Hotspot drawing
   const handleImageMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!imgRef[0]) return;
     const rect = imgRef[0].getBoundingClientRect();
@@ -3371,57 +3398,254 @@ function BannersManagement() {
     setDrawStart({ x, y });
     setPreviewRect({ x, y, w: 0, h: 0 });
   };
-
   const handleImageMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
     if (!isDrawing || !imgRef[0]) return;
     const rect = imgRef[0].getBoundingClientRect();
-    const currentX = ((e.clientX - rect.left) / rect.width) * 100;
-    const currentY = ((e.clientY - rect.top) / rect.height) * 100;
-
-    setPreviewRect({
-      x: Math.min(drawStart.x, currentX),
-      y: Math.min(drawStart.y, currentY),
-      w: Math.abs(currentX - drawStart.x),
-      h: Math.abs(currentY - drawStart.y),
-    });
+    const cx = ((e.clientX - rect.left) / rect.width) * 100;
+    const cy = ((e.clientY - rect.top) / rect.height) * 100;
+    setPreviewRect({ x: Math.min(drawStart.x, cx), y: Math.min(drawStart.y, cy), w: Math.abs(cx - drawStart.x), h: Math.abs(cy - drawStart.y) });
   };
-
   const handleImageMouseUp = () => {
     if (!isDrawing) return;
     setIsDrawing(false);
-    // Only set hotspot if the rectangle is big enough (> 2% in both dimensions)
     if (previewRect.w > 2 && previewRect.h > 2) {
-      setFormData({
-        ...formData,
-        hotspotX: Math.round(previewRect.x * 10) / 10,
-        hotspotY: Math.round(previewRect.y * 10) / 10,
-        hotspotW: Math.round(previewRect.w * 10) / 10,
-        hotspotH: Math.round(previewRect.h * 10) / 10,
-      });
+      setFormData({ ...formData, hotspotX: Math.round(previewRect.x * 10) / 10, hotspotY: Math.round(previewRect.y * 10) / 10, hotspotW: Math.round(previewRect.w * 10) / 10, hotspotH: Math.round(previewRect.h * 10) / 10 });
     }
   };
-
-  const clearHotspot = () => {
-    setFormData({ ...formData, hotspotX: 0, hotspotY: 0, hotspotW: 0, hotspotH: 0 });
-  };
-
+  const clearHotspot = () => { setFormData({ ...formData, hotspotX: 0, hotspotY: 0, hotspotW: 0, hotspotH: 0 }); };
   const hasHotspot = formData.hotspotW > 0 && formData.hotspotH > 0;
 
-  const heroBanners = banners.filter(b => b.section === 'hero').sort((a, b) => a.order - b.order);
-  const promoBanners = banners.filter(b => b.section !== 'hero').sort((a, b) => a.order - b.order);
+  // ============================================================
+  // VISUAL HOMEPAGE SIMULATOR
+  // ============================================================
+  const VisualSimulator = () => {
+    const getBannersForSection = (section: string) => banners.filter(b => b.section === section).sort((a, b) => a.order - b.order);
+    const handleDragStart = (e: React.DragEvent, bannerId: string) => { setDraggedBannerId(bannerId); e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', bannerId); };
+    const handleDragEnd = () => { setDraggedBannerId(null); setDragOverSection(null); };
+    const handleDragOver = (e: React.DragEvent, section: string) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDragOverSection(section); };
+    const handleDragLeave = () => { setDragOverSection(null); };
+    const handleDrop = (e: React.DragEvent, section: string) => {
+      e.preventDefault();
+      const bannerId = e.dataTransfer.getData('text/plain');
+      if (bannerId) moveBannerToSection(bannerId, section);
+      setDraggedBannerId(null); setDragOverSection(null);
+    };
 
+    return (
+      <div className="space-y-4">
+        <div className="bg-gradient-to-r from-gray-800 to-gray-900 rounded-2xl p-1">
+          {/* Phone frame */}
+          <div className="bg-gray-100 rounded-xl overflow-hidden">
+            {/* Browser bar */}
+            <div className="bg-white border-b px-3 py-2 flex items-center gap-2">
+              <div className="flex gap-1"><div className="w-2.5 h-2.5 rounded-full bg-red-400" /><div className="w-2.5 h-2.5 rounded-full bg-yellow-400" /><div className="w-2.5 h-2.5 rounded-full bg-green-400" /></div>
+              <div className="flex-1 bg-gray-100 rounded-md px-2 py-0.5 text-[10px] text-gray-400 font-mono text-center truncate">kamal-saad.com</div>
+            </div>
+
+            <div className="min-h-[500px] space-y-0">
+              {sectionKeys.map(sectionKey => {
+                const sec = sections[sectionKey];
+                const secBanners = getBannersForSection(sectionKey);
+                const isOver = dragOverSection === sectionKey;
+                return (
+                  <div
+                    key={sectionKey}
+                    className={`border-2 border-dashed transition-all duration-200 ${isOver ? sec.color + ' border-solid scale-[1.01] shadow-lg' : 'border-gray-200 bg-white hover:border-gray-300'}`}
+                    onDragOver={(e) => handleDragOver(e, sectionKey)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, sectionKey)}
+                  >
+                    {/* Section label */}
+                    <div className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border-b border-gray-100">
+                      <span className="text-xs">{sec.icon}</span>
+                      <span className="text-[11px] font-bold text-gray-600">{sec.label}</span>
+                      <span className="text-[10px] text-gray-400 mr-auto">{secBanners.length} بانر</span>
+                    </div>
+
+                    {/* Banners in section */}
+                    {secBanners.length === 0 ? (
+                      <div className={`flex flex-col items-center justify-center py-6 text-gray-300 transition-colors ${isOver ? 'text-emerald-500' : ''}`}>
+                        <div className="text-2xl mb-1">➕</div>
+                        <p className="text-[10px]">{isOver ? 'أفلت البانر هنا' : 'اسحب بانر هنا'}</p>
+                      </div>
+                    ) : sectionKey === 'hero' ? (
+                      /* Hero: stack vertically, show as full-width slider */
+                      <div className="space-y-1 p-2">
+                        {secBanners.map((b, idx) => (
+                          <div
+                            key={b.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, b.id)}
+                            onDragEnd={handleDragEnd}
+                            className={`group relative rounded-lg overflow-hidden cursor-grab active:cursor-grabbing border transition-all ${draggedBannerId === b.id ? 'opacity-40 scale-95' : 'hover:border-purple-300 hover:shadow-md'}`}
+                            style={{ height: '80px' }}
+                          >
+                            <img src={b.image} alt={b.titleAr} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-black/50 to-transparent flex items-center px-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-[9px] font-bold text-white truncate">{b.titleAr}</p>
+                                <div className="flex gap-1 mt-0.5">
+                                  {b.hotspotW > 0 && <span className="text-[7px] bg-emerald-500 text-white px-1 rounded">🎯</span>}
+                                  {b.link && <span className="text-[7px] text-blue-300 truncate max-w-[50px]" dir="ltr">{b.link}</span>}
+                                </div>
+                              </div>
+                              <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button onClick={() => handleEdit(b)} className="p-1 bg-white/90 rounded hover:bg-white"><Edit className="w-2.5 h-2.5 text-gray-600" /></button>
+                                <button onClick={() => idx > 0 && reorderBanner(b.id, 'up')} className="p-1 bg-white/90 rounded hover:bg-white"><ChevronLeft className="w-2.5 h-2.5 text-gray-600" /></button>
+                                <button onClick={() => idx < secBanners.length - 1 && reorderBanner(b.id, 'down')} className="p-1 bg-white/90 rounded hover:bg-white"><ChevronLeft className="w-2.5 h-2.5 text-gray-600 rotate-180" /></button>
+                              </div>
+                            </div>
+                            {!b.active && <div className="absolute inset-0 bg-black/50 flex items-center justify-center"><span className="text-[8px] text-white bg-red-500 px-1 rounded">معطل</span></div>}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      /* Other sections: grid */
+                      <div className={`grid gap-1 p-2 ${secBanners.length === 1 ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                        {secBanners.map((b, idx) => (
+                          <div
+                            key={b.id}
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, b.id)}
+                            onDragEnd={handleDragEnd}
+                            className={`group relative rounded-lg overflow-hidden cursor-grab active:cursor-grabbing border transition-all ${draggedBannerId === b.id ? 'opacity-40 scale-95' : 'hover:shadow-md'}`}
+                            style={{ height: '70px' }}
+                          >
+                            <img src={b.image} alt={b.titleAr} className="w-full h-full object-cover" />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                            <div className="absolute bottom-0 inset-x-0 px-1.5 pb-1">
+                              <p className="text-[8px] font-bold text-white truncate">{b.titleAr}</p>
+                            </div>
+                            <div className="absolute top-0.5 right-0.5 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button onClick={() => handleEdit(b)} className="p-0.5 bg-white/90 rounded hover:bg-white"><Edit className="w-2 h-2 text-gray-600" /></button>
+                              <button onClick={() => idx > 0 && reorderBanner(b.id, 'up')} className="p-0.5 bg-white/90 rounded hover:bg-white"><ChevronLeft className="w-2 h-2 text-gray-600" /></button>
+                              <button onClick={() => idx < secBanners.length - 1 && reorderBanner(b.id, 'down')} className="p-0.5 bg-white/90 rounded hover:bg-white"><ChevronLeft className="w-2 h-2 text-gray-600 rotate-180" /></button>
+                            </div>
+                            <div className="absolute top-0.5 left-0.5 flex gap-0.5">
+                              {b.hotspotW > 0 && <span className="text-[6px] bg-emerald-500 text-white px-0.5 rounded">🎯</span>}
+                              {!b.active && <span className="text-[6px] bg-red-500 text-white px-0.5 rounded">✗</span>}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
+              {/* Footer placeholder */}
+              <div className="bg-gray-800 text-center py-3">
+                <p className="text-[9px] text-gray-400">Footer</p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p className="text-[11px] text-gray-400 text-center">🖱️ اسحب البانرات بين الأقسام لتحديد مكان عرضها • اضغط ✏️ للتعديل</p>
+      </div>
+    );
+  };
+
+  // ============================================================
+  // LIST VIEW
+  // ============================================================
+  const ListView = () => {
+    const heroBanners = banners.filter(b => b.section === 'hero').sort((a, b) => a.order - b.order);
+    const promoBanners = banners.filter(b => b.section !== 'hero').sort((a, b) => a.order - b.order);
+
+    if (banners.length === 0) return (
+      <Card className="shadow-lg"><CardContent className="py-16 text-center"><Image className="h-12 w-12 mx-auto mb-4 text-gray-400" /><p className="text-gray-500">لا توجد بنرات</p></CardContent></Card>
+    );
+
+    return (
+      <div className="space-y-6">
+        {heroBanners.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">🖼️ شريط البطل ({heroBanners.length})</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {heroBanners.map(b => (
+                <Card key={b.id} className="overflow-hidden">
+                  <div className="relative h-36"><img src={b.image} alt={b.titleAr} className="w-full h-full object-cover" />
+                    <Badge className={`absolute top-2 right-2 ${b.active ? 'bg-green-500' : 'bg-gray-500'}`}>{b.active ? '✓' : '✗'}</Badge></div>
+                  <CardContent className="p-3">
+                    <p className="font-semibold text-sm truncate">{b.titleAr}</p>
+                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-400 flex-wrap">
+                      {b.link && <span className="text-blue-500 truncate max-w-[80px]" dir="ltr">{b.link}</span>}
+                      {b.hotspotW > 0 && <span className="text-emerald-600">🎯 hotspot</span>}
+                      {b.height > 0 && <span>{b.height}px</span>}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(b)}><Edit className="h-3.5 w-3.5" /></Button>
+                      <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDelete(b.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+        {promoBanners.length > 0 && (
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 mb-3">📐 بانرات إعلانية ({promoBanners.length})</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {promoBanners.map(b => (
+                <Card key={b.id} className="overflow-hidden">
+                  <div className="relative h-36"><img src={b.image} alt={b.titleAr} className="w-full h-full object-cover" />
+                    <Badge className={`absolute top-2 right-2 ${b.active ? 'bg-green-500' : 'bg-gray-500'}`}>{b.active ? '✓' : '✗'}</Badge>
+                    <div className="absolute top-2 left-2 flex gap-1"><span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">{sections[b.section]?.icon} {sections[b.section]?.label}</span></div></div>
+                  <CardContent className="p-3">
+                    <p className="font-semibold text-sm truncate">{b.titleAr}</p>
+                    <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-400 flex-wrap">
+                      {b.link && <span className="text-blue-500 truncate max-w-[80px]" dir="ltr">{b.link}</span>}
+                      {b.hotspotW > 0 && <span className="text-emerald-600">🎯 hotspot</span>}
+                      {b.height > 0 && <span>{b.height}px</span>}
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <Button variant="outline" size="sm" onClick={() => handleEdit(b)}><Edit className="h-3.5 w-3.5" /></Button>
+                      <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDelete(b.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // ============================================================
+  // RENDER
+  // ============================================================
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-800">إدارة البنرات</h2>
-          <p className="text-sm text-gray-500 mt-1">تحكم كامل: المكان، الحجم، مناطق النقر، الوجهة</p>
+          <p className="text-sm text-gray-500 mt-1">سحب وإفلات • تحكم كامل في المكان والحجم والنقر</p>
         </div>
-        <Button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700">
-          <Plus className="h-4 w-4 ml-2" /> إضافة بانر
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={() => { resetForm(); setShowForm(true); }} className="bg-emerald-600 hover:bg-emerald-700">
+            <Plus className="h-4 w-4 ml-2" /> إضافة بانر
+          </Button>
+        </div>
       </div>
 
+      {/* View mode toggle */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+        <button onClick={() => setViewMode('visual')} className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${viewMode === 'visual' ? 'bg-white shadow text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+          📱 محاكاة الصفحة الرئيسية
+        </button>
+        <button onClick={() => setViewMode('list')} className={`px-4 py-2 rounded-lg text-xs font-semibold transition-all ${viewMode === 'list' ? 'bg-white shadow text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}>
+          📋 قائمة
+        </button>
+      </div>
+
+      {/* Visual or List view */}
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-emerald-600" /></div>
+      ) : viewMode === 'visual' ? <VisualSimulator /> : <ListView />}
+
+      {/* Form Modal */}
       {showForm && (
         <Card className="shadow-lg border-0">
           <CardHeader className="bg-gray-50 rounded-t-xl">
@@ -3429,10 +3653,8 @@ function BannersManagement() {
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
-
-              {/* Section */}
               <div className="space-y-2">
-                <Label className="font-semibold">📍 أين يظهر البانر؟</Label>
+                <Label className="font-semibold">📍 القسم</Label>
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   {Object.entries(sections).map(([k, v]) => (
                     <button key={k} type="button" onClick={() => setFormData({ ...formData, section: k })}
@@ -3444,229 +3666,82 @@ function BannersManagement() {
                 </div>
               </div>
 
-              {/* Custom Width + Height */}
               <div className="space-y-3 p-4 bg-blue-50 rounded-xl border border-blue-100">
-                <p className="font-semibold text-sm text-blue-800">📐 أبعاد البانر (بالبكسل)</p>
+                <p className="font-semibold text-sm text-blue-800">📐 الأبعاد (بالبكسل)</p>
                 <div className="grid md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label>العرض (بالبكسل)</Label>
-                    <Input type="number" value={formData.width || ''} onChange={(e) => setFormData({ ...formData, width: parseInt(e.target.value) || 0 })}
-                      placeholder="0 = كامل العرض" dir="ltr" className="font-mono" />
-                    <p className="text-[10px] text-gray-400">0 = كامل العرض المتاح. مثال: 800 أو 1200</p>
+                    <Label>الارتفاع</Label>
+                    <Input type="number" value={formData.height || ''} onChange={(e) => setFormData({ ...formData, height: parseInt(e.target.value) || 0 })} placeholder="0 = تلقائي" dir="ltr" className="font-mono" />
+                    <p className="text-[10px] text-gray-400">0 = تلقائي (بطل: 260-460، إعلان: 220)</p>
                   </div>
                   <div className="space-y-2">
-                    <Label>الارتفاع (بالبكسل)</Label>
-                    <Input type="number" value={formData.height || ''} onChange={(e) => setFormData({ ...formData, height: parseInt(e.target.value) || 0 })}
-                      placeholder="0 = تلقائي" dir="ltr" className="font-mono" />
-                    <p className="text-[10px] text-gray-400">0 = تلقائي (بطل: 260-460). مثال: 300 أو 500</p>
+                    <Label>الترتيب</Label>
+                    <Input type="number" value={formData.order} onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })} />
+                    <p className="text-[10px] text-gray-400">رقم صغير يظهر أولاً</p>
                   </div>
                 </div>
               </div>
 
-              {/* Titles */}
               <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>العنوان بالعربية</Label>
-                  <Input value={formData.titleAr} onChange={(e) => setFormData({ ...formData, titleAr: e.target.value })} required />
-                </div>
-                <div className="space-y-2">
-                  <Label>العنوان بالإنجليزية</Label>
-                  <Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required dir="ltr" />
-                </div>
-              </div>
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>العنوان الفرعي بالعربية</Label>
-                  <Input value={formData.subtitleAr} onChange={(e) => setFormData({ ...formData, subtitleAr: e.target.value })} placeholder="مثال: خصم 30%" />
-                </div>
-                <div className="space-y-2">
-                  <Label>العنوان الفرعي بالإنجليزية</Label>
-                  <Input value={formData.subtitle} onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })} placeholder="e.g. 30% OFF" dir="ltr" />
-                </div>
+                <div className="space-y-2"><Label>العنوان بالعربية</Label><Input value={formData.titleAr} onChange={(e) => setFormData({ ...formData, titleAr: e.target.value })} required /></div>
+                <div className="space-y-2"><Label>العنوان بالإنجليزية</Label><Input value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} required dir="ltr" /></div>
               </div>
 
-              {/* Image */}
               <div className="space-y-2">
-                <Label>صورة البانر * <span className="text-gray-400 font-normal">(تُضبط تلقائياً حسب الأبعاد)</span></Label>
+                <Label>صورة البانر *</Label>
                 <ImageUploader images={formData.image ? [formData.image] : []} onImagesChange={(imgs) => setFormData({ ...formData, image: imgs[0] || '' })} maxImages={1} folder="kamal-saad-banners" />
               </div>
 
-              {/* Hotspot Section - Click on image to place clickable zone */}
+              {/* Hotspot */}
               <div className="space-y-4 p-4 bg-emerald-50 rounded-xl border border-emerald-100">
                 <div className="flex items-center justify-between">
-                  <div>
-                    <p className="font-semibold text-sm text-emerald-800">🎯 منطقة النقر على الصورة (Hotspot)</p>
-                    <p className="text-xs text-emerald-600 mt-1">ارسم مستطيلاً على الصورة لتحديد المنطقة القابلة للنقر (مثل مكان زر &quot;اشتري الآن&quot; المطبوع على الصورة)</p>
-                  </div>
-                  {hasHotspot && (
-                    <Button type="button" variant="outline" size="sm" onClick={clearHotspot} className="text-red-500 border-red-200 hover:bg-red-50 text-xs">
-                      <X className="h-3 w-3 ml-1" /> مسح المنطقة
-                    </Button>
-                  )}
+                  <div><p className="font-semibold text-sm text-emerald-800">🎯 منطقة النقر (Hotspot)</p><p className="text-xs text-emerald-600 mt-1">ارسم مستطيلاً على الصورة لتحديد المنطقة القابلة للنقر</p></div>
+                  {hasHotspot && <Button type="button" variant="outline" size="sm" onClick={clearHotspot} className="text-red-500 border-red-200 hover:bg-red-50 text-xs"><X className="h-3 w-3 ml-1" /> مسح</Button>}
                 </div>
-
                 {formData.image && (
                   <div className="space-y-2">
-                    <div
-                      ref={(el) => { imgRef[1](el); }}
-                      className="relative w-full overflow-hidden rounded-xl border-2 border-dashed border-emerald-300 cursor-crosshair select-none"
-                      style={{ height: '300px' }}
-                      onMouseDown={handleImageMouseDown}
-                      onMouseMove={handleImageMouseMove}
-                      onMouseUp={handleImageMouseUp}
-                      onMouseLeave={() => { if (isDrawing) handleImageMouseUp(); }}
-                    >
+                    <div ref={(el) => { imgRef[1](el); }} className="relative w-full overflow-hidden rounded-xl border-2 border-dashed border-emerald-300 cursor-crosshair select-none" style={{ height: '280px' }}
+                      onMouseDown={handleImageMouseDown} onMouseMove={handleImageMouseMove} onMouseUp={handleImageMouseUp} onMouseLeave={() => { if (isDrawing) handleImageMouseUp(); }}>
                       <img src={formData.image} alt="Banner" className="absolute inset-0 w-full h-full object-cover object-center pointer-events-none" />
-
-                      {/* Existing hotspot (green dashed) */}
                       {hasHotspot && !isDrawing && (
-                        <div
-                          className="absolute border-2 border-dashed border-emerald-500 bg-emerald-500/10 rounded-lg flex items-center justify-center z-10 pointer-events-none"
-                          style={{
-                            left: `${formData.hotspotX}%`,
-                            top: `${formData.hotspotY}%`,
-                            width: `${formData.hotspotW}%`,
-                            height: `${formData.hotspotH}%`,
-                          }}
-                        >
-                          <span className="text-[10px] font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded pointer-events-none">
-                            🔗 منطقة نقر ({Math.round(formData.hotspotW)}% × {Math.round(formData.hotspotH)}%)
-                          </span>
+                        <div className="absolute border-2 border-dashed border-emerald-500 bg-emerald-500/10 rounded-lg flex items-center justify-center z-10 pointer-events-none"
+                          style={{ left: `${formData.hotspotX}%`, top: `${formData.hotspotY}%`, width: `${formData.hotspotW}%`, height: `${formData.hotspotH}%` }}>
+                          <span className="text-[10px] font-bold text-emerald-700 bg-white/80 px-2 py-0.5 rounded">🔗 منطقة نقر</span>
                         </div>
                       )}
-
-                      {/* Drawing preview (blue) */}
                       {isDrawing && previewRect.w > 0.5 && previewRect.h > 0.5 && (
-                        <div
-                          className="absolute border-2 border-blue-500 bg-blue-500/15 rounded-lg z-20 pointer-events-none"
-                          style={{
-                            left: `${previewRect.x}%`,
-                            top: `${previewRect.y}%`,
-                            width: `${previewRect.w}%`,
-                            height: `${previewRect.h}%`,
-                          }}
-                        />
+                        <div className="absolute border-2 border-blue-500 bg-blue-500/15 rounded-lg z-20 pointer-events-none"
+                          style={{ left: `${previewRect.x}%`, top: `${previewRect.y}%`, width: `${previewRect.w}%`, height: `${previewRect.h}%` }} />
                       )}
-
-                      {/* Instructions overlay when no hotspot */}
                       {!hasHotspot && !isDrawing && (
                         <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                          <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-4 py-2 rounded-xl text-center">
-                            <p className="font-bold">🖱️ اضغط واسحب على الصورة</p>
-                            <p className="text-white/70 mt-0.5">لتحديد منطقة النقر</p>
-                          </div>
+                          <div className="bg-black/50 backdrop-blur-sm text-white text-xs px-4 py-2 rounded-xl text-center"><p className="font-bold">🖱️ اضغط واسحب</p></div>
                         </div>
                       )}
                     </div>
-
-                    {/* Hotspot coordinates display */}
                     {hasHotspot && (
                       <div className="grid grid-cols-4 gap-2">
-                        <div className="bg-white rounded-lg p-2 border text-center">
-                          <p className="text-[10px] text-gray-400">X (%)</p>
-                          <p className="font-mono text-sm font-bold text-emerald-600">{formData.hotspotX}</p>
-                        </div>
-                        <div className="bg-white rounded-lg p-2 border text-center">
-                          <p className="text-[10px] text-gray-400">Y (%)</p>
-                          <p className="font-mono text-sm font-bold text-emerald-600">{formData.hotspotY}</p>
-                        </div>
-                        <div className="bg-white rounded-lg p-2 border text-center">
-                          <p className="text-[10px] text-gray-400">العرض (%)</p>
-                          <p className="font-mono text-sm font-bold text-emerald-600">{formData.hotspotW}</p>
-                        </div>
-                        <div className="bg-white rounded-lg p-2 border text-center">
-                          <p className="text-[10px] text-gray-400">الارتفاع (%)</p>
-                          <p className="font-mono text-sm font-bold text-emerald-600">{formData.hotspotH}</p>
-                        </div>
+                        {[{ l: 'X', v: formData.hotspotX }, { l: 'Y', v: formData.hotspotY }, { l: 'عرض', v: formData.hotspotW }, { l: 'ارتفاع', v: formData.hotspotH }].map(c => (
+                          <div key={c.l} className="bg-white rounded-lg p-2 border text-center"><p className="text-[10px] text-gray-400">{c.l} (%)</p><p className="font-mono text-sm font-bold text-emerald-600">{c.v}</p></div>
+                        ))}
                       </div>
                     )}
                   </div>
                 )}
-
-                {!formData.image && (
-                  <div className="text-center py-8 text-gray-400 text-sm">
-                    <Image className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p>قم برفع صورة البانر أولاً ثم ارسم منطقة النقر</p>
-                  </div>
-                )}
-
-                {/* Link destination */}
+                {!formData.image && <div className="text-center py-6 text-gray-400 text-sm"><p>قم برفع صورة البانر أولاً</p></div>}
                 <div className="space-y-2 pt-2">
-                  <Label>🔗 رابط الوجهة عند الضغط على منطقة النقر</Label>
-                  <Input value={formData.link} onChange={(e) => setFormData({ ...formData, link: e.target.value })}
-                    placeholder="/?search=أقلام  أو  /product/abc123  أو  https://..." dir="ltr" className="font-mono text-sm" />
+                  <Label>🔗 رابط الوجهة</Label>
+                  <Input value={formData.link} onChange={(e) => setFormData({ ...formData, link: e.target.value })} placeholder="/?search=أقلام  أو  /product/abc123  أو  https://..." dir="ltr" className="font-mono text-sm" />
                   <div className="flex flex-wrap gap-1.5">
-                    {linkExamples.map((ex, i) => (
-                      <button key={i} type="button" onClick={() => setFormData({ ...formData, link: ex.value })}
-                        className="text-[10px] bg-white border text-gray-500 px-2 py-0.5 rounded hover:bg-gray-100 transition" dir="ltr">{ex.label}</button>
-                    ))}
+                    {linkExamples.map((ex, i) => (<button key={i} type="button" onClick={() => setFormData({ ...formData, link: ex.value })} className="text-[10px] bg-white border text-gray-500 px-2 py-0.5 rounded hover:bg-gray-100" dir="ltr">{ex.label}</button>))}
                   </div>
-                  <p className="text-[10px] text-gray-400">يجب تحديد رابط الوجهة لتكون منطقة النقر فعّالة</p>
                 </div>
               </div>
 
-              {/* Order & Active */}
-              <div className="grid md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>الترتيب (رقم صغير يظهر أولاً)</Label>
-                  <Input type="number" value={formData.order} onChange={(e) => setFormData({ ...formData, order: parseInt(e.target.value) || 0 })} />
-                </div>
-                <div className="flex items-end gap-2 pb-2">
-                  <input type="checkbox" checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} className="w-4 h-4 accent-emerald-600" />
-                  <Label className="font-semibold">بانر فعال</Label>
-                </div>
+              <div className="flex items-center gap-2">
+                <input type="checkbox" checked={formData.active} onChange={(e) => setFormData({ ...formData, active: e.target.checked })} className="w-4 h-4 accent-emerald-600" />
+                <Label className="font-semibold">بانر فعال</Label>
               </div>
-
-              {/* Live Preview */}
-              {formData.image && (
-                <div className="space-y-2 p-4 bg-gray-50 rounded-xl border">
-                  <Label>👁️ معاينة مباشرة (كما سيظهر للمستخدم)</Label>
-                  <div
-                    className="relative overflow-hidden rounded-xl bg-gray-200"
-                    style={{
-                      height: `${Math.min(formData.height || 200, 300)}px`,
-                      maxWidth: formData.width > 0 ? `${formData.width}px` : undefined,
-                      margin: formData.width > 0 ? '0 auto' : undefined,
-                    }}
-                  >
-                    <img src={formData.image} alt="Preview" className="absolute inset-0 w-full h-full object-cover object-center" />
-
-                    {/* Hotspot preview (invisible on front-end, shown as subtle overlay in admin) */}
-                    {hasHotspot && formData.link && (
-                      <div
-                        className="absolute bg-white/10 hover:bg-white/20 transition-colors cursor-pointer rounded-lg"
-                        style={{
-                          left: `${formData.hotspotX}%`,
-                          top: `${formData.hotspotY}%`,
-                          width: `${formData.hotspotW}%`,
-                          height: `${formData.hotspotH}%`,
-                        }}
-                      >
-                        <div className="w-full h-full flex items-center justify-center">
-                          <span className="text-[9px] text-white bg-black/50 px-1.5 py-0.5 rounded font-mono">↗ {formData.link.length > 25 ? formData.link.slice(0, 25) + '...' : formData.link}</span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Info badges */}
-                    <div className="absolute top-2 left-2 flex gap-1 z-10">
-                      <span className="text-[10px] bg-black/60 text-white px-1.5 py-0.5 rounded">{sections[formData.section]?.label}</span>
-                      {formData.width > 0 && <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">{formData.width}px</span>}
-                      {formData.height > 0 && <span className="text-[10px] bg-gray-600 text-white px-1.5 py-0.5 rounded">{formData.height}px</span>}
-                      {hasHotspot && <span className="text-[10px] bg-emerald-600 text-white px-1.5 py-0.5 rounded">🎯 hotspot</span>}
-                    </div>
-                  </div>
-                  {!formData.link && hasHotspot && (
-                    <p className="text-xs text-amber-600 text-center">⚠️ تم تحديد منطقة النقر لكن لم يتم تحديد رابط الوجهة</p>
-                  )}
-                  {hasHotspot && formData.link && (
-                    <p className="text-xs text-emerald-600 text-center">✅ منطقة النقر فعّالة — عند ضغط المستخدم عليها سيتم نقله إلى: <span dir="ltr" className="font-mono">{formData.link}</span></p>
-                  )}
-                  {!hasHotspot && (
-                    <p className="text-xs text-gray-400 text-center">ℹ️ لم يتم تحديد منطقة نقر — الصورة للعرض فقط</p>
-                  )}
-                </div>
-              )}
 
               <div className="flex gap-3">
                 <Button type="submit" className="bg-emerald-600 hover:bg-emerald-700">{editingBanner ? '💾 حفظ' : '➕ إضافة'}</Button>
@@ -3675,91 +3750,6 @@ function BannersManagement() {
             </form>
           </CardContent>
         </Card>
-      )}
-
-      {/* List */}
-      {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-emerald-600" /></div>
-      ) : banners.length === 0 ? (
-        <Card className="shadow-lg"><CardContent className="py-16 text-center"><Image className="h-12 w-12 mx-auto mb-4 text-gray-400" /><p className="text-gray-500">لا توجد بنرات</p></CardContent></Card>
-      ) : (
-        <div className="space-y-6">
-          {heroBanners.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-500 mb-3">🖼️ شريط البطل ({heroBanners.length})</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {heroBanners.map(b => (
-                  <Card key={b.id} className="overflow-hidden">
-                    <div className="relative h-36">
-                      <img src={b.image} alt={b.titleAr} className="w-full h-full object-cover" />
-                      <Badge className={`absolute top-2 right-2 ${b.active ? 'bg-green-500' : 'bg-gray-500'}`}>{b.active ? '✓' : '✗'}</Badge>
-                      {b.hotspotW > 0 && b.hotspotH > 0 && (
-                        <div className="absolute border border-dashed border-emerald-400 bg-emerald-400/10 pointer-events-none"
-                          style={{ left: `${b.hotspotX}%`, top: `${b.hotspotY}%`, width: `${b.hotspotW}%`, height: `${b.hotspotH}%` }}>
-                          <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-[8px] text-emerald-700 font-bold">🎯</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <CardContent className="p-3">
-                      <p className="font-semibold text-sm truncate">{b.titleAr}</p>
-                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-400 flex-wrap">
-                        {b.link && <span className="text-blue-500 truncate max-w-[100px]" dir="ltr">{b.link}</span>}
-                        {b.hotspotW > 0 && <span className="text-emerald-600">🎯 hotspot</span>}
-                        {b.width > 0 && <span>{b.width}×{b.height}px</span>}
-                        {b.height > 0 && b.width === 0 && <span>{b.height}px</span>}
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(b)}><Edit className="h-3.5 w-3.5" /></Button>
-                        <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDelete(b.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-          {promoBanners.length > 0 && (
-            <div>
-              <h3 className="text-sm font-semibold text-gray-500 mb-3">📐 بانرات إعلانية ({promoBanners.length})</h3>
-              <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {promoBanners.map(b => (
-                  <Card key={b.id} className="overflow-hidden">
-                    <div className="relative h-36">
-                      <img src={b.image} alt={b.titleAr} className="w-full h-full object-cover" />
-                      <Badge className={`absolute top-2 right-2 ${b.active ? 'bg-green-500' : 'bg-gray-500'}`}>{b.active ? '✓' : '✗'}</Badge>
-                      <div className="absolute top-2 left-2 flex gap-1">
-                        <span className="text-[10px] bg-blue-600 text-white px-1.5 py-0.5 rounded">{sections[b.section]?.icon} {sections[b.section]?.label}</span>
-                      </div>
-                      {b.hotspotW > 0 && b.hotspotH > 0 && (
-                        <div className="absolute border border-dashed border-emerald-400 bg-emerald-400/10 pointer-events-none"
-                          style={{ left: `${b.hotspotX}%`, top: `${b.hotspotY}%`, width: `${b.hotspotW}%`, height: `${b.hotspotH}%` }}>
-                          <div className="w-full h-full flex items-center justify-center">
-                            <span className="text-[8px] text-emerald-700 font-bold">🎯</span>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <CardContent className="p-3">
-                      <p className="font-semibold text-sm truncate">{b.titleAr}</p>
-                      <div className="flex items-center gap-2 mt-1.5 text-[10px] text-gray-400 flex-wrap">
-                        {b.link && <span className="text-blue-500 truncate max-w-[100px]" dir="ltr">{b.link}</span>}
-                        {b.hotspotW > 0 && <span className="text-emerald-600">🎯 hotspot</span>}
-                        {b.width > 0 && <span>{b.width}×{b.height}px</span>}
-                        {b.height > 0 && b.width === 0 && <span>{b.height}px</span>}
-                      </div>
-                      <div className="flex gap-2 mt-2">
-                        <Button variant="outline" size="sm" onClick={() => handleEdit(b)}><Edit className="h-3.5 w-3.5" /></Button>
-                        <Button variant="outline" size="sm" className="text-red-500" onClick={() => handleDelete(b.id)}><Trash2 className="h-3.5 w-3.5" /></Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
       )}
     </div>
   );
