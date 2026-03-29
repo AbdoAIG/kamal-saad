@@ -1,15 +1,21 @@
 /**
  * Image Optimization Utilities
- * Uses Cloudinary transformations for automatic optimization
+ * 
+ * Architecture:
+ * - Uploads: Cloudinary (with watermark) — FREE tier (25 credits/day = 750/month)
+ * - Display: next/image + sharp — FREE (AVIF/WebP auto-conversion)
+ * - Future scaling: Migrate storage to Cloudflare R2 (~$5-15/month vs Cloudinary $89/month)
+ * 
+ * Note: next/image handles format conversion (AVIF > WebP > JPEG) automatically via sharp.
+ * This file provides additional Cloudinary URL transformations for bonus optimization
+ * when images are served directly from Cloudinary CDN.
  */
 
 /**
- * Optimize a Cloudinary image URL for the web
- * - Auto format (WebP for supported browsers, fallback to JPEG)
- * - Quality optimization
- * - Responsive sizing
+ * Optimize a Cloudinary image URL with on-the-fly transformations
+ * This adds Cloudinary-level optimizations ON TOP of next/image's sharp processing
  */
-export function optimizeImage(url: string, options?: {
+export function optimizeCloudinaryUrl(url: string, options?: {
   width?: number;
   height?: number;
   quality?: number;
@@ -19,15 +25,15 @@ export function optimizeImage(url: string, options?: {
 }): string {
   if (!url) return '';
 
-  // Skip optimization for non-Cloudinary URLs
-  if (!url.includes('cloudinary.com') && !url.includes('res.cloudinary.com')) {
+  // Only apply to Cloudinary URLs
+  if (!url.includes('cloudinary.com')) {
     return url;
   }
 
   const {
     width,
     height,
-    quality = 80, // Good balance between quality and file size
+    quality = 80,
     format = 'auto',
     fit = 'cover',
     gravity = 'auto',
@@ -35,32 +41,25 @@ export function optimizeImage(url: string, options?: {
 
   try {
     const urlObj = new URL(url);
-
-    // Build transformation string
     const transformations: string[] = [];
 
     if (width) transformations.push(`w_${width}`);
     if (height) transformations.push(`h_${height}`);
     if (quality) transformations.push(`q_${quality}`);
     if (format === 'auto') {
-      transformations.push('f_auto'); // Auto format (WebP/AVIF)
+      transformations.push('f_auto');
     } else if (format) {
       transformations.push(`f_${format}`);
     }
     transformations.push(`c_${fit}`);
     if (gravity === 'auto') {
-      transformations.push('g_auto'); // Smart cropping
+      transformations.push('g_auto');
     } else if (gravity) {
       transformations.push(`g_${gravity}`);
     }
-
-    // Add dpr (device pixel ratio) hint
     transformations.push('dpr_auto');
 
     const transformString = transformations.join(',');
-
-    // Cloudinary URL structure:
-    // https://res.cloudinary.com/{cloud_name}/image/upload/{transformations}/{public_id}
     const pathParts = urlObj.pathname.split('/');
     const uploadIndex = pathParts.indexOf('upload');
 
@@ -76,22 +75,7 @@ export function optimizeImage(url: string, options?: {
 }
 
 /**
- * Generate srcset for responsive images
- */
-export function generateSrcSet(url: string, baseWidth: number): string {
-  if (!url.includes('cloudinary.com')) return '';
-
-  const sizes = [300, 400, 600, 800, 1000, 1200];
-  const srcSet = sizes
-    .filter(w => w >= baseWidth * 0.5 && w <= baseWidth * 2)
-    .map(w => `${optimizeImage(url, { width: w })} ${w}w`)
-    .join(', ');
-
-  return srcSet;
-}
-
-/**
- * Get placeholder (blur) data URL for image loading
+ * Generate a lightweight SVG blur placeholder for progressive loading
  */
 export function getBlurPlaceholder(width: number = 10, height: number = 10): string {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}">
@@ -101,19 +85,27 @@ export function getBlurPlaceholder(width: number = 10, height: number = 10): str
 }
 
 /**
- * Predefined image size presets for different contexts
+ * next/image sizes configurations for different components
+ * Used as reference — actual sizes are set in the components
  */
-export const ImagePresets = {
-  // Product card thumbnail
-  productCard: { width: 400, height: 400, quality: 80 },
-  // Product detail page main image
-  productDetail: { width: 800, height: 800, quality: 85 },
-  // Banner/hero image
-  banner: { width: 1920, height: 600, quality: 85 },
-  // Category thumbnail
-  category: { width: 200, height: 200, quality: 80 },
-  // Avatar/profile image
-  avatar: { width: 150, height: 150, quality: 80 },
-  // Thumbnail (gallery, etc)
-  thumbnail: { width: 100, height: 100, quality: 75 },
+export const ImageSizes = {
+  /** Product card in grid: 2 cols mobile, 3 tablet, 4-5 desktop */
+  productCard: '(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw',
+  /** Product detail page: full width mobile, half desktop */
+  productDetail: '(max-width: 1024px) 100vw, 50vw',
+  /** Cart/favorites sidebar thumbnails */
+  thumbnail: '80px',
+  /** Banner/hero images */
+  banner: '100vw',
+} as const;
+
+/**
+ * Quality presets for different contexts
+ */
+export const QualityPresets = {
+  productCard: 80,
+  productDetail: 85,
+  thumbnail: 75,
+  banner: 85,
+  avatar: 80,
 } as const;

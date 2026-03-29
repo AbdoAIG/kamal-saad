@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Heart, Trash2, ArrowLeft, ArrowRight, ShoppingCart, X } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
@@ -104,10 +105,12 @@ export function FavoritesSidebar() {
                       >
                         {/* Image */}
                         <div className="relative w-20 h-20 rounded-xl overflow-hidden flex-shrink-0">
-                          <img
+                          <Image
                             src={mainImage}
                             alt={productName}
-                            className="w-full h-full object-cover"
+                            fill
+                            sizes="80px"
+                            className="object-cover"
                           />
                         </div>
 

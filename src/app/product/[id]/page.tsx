@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { 
   Star, ShoppingCart, Heart, Share2, Minus, Plus, Truck, Shield, 
   RotateCcw, Check, ChevronRight, ChevronLeft, Package, Phone, Zap, 
@@ -356,16 +357,24 @@ export default function ProductPage() {
                 onClick={() => setIsLightboxOpen(true)}
               >
                 <AnimatePresence mode="wait">
-                  <motion.img
+                  <motion.div
                     key={selectedImage}
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.25 }}
-                    src={images[selectedImage] || 'https://via.placeholder.com/500'}
-                    alt={productName}
-                    className="w-full h-full object-contain p-8"
-                  />
+                    className="absolute inset-0"
+                  >
+                    <Image
+                      src={images[selectedImage] || 'https://via.placeholder.com/500'}
+                      alt={productName}
+                      fill
+                      sizes="(max-width: 1024px) 100vw, 50vw"
+                      className="object-contain p-8"
+                      quality={85}
+                      priority={selectedImage === 0}
+                    />
+                  </motion.div>
                 </AnimatePresence>
 
                 {/* Discount badge */}
@@ -422,13 +431,13 @@ export default function ProductPage() {
                     <button
                       key={idx}
                       onClick={() => setSelectedImage(idx)}
-                      className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-md overflow-hidden border-2 transition-all ${
+                      className={`relative flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-md overflow-hidden border-2 transition-all ${
                         selectedImage === idx
                           ? 'border-gray-900 dark:border-gray-100 shadow-sm dark:shadow-gray-900/50'
                           : 'border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 opacity-70'
                       }`}
                     >
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <Image src={img} alt="" fill sizes="80px" className="object-cover" />
                     </button>
                   ))}
                 </div>

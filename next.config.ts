@@ -52,9 +52,26 @@ const nextConfig: NextConfig = {
     ];
   },
   
-  // Image optimization
+  // Image optimization — next/image + sharp
+  // يدعم: R2 CDN, Cloudinary, وأي مصدر خارجي
   images: {
     remotePatterns: [
+      // Cloudflare R2 (مجال مخصص)
+      ...(process.env.R2_PUBLIC_URL ? [{
+        protocol: 'https' as const,
+        hostname: new URL(process.env.R2_PUBLIC_URL).hostname,
+      }] : []),
+      // Cloudflare R2 (r2.dev)
+      ...(process.env.R2_BUCKET ? [{
+        protocol: 'https' as const,
+        hostname: `${process.env.R2_BUCKET}.r2.dev`,
+      }] : []),
+      // Cloudinary
+      ...(process.env.CLOUDINARY_CLOUD_NAME ? [{
+        protocol: 'https' as const,
+        hostname: 'res.cloudinary.com',
+      }] : []),
+      // أي HTTPS (للصور القديمة والروابط الخارجية)
       {
         protocol: 'https',
         hostname: '**',

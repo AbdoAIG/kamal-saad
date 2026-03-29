@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useStore } from '@/store/useStore';
@@ -75,7 +76,7 @@ export function HeroBanner({ banners }: { banners: Banner[] }) {
     <div style={style} dir={isArabic ? 'rtl' : 'ltr'} onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}>
       <AnimatePresence mode="wait">
         <motion.div key={b.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }} className="absolute inset-0">
-          <img src={b.image} alt={isArabic ? b.titleAr : b.title} className="w-full h-full object-cover object-center" loading={current === 0 ? 'eager' : 'lazy'} />
+          <Image src={b.image} alt={isArabic ? b.titleAr : b.title} fill sizes="100vw" className="object-cover object-center" priority={current === 0} />
           <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none" />
         </motion.div>
       </AnimatePresence>
@@ -110,7 +111,7 @@ function PromoCard({ banner, isArabic }: { banner: Banner; isArabic: boolean }) 
     <motion.div whileHover={{ scale: 1.01, y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}
       className="relative overflow-hidden rounded-2xl shadow-lg group bg-gray-100" style={{ height: `${h}px` }}>
       {!imgError ? (
-        <img src={banner.image} alt={isArabic ? banner.titleAr : banner.title} className="w-full h-full object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]" loading="lazy" onError={() => setImgError(true)} />
+        <Image src={banner.image} alt={isArabic ? banner.titleAr : banner.title} fill sizes="(max-width: 1024px) 100vw, 33vw" className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]" quality={85} onError={() => setImgError(true)} />
       ) : (
         <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
           <div className="text-center text-gray-500"><div className="text-3xl mb-1">🖼️</div><p className="text-xs">صورة غير متوفرة</p></div>

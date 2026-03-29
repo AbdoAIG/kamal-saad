@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { Star, ShoppingCart, Heart, Package, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Product, useStore, t } from '@/store/useStore';
@@ -74,11 +75,14 @@ export function ProductCard({ product, onAddToCart }: ProductCardProps) {
           <div className="relative aspect-square bg-[#f8f8f8] dark:bg-gray-700 overflow-hidden">
             {/* Product Image */}
             {!imageError && mainImage ? (
-              <img
+              <Image
                 src={mainImage}
                 alt={productName}
-                className={`w-full h-full object-contain p-6 transition-transform duration-500 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                fill
+                sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 20vw"
+                className={`object-contain p-6 transition-transform duration-500 group-hover:scale-105 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
                 loading="lazy"
+                quality={80}
                 onLoad={() => setImageLoaded(true)}
                 onError={() => { setImageError(true); setImageLoaded(true); }}
               />
