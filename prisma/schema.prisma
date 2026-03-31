@@ -1,12 +1,16 @@
-// Schema for local SQLite development
+// Schema version: 5.0 - PostgreSQL for Production
+// Use this schema when deploying to production (Vercel, Coolify, etc.)
+// To use: cp prisma/schema.postgresql.prisma prisma/schema.prisma
+
 generator client {
   provider        = "prisma-client-js"
-  binaryTargets   = ["native"]
+  previewFeatures = ["fullTextSearchPostgres"]
+  binaryTargets   = ["native", "rhel-openssl-3.0.x", "debian-openssl-3.0.x", "linux-arm64-openssl-3.0.x"]
 }
 
 datasource db {
-  provider  = "sqlite"
-  url       = "file:/home/z/my-project/db/custom.db"
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
 }
 
 model Account {
@@ -15,13 +19,13 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String?
-  access_token      String?
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String?
-  session_state     String?
+  id_token          String? @db.Text
+  session_state     String? @db.Text
   user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
@@ -76,16 +80,16 @@ model Category {
 }
 
 model ContactMessage {
-  id        String   @id @default(cuid())
+  id        String    @id @default(cuid())
   name      String
   email     String
   phone     String?
   subject   String?
-  message   String
-  status    String   @default("new")
-  reply     String?
+  message   String    @db.Text
+  status    String    @default("new")
+  reply     String?   @db.Text
   repliedAt DateTime?
-  createdAt DateTime @default(now())
+  createdAt DateTime  @default(now())
 }
 
 model Coupon {
@@ -122,9 +126,9 @@ model Notification {
   type      String
   title     String
   titleAr   String?
-  message   String
-  messageAr String?
-  data      String?
+  message   String   @db.Text
+  messageAr String?  @db.Text
+  data      String?  @db.Text
   isRead    Boolean  @default(false)
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -136,11 +140,11 @@ model Order {
   status           String      @default("pending")
   total            Float
   discount         Float       @default(0)
-  shippingAddress  String?
+  shippingAddress  String?     @db.Text
   phone            String?
   paymentMethod    String      @default("cod")
   paymentReference String?
-  notes            String?
+  notes            String?     @db.Text
   couponId         String?
   pointsUsed       Int         @default(0)
   pointsEarned     Int         @default(0)
@@ -168,11 +172,11 @@ model Product {
   id                 String                    @id @default(cuid())
   name               String
   nameAr             String
-  description        String?
-  descriptionAr      String?
+  description        String?                   @db.Text
+  descriptionAr      String?                   @db.Text
   price              Float
   discountPrice      Float?
-  images             String
+  images             String                    @db.Text
   stock              Int                       @default(0)
   categoryId         String
   rating             Float                     @default(0)
@@ -202,11 +206,11 @@ model Return {
   type         String
   reason       String
   reasonAr     String?
-  description  String?
+  description  String?      @db.Text
   status       String       @default("pending")
   refundAmount Float?
   refundMethod String?
-  adminNotes   String?
+  adminNotes   String?      @db.Text
   createdAt    DateTime     @default(now())
   updatedAt    DateTime     @updatedAt
   user         User         @relation(fields: [userId], references: [id])
@@ -231,8 +235,8 @@ model Review {
   productId  String
   rating     Int
   title      String?
-  comment    String?
-  images     String?
+  comment    String?  @db.Text
+  images     String?  @db.Text
   isVerified Boolean  @default(false)
   isApproved Boolean  @default(true)
   helpful    Int      @default(0)
@@ -270,7 +274,7 @@ model User {
   name               String?
   password           String?
   phone              String?
-  address            String?
+  address            String?             @db.Text
   image              String?
   emailVerified      DateTime?
   role               String              @default("customer")
@@ -329,7 +333,7 @@ model VerificationToken {
 model SiteSetting {
   id            String   @id @default(cuid())
   key           String   @unique
-  value         String
+  value         String   @db.Text
   type          String   @default("text")
   group         String   @default("general")
   label         String
