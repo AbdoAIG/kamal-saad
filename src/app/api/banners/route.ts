@@ -3,8 +3,8 @@ import { db } from '@/lib/db';
 
 export async function GET() {
   try {
+    // Get all banners (active and inactive) for admin management
     const banners = await db.banner.findMany({
-      where: { active: true },
       orderBy: [{ section: 'asc' }, { order: 'asc' }]
     });
     return NextResponse.json({ success: true, data: banners });
@@ -17,39 +17,57 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    console.log('POST /api/banners - Request body:', body);
+    
     const {
       title, titleAr, subtitle, subtitleAr, image, link,
       section, width, height, hotspotX, hotspotY, hotspotW, hotspotH,
       active, order
     } = body;
 
-    if (!title || !titleAr || !image) {
-      return NextResponse.json({ success: false, error: 'title, titleAr, image required' }, { status: 400 });
+    // Validation
+    if (!title?.trim() || !titleAr?.trim()) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'العنوان بالعربية والإنجليزية مطلوب' 
+      }, { status: 400 });
+    }
+    
+    if (!image?.trim()) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'يرجى رفع صورة للبانر' 
+      }, { status: 400 });
     }
 
     const banner = await db.banner.create({
       data: {
-        title,
-        titleAr: titleAr || title,
-        subtitle: subtitle || null,
-        subtitleAr: subtitleAr || null,
-        image,
-        link: link || null,
+        title: title.trim(),
+        titleAr: titleAr.trim(),
+        subtitle: subtitle?.trim() || null,
+        subtitleAr: subtitleAr?.trim() || null,
+        image: image.trim(),
+        link: link?.trim() || null,
         section: section || 'hero',
-        width: parseInt(width) || 0,
-        height: parseInt(height) || 0,
-        hotspotX: parseFloat(hotspotX) || 0,
-        hotspotY: parseFloat(hotspotY) || 0,
-        hotspotW: parseFloat(hotspotW) || 0,
-        hotspotH: parseFloat(hotspotH) || 0,
-        active: active !== undefined ? active : true,
-        order: parseInt(order) || 0
+        width: Number(width) || 0,
+        height: Number(height) || 0,
+        hotspotX: Number(hotspotX) || 0,
+        hotspotY: Number(hotspotY) || 0,
+        hotspotW: Number(hotspotW) || 0,
+        hotspotH: Number(hotspotH) || 0,
+        active: active !== false,
+        order: Number(order) || 0
       }
     });
+    
+    console.log('Created banner:', banner.id);
     return NextResponse.json({ success: true, data: banner });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error creating banner:', error);
-    return NextResponse.json({ success: false, error: 'Failed to create banner' }, { status: 500 });
+    return NextResponse.json({ 
+      success: false, 
+      error: error?.message || 'Failed to create banner' 
+    }, { status: 500 });
   }
 }
 

@@ -211,7 +211,11 @@ export function HeroBannerSection() {
 
   useEffect(() => {
     fetch('/api/banners').then(r => r.json()).then(d => {
-      if (d.success) setBanners(d.data.filter((b: Banner) => b.section === 'hero').sort((a: Banner, b: Banner) => a.order - b.order));
+      if (d.success) setBanners(
+        d.data
+          .filter((b: Banner) => b.section === 'hero' && b.active !== false)
+          .sort((a: Banner, b: Banner) => a.order - b.order)
+      );
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -229,7 +233,11 @@ export function BelowCategoriesBannerSection() {
 
   useEffect(() => {
     fetch('/api/banners').then(r => r.json()).then(d => {
-      if (d.success) setBanners(d.data.filter((b: Banner) => b.section === 'below-categories').sort((a: Banner, b: Banner) => a.order - b.order));
+      if (d.success) setBanners(
+        d.data
+          .filter((b: Banner) => b.section === 'below-categories' && b.active !== false)
+          .sort((a: Banner, b: Banner) => a.order - b.order)
+      );
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -251,7 +259,11 @@ export function BetweenProductsBannerSection() {
 
   useEffect(() => {
     fetch('/api/banners').then(r => r.json()).then(d => {
-      if (d.success) setBanners(d.data.filter((b: Banner) => b.section === 'between-products').sort((a: Banner, b: Banner) => a.order - b.order));
+      if (d.success) setBanners(
+        d.data
+          .filter((b: Banner) => b.section === 'between-products' && b.active !== false)
+          .sort((a: Banner, b: Banner) => a.order - b.order)
+      );
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -273,7 +285,11 @@ export function AboveFooterBannerSection() {
 
   useEffect(() => {
     fetch('/api/banners').then(r => r.json()).then(d => {
-      if (d.success) setBanners(d.data.filter((b: Banner) => b.section === 'above-footer').sort((a: Banner, b: Banner) => a.order - b.order));
+      if (d.success) setBanners(
+        d.data
+          .filter((b: Banner) => b.section === 'above-footer' && b.active !== false)
+          .sort((a: Banner, b: Banner) => a.order - b.order)
+      );
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 

@@ -58,6 +58,7 @@ export function BannersManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [formData, setFormData] = useState({ ...DEFAULT_FORM });
   const [dragOverSection, setDragOverSection] = useState<string | null>(null);
 
@@ -111,16 +112,46 @@ export function BannersManagement() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaveError(null);
+    
+    // Client-side validation
+    if (!formData.titleAr?.trim()) {
+      setSaveError('العنوان بالعربية مطلوب');
+      return;
+    }
+    if (!formData.title?.trim()) {
+      setSaveError('العنوان بالإنجليزية مطلوب');
+      return;
+    }
+    if (!formData.image) {
+      setSaveError('يرجى رفع صورة للبانر');
+      return;
+    }
+    
     setSaving(true);
     try {
       const isEdit = !!editingBanner;
+      console.log('Submitting banner:', { isEdit, formData });
+      
       const res = await fetch('/api/banners', {
         method: isEdit ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(isEdit ? { id: editingBanner.id, ...formData } : formData),
       });
-      if (res.ok) { cancelForm(); fetchBanners(); }
-    } catch (e) { console.error(e); }
+      
+      const data = await res.json();
+      console.log('API response:', data);
+      
+      if (res.ok && data.success) {
+        cancelForm();
+        fetchBanners();
+      } else {
+        setSaveError(data.error || 'حدث خطأ أثناء حفظ البانر');
+      }
+    } catch (e) {
+      console.error('Submit error:', e);
+      setSaveError('حدث خطأ في الاتصال بالخادم');
+    }
     finally { setSaving(false); }
   };
 
@@ -156,6 +187,7 @@ export function BannersManagement() {
     setShowForm(false);
     setEditingBanner(null);
     setFormData({ ...DEFAULT_FORM });
+    setSaveError(null);
     setIsDrawing(false);
     setDrawStart(null);
     setPreviewRect(null);
@@ -610,6 +642,13 @@ export function BannersManagement() {
                   <input type="checkbox" checked={formData.active} onChange={e => setFormData(p => ({ ...p, active: e.target.checked }))} className="w-4 h-4 accent-emerald-600" />
                   <span className="text-sm font-semibold">بانر فعال</span>
                 </label>
+
+                {/* Error Message */}
+                {saveError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-sm text-red-600 font-medium">⚠️ {saveError}</p>
+                  </div>
+                )}
 
                 {/* Submit */}
                 <div className="flex gap-2 pt-2">
