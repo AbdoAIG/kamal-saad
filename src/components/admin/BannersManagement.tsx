@@ -469,18 +469,32 @@ export function BannersManagement() {
                   </div>
                 </div>
 
-                {/* Dimensions */}
+                {/* Dimensions - Auto-detected from image */}
                 <div className="p-3 bg-blue-50 rounded-xl border border-blue-100 space-y-2">
-                  <p className="font-semibold text-sm text-blue-700">📐 الأبعاد</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-semibold text-sm text-blue-700">📐 الأبعاد (تلقائية)</p>
+                    {formData.width > 0 && formData.height > 0 && (
+                      <span className="text-xs text-blue-600 bg-blue-100 px-2 py-0.5 rounded-full">
+                        {formData.width} × {formData.height}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-blue-500">
+                    يتم اكتشاف الأبعاد تلقائياً من الصورة. اتركها كما هي لعرض البانر بالكامل.
+                  </p>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-1">
-                      <Label className="text-xs">الارتفاع (px) — 0 = تلقائي</Label>
-                      <Input type="number" min={0} value={formData.height || ''} onChange={e => setFormData(p => ({ ...p, height: parseInt(e.target.value) || 0 }))} placeholder="0" dir="ltr" className="font-mono text-sm" />
+                      <Label className="text-xs">العرض (px)</Label>
+                      <Input type="number" min={0} value={formData.width || ''} onChange={e => setFormData(p => ({ ...p, width: parseInt(e.target.value) || 0 }))} placeholder="تلقائي" dir="ltr" className="font-mono text-sm" />
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-xs">الترتيب</Label>
-                      <Input type="number" min={0} value={formData.order || ''} onChange={e => setFormData(p => ({ ...p, order: parseInt(e.target.value) || 0 }))} placeholder="0" />
+                      <Label className="text-xs">الارتفاع (px)</Label>
+                      <Input type="number" min={0} value={formData.height || ''} onChange={e => setFormData(p => ({ ...p, height: parseInt(e.target.value) || 0 }))} placeholder="تلقائي" dir="ltr" className="font-mono text-sm" />
                     </div>
+                  </div>
+                  <div className="space-y-1 pt-2">
+                    <Label className="text-xs">الترتيب</Label>
+                    <Input type="number" min={0} value={formData.order || ''} onChange={e => setFormData(p => ({ ...p, order: parseInt(e.target.value) || 0 }))} placeholder="0" />
                   </div>
                 </div>
 
@@ -499,7 +513,33 @@ export function BannersManagement() {
                 {/* Image */}
                 <div className="space-y-1">
                   <Label className="font-semibold text-sm">🖼️ الصورة *</Label>
-                  <ImageUploader images={formData.image ? [formData.image] : []} onImagesChange={imgs => setFormData(p => ({ ...p, image: imgs[0] || '' }))} maxImages={1} folder="kamal-saad-banners" />
+                  <ImageUploader 
+                    images={formData.image ? [formData.image] : []} 
+                    onImagesChange={imgs => {
+                      const newImage = imgs[0] || '';
+                      setFormData(p => ({ ...p, image: newImage }));
+                      
+                      // Auto-detect image dimensions
+                      if (newImage) {
+                        const img = document.createElement('img');
+                        img.onload = () => {
+                          setFormData(p => ({ 
+                            ...p, 
+                            width: img.naturalWidth,
+                            height: img.naturalHeight 
+                          }));
+                        };
+                        img.src = newImage;
+                      }
+                    }} 
+                    maxImages={1} 
+                    folder="kamal-saad-banners" 
+                  />
+                  {formData.width > 0 && formData.height > 0 && (
+                    <p className="text-xs text-gray-500">
+                      📐 الأبعاد: {formData.width} × {formData.height} بكسل
+                    </p>
+                  )}
                 </div>
 
                 {/* Hotspot */}

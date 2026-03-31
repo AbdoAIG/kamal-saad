@@ -50,11 +50,12 @@ function Hotspot({ banner }: { banner: Banner }) {
 }
 
 // ============================================================
-// HERO SLIDER
+// HERO SLIDER - Shows full banner without cropping
 // ============================================================
 export function HeroBanner({ banners }: { banners: Banner[] }) {
   const [current, setCurrent] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
+  const [imageHeight, setImageHeight] = useState<Record<string, number>>({});
   const { language } = useStore();
   const isArabic = language === 'ar';
 
@@ -66,32 +67,66 @@ export function HeroBanner({ banners }: { banners: Banner[] }) {
 
   if (banners.length === 0) return null;
   const b = banners[current];
-  const h = b.height > 0 ? b.height : 0;
 
-  const style: React.CSSProperties = { position: 'relative', width: '100%', overflow: 'hidden' };
-  if (h > 0) { style.height = `${h}px`; }
-  else { style.minHeight = '200px'; style.maxHeight = '460px'; }
+  // Use natural image aspect ratio or default
+  const aspectRatio = b.width && b.height ? b.width / b.height : 16 / 9;
 
   return (
-    <div style={style} dir={isArabic ? 'rtl' : 'ltr'} onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)}>
+    <div 
+      dir={isArabic ? 'rtl' : 'ltr'} 
+      onMouseEnter={() => setIsPaused(true)} 
+      onMouseLeave={() => setIsPaused(false)}
+      className="relative w-full bg-gray-100 dark:bg-gray-800"
+    >
       <AnimatePresence mode="wait">
-        <motion.div key={b.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.6 }} className="absolute inset-0">
-          <Image src={b.image} alt={isArabic ? b.titleAr : b.title} fill sizes="100vw" className="object-cover object-center" priority={current === 0} />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/30 via-transparent to-black/10 pointer-events-none" />
+        <motion.div 
+          key={b.id} 
+          initial={{ opacity: 0 }} 
+          animate={{ opacity: 1 }} 
+          exit={{ opacity: 0 }} 
+          transition={{ duration: 0.6 }} 
+          className="relative w-full"
+          style={{ aspectRatio: aspectRatio }}
+        >
+          <Image 
+            src={b.image} 
+            alt={isArabic ? b.titleAr : b.title} 
+            fill 
+            sizes="100vw" 
+            className="object-contain" 
+            priority={current === 0}
+            onLoad={(e) => {
+              const img = e.target as HTMLImageElement;
+              setImageHeight(prev => ({
+                ...prev,
+                [b.id]: img.naturalHeight
+              }));
+            }}
+          />
         </motion.div>
       </AnimatePresence>
       <Hotspot banner={b} />
       {banners.length > 1 && (
         <>
-          <button onClick={() => setCurrent(p => (p - 1 + banners.length) % banners.length)} className={`absolute top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-white/25 backdrop-blur-md text-white p-2.5 rounded-full transition-all hover:scale-110 border border-white/10 ${isArabic ? 'right-3 md:right-5' : 'left-3 md:left-5'}`}>
-            {isArabic ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          <button 
+            onClick={() => setCurrent(p => (p - 1 + banners.length) % banners.length)} 
+            className={`absolute top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white text-gray-700 p-2 md:p-3 rounded-full transition-all hover:scale-110 shadow-lg ${isArabic ? 'right-3 md:right-5' : 'left-3 md:left-5'}`}
+          >
+            {isArabic ? <ChevronRight className="w-5 h-5 md:w-6 md:h-6" /> : <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" />}
           </button>
-          <button onClick={() => setCurrent(p => (p + 1) % banners.length)} className={`absolute top-1/2 -translate-y-1/2 z-30 bg-white/10 hover:bg-white/25 backdrop-blur-md text-white p-2.5 rounded-full transition-all hover:scale-110 border border-white/10 ${isArabic ? 'left-3 md:left-5' : 'right-3 md:right-5'}`}>
-            {isArabic ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+          <button 
+            onClick={() => setCurrent(p => (p + 1) % banners.length)} 
+            className={`absolute top-1/2 -translate-y-1/2 z-30 bg-white/90 hover:bg-white text-gray-700 p-2 md:p-3 rounded-full transition-all hover:scale-110 shadow-lg ${isArabic ? 'left-3 md:left-5' : 'right-3 md:right-5'}`}
+          >
+            {isArabic ? <ChevronLeft className="w-5 h-5 md:w-6 md:h-6" /> : <ChevronRight className="w-5 h-5 md:w-6 md:h-6" />}
           </button>
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
+          <div className="absolute bottom-3 md:bottom-5 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2">
             {banners.map((_, i) => (
-              <button key={i} onClick={() => setCurrent(i)} className={`transition-all rounded-full ${i === current ? 'w-6 h-2 bg-white' : 'w-2 h-2 bg-white/40 hover:bg-white/60'}`} />
+              <button 
+                key={i} 
+                onClick={() => setCurrent(i)} 
+                className={`transition-all rounded-full ${i === current ? 'w-6 h-2.5 bg-white shadow-md' : 'w-2.5 h-2.5 bg-white/50 hover:bg-white/70'}`} 
+              />
             ))}
           </div>
         </>
@@ -101,23 +136,41 @@ export function HeroBanner({ banners }: { banners: Banner[] }) {
 }
 
 // ============================================================
-// PROMO CARD
+// PROMO CARD - Shows full image without cropping
 // ============================================================
 function PromoCard({ banner, isArabic }: { banner: Banner; isArabic: boolean }) {
   const [imgError, setImgError] = useState(false);
-  const h = banner.height > 0 ? banner.height : 220;
+  
+  // Calculate aspect ratio from stored dimensions
+  const aspectRatio = banner.width && banner.height 
+    ? banner.width / banner.height 
+    : 16 / 9;
 
   return (
-    <motion.div whileHover={{ scale: 1.01, y: -2 }} transition={{ type: 'spring', stiffness: 300, damping: 25 }}
-      className="relative overflow-hidden rounded-2xl shadow-lg group bg-gray-100" style={{ height: `${h}px` }}>
+    <motion.div 
+      whileHover={{ scale: 1.02, y: -3 }} 
+      transition={{ type: 'spring', stiffness: 300, damping: 25 }}
+      className="relative overflow-hidden rounded-2xl shadow-lg group bg-gray-100 dark:bg-gray-800"
+      style={{ aspectRatio: aspectRatio }}
+    >
       {!imgError ? (
-        <Image src={banner.image} alt={isArabic ? banner.titleAr : banner.title} fill sizes="(max-width: 1024px) 100vw, 33vw" className="object-cover object-center transition-transform duration-700 group-hover:scale-[1.03]" quality={85} onError={() => setImgError(true)} />
+        <Image 
+          src={banner.image} 
+          alt={isArabic ? banner.titleAr : banner.title} 
+          fill 
+          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" 
+          className="object-contain" 
+          quality={90} 
+          onError={() => setImgError(true)} 
+        />
       ) : (
-        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
-          <div className="text-center text-gray-500"><div className="text-3xl mb-1">🖼️</div><p className="text-xs">صورة غير متوفرة</p></div>
+        <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-800">
+          <div className="text-center text-gray-500 dark:text-gray-400">
+            <div className="text-3xl mb-1">🖼️</div>
+            <p className="text-xs">صورة غير متوفرة</p>
+          </div>
         </div>
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent pointer-events-none" />
       <Hotspot banner={banner} />
     </motion.div>
   );
@@ -128,9 +181,16 @@ function PromoCard({ banner, isArabic }: { banner: Banner; isArabic: boolean }) 
 // ============================================================
 function PromoSection({ banners, isArabic }: { banners: Banner[]; isArabic: boolean }) {
   if (banners.length === 0) return null;
-  const cols = banners.length === 1 ? 'grid-cols-1' : banners.length === 2 ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+  
+  // Responsive grid based on number of banners
+  const gridClass = banners.length === 1 
+    ? 'grid-cols-1' 
+    : banners.length === 2 
+      ? 'grid-cols-1 sm:grid-cols-2' 
+      : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+  
   return (
-    <div className={`grid ${cols} gap-4`}>
+    <div className={`grid ${gridClass} gap-3 md:gap-4`}>
       {banners.map(b => <PromoCard key={b.id} banner={b} isArabic={isArabic} />)}
     </div>
   );
@@ -155,7 +215,7 @@ export function HeroBannerSection() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="w-full h-[260px] bg-gray-200 dark:bg-gray-800 animate-pulse" />;
+  if (loading) return <div className="w-full aspect-[16/9] bg-gray-200 dark:bg-gray-800 animate-pulse" />;
   if (banners.length === 0) return null;
   return <div dir={isArabic ? 'rtl' : 'ltr'}><HeroBanner banners={banners} /></div>;
 }
@@ -173,10 +233,10 @@ export function BelowCategoriesBannerSection() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="w-full h-[100px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-2xl mx-auto max-w-7xl px-4 mt-5" />;
+  if (loading) return <div className="w-full aspect-[3/1] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-2xl mx-auto max-w-7xl px-4 mt-5" />;
   if (banners.length === 0) return null;
   return (
-    <div className="container mx-auto px-4 py-5" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="container mx-auto px-4 py-4 md:py-5" dir={isArabic ? 'rtl' : 'ltr'}>
       <PromoSection banners={banners} isArabic={isArabic} />
     </div>
   );
@@ -195,10 +255,10 @@ export function BetweenProductsBannerSection() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="w-full h-[100px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-2xl mx-auto max-w-7xl px-4 mt-5" />;
+  if (loading) return <div className="w-full aspect-[3/1] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-2xl mx-auto max-w-7xl px-4 mt-5" />;
   if (banners.length === 0) return null;
   return (
-    <div className="container mx-auto px-4 py-5" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="container mx-auto px-4 py-4 md:py-5" dir={isArabic ? 'rtl' : 'ltr'}>
       <PromoSection banners={banners} isArabic={isArabic} />
     </div>
   );
@@ -217,10 +277,10 @@ export function AboveFooterBannerSection() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <div className="w-full h-[100px] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-2xl mx-auto max-w-7xl px-4 mt-5" />;
+  if (loading) return <div className="w-full aspect-[3/1] bg-gray-200 dark:bg-gray-800 animate-pulse rounded-2xl mx-auto max-w-7xl px-4 mt-5" />;
   if (banners.length === 0) return null;
   return (
-    <div className="container mx-auto px-4 py-5" dir={isArabic ? 'rtl' : 'ltr'}>
+    <div className="container mx-auto px-4 py-4 md:py-5" dir={isArabic ? 'rtl' : 'ltr'}>
       <PromoSection banners={banners} isArabic={isArabic} />
     </div>
   );
